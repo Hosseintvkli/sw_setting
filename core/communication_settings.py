@@ -59,3 +59,5 @@ class DeviceCommunicationSettings:
     )
     # Modbus unit / slave id (often same idea as device addressing on the bus)
     modbus_unit_identifier: int = 1
+    # Total attempts per Modbus transaction (try immediately, then wait timeout & retry)
+    modbus_transaction_retry_count: int = 3

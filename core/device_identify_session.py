@@ -88,32 +88,13 @@ class DeviceIdentifySession:
                 f"addr={HOLDING_ADDRESS_SLAVE_ID} value=1 (force all SlaveId→1)"
             )
             self._broadcast_write_u16(HOLDING_ADDRESS_SLAVE_ID, 1)
-            self._log(
-                "  → broadcast SlaveId=1 sent "
-                "(no reply expected — timeout is OK)"
-            )
-            settle_s = self._settle_seconds_after_broadcast()
-            self._log(
-                f"  Waiting {settle_s:.3f}s after broadcast "
-                f"(= Write timeout from Communicate settings; "
-                f"set simulator unit/SlaveId to 1 now if testing manually)..."
-            )
-            time.sleep(settle_s)
-
+            self._log("Broadcast SlaveId=1 (no reply expected)")
             self._log(
                 f"STEP broadcast WRITE unit={BROADCAST_MODBUS_UNIT_IDENTIFIER} "
                 f"addr={HOLDING_ADDRESS_IDENTIFY_STATUS} value=1"
             )
             self._broadcast_write_u16(HOLDING_ADDRESS_IDENTIFY_STATUS, 1)
-            self._log(
-                "  → broadcast IdentifyStatus=1 sent (no reply expected)"
-            )
-            settle_s = self._settle_seconds_after_broadcast()
-            self._log(
-                f"  Waiting {settle_s:.3f}s after broadcast "
-                f"(= Write timeout from Communicate settings)..."
-            )
-            time.sleep(settle_s)
+            self._log("Broadcast IdentifyStatus=1 (no reply expected)")
 
             self._log(
                 f"STEP probe root: READ unit={TEMPORARY_DISCOVERY_MODBUS_UNIT_IDENTIFIER} "
@@ -180,33 +161,24 @@ class DeviceIdentifySession:
                 f"port[{port_index_on_parent}]"
             )
         )
-        self._log(f"--- discover under {parent_info} via unit={unit} ---")
-
+        self._log(f"Probe ({parent_info}) unit={unit}")
         try:
-            self._log(f"  READ unit={unit} addr={HOLDING_ADDRESS_DEVICE_ID}")
             device_id = self._read_u16(HOLDING_ADDRESS_DEVICE_ID, unit)
-            self._log(f"  → DeviceId={device_id}")
-
-            self._log(
-                f"  READ unit={unit} addr={HOLDING_ADDRESS_PARAMETER_LIST_VERSION}"
-            )
             parameter_list_version = self._read_u16(
                 HOLDING_ADDRESS_PARAMETER_LIST_VERSION, unit
             )
-            self._log(f"  → ParameterListVersion={parameter_list_version}")
+            self._log(
+                f"  Found DeviceId={device_id} Version={parameter_list_version}"
+            )
         except DeviceModbusLinkError as exc:
             self._log(f"  → no answer / read failed: {exc}")
             return None
 
         try:
-            self._log(
-                f"  Load JSON package DeviceId={device_id} "
-                f"Version={parameter_list_version}"
-            )
             package = self._catalog.load_parameter_list_package(
                 device_id, parameter_list_version
             )
-            self._log(f"  → JSON OK name={package.info.device_name!r}")
+            self._log(f"  JSON: {package.info.device_name!r}")
         except CodeGenParameterListCatalogError as exc:
             self._log(f"  → JSON FAIL: {exc}")
             raise DeviceIdentifySessionError(
@@ -214,19 +186,10 @@ class DeviceIdentifySession:
             ) from exc
 
         permanent_slave_id = self._allocate_permanent_slave_id()
-        self._log(
-            f"  WRITE unit={unit} addr={HOLDING_ADDRESS_SLAVE_ID} "
-            f"value={permanent_slave_id} (assign permanent SlaveId)"
-        )
+        self._log(f"  Set permanent SlaveId={permanent_slave_id}")
         try:
             self._write_u16(HOLDING_ADDRESS_SLAVE_ID, permanent_slave_id, unit)
-            settle_s = self._settle_seconds_after_slave_id_assign()
-            self._log(
-                f"  → assign write OK. Waiting {settle_s:.3f}s "
-                f"(= Write timeout from Communicate settings; "
-                f"if simulator: change unit to {permanent_slave_id} now)..."
-            )
-            time.sleep(settle_s)
+            self._log(f"Assigned SlaveId={permanent_slave_id}")
         except DeviceModbusLinkError as exc:
             self._log(f"  → assign write FAIL: {exc}")
             raise DeviceIdentifySessionError(
@@ -248,26 +211,13 @@ class DeviceIdentifySession:
         if parent_node is not None and port_index_on_parent is not None:
             parent_node.children_by_port_index[port_index_on_parent] = node
             self._log(
-                f"  Open hub path for permanent SlaveId={permanent_slave_id} "
-                f"on all ancestor ports BEFORE talking to unit={permanent_slave_id}"
+                f"  Update ancestor hub Min/Max for SlaveId={permanent_slave_id}"
             )
             self._expand_routing_ranges_for_slave_id_on_ancestors(
                 child_node=node, permanent_slave_id=permanent_slave_id
             )
-            settle_s = self._settle_seconds_after_slave_id_assign()
-            self._log(
-                f"  Waiting {settle_s:.3f}s after routing update "
-                f"(Write timeout) so hubs apply Min/Max..."
-            )
-            time.sleep(settle_s)
-        else:
-            self._log(
-                "  Root device — no parent hub routing to update before permanent-unit I/O"
-            )
 
-        self._log(
-            f"  READ unit={permanent_slave_id} addr={HOLDING_ADDRESS_DOWNSTREAM_QUANTITY}"
-        )
+        self._log(f"  Read DownStreamQty unit={permanent_slave_id}")
         try:
             downstream_quantity = self._read_u16(
                 HOLDING_ADDRESS_DOWNSTREAM_QUANTITY, permanent_slave_id
@@ -434,9 +384,8 @@ class DeviceIdentifySession:
                 new_min = min(permanent_candidates)
                 new_max = max(permanent_candidates)
             self._log(
-                f"  routing: hub {parent.permanent_modbus_slave_id} "
-                f"port[{port_index}] → {new_min}..{new_max} "
-                f"(include SlaveId={permanent_slave_id})"
+                f"  Hub {parent.permanent_modbus_slave_id} port[{port_index}] "
+                f"→ {new_min}..{new_max}"
             )
             self._write_port_min_max(parent, package, port_index, new_min, new_max)
             parent.downstream_port_slave_id_min[port_index] = new_min
@@ -456,10 +405,6 @@ class DeviceIdentifySession:
         min_addr = _find_parameter_modbus_address(package, min_name)
         max_addr = _find_parameter_modbus_address(package, max_name)
         unit = hub_node.permanent_modbus_slave_id
-        self._log(
-            f"    WRITE unit={unit} {min_name}@addr={min_addr}={slave_id_min}, "
-            f"{max_name}@addr={max_addr}={slave_id_max}"
-        )
         self._write_u16(min_addr, slave_id_min, unit)
         self._write_u16(max_addr, slave_id_max, unit)
 
@@ -496,11 +441,9 @@ class DeviceIdentifySession:
         return self._device_modbus_link.get_active_write_timeout_seconds()
 
     def _log(self, message: str) -> None:
-        self._step_number += 1
-        line = f"[ID:{self._step_number:04d}] {message}"
-        self._log_lines.append(line)
+        self._log_lines.append(message)
         if self._log_callback is not None:
-            self._log_callback(line)
+            self._log_callback(message)
 
 
 def _find_parameter_modbus_address(

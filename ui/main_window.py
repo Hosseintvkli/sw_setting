@@ -58,6 +58,7 @@ from core.setting_profile_csv import (
     load_setting_profile_assignments_from_csv,
     save_setting_profile_csv,
 )
+from core.device_command_executor import DeviceCommandExecutor
 from core.device_identify_session import (
     DeviceIdentifySession,
     DeviceIdentifySessionError,
@@ -262,7 +263,7 @@ class DeviceSettingMainWindow(QMainWindow):
         csv_path_row.addWidget(self.push_button_browse_profile_csv)
 
         self.check_box_apply_profile_to_all_similar_device_ids = QCheckBox(
-            "Apply to all discovered devices with the same DeviceId (not implemented yet)"
+            "Apply to all discovered devices with the same DeviceId"
         )
         # Placeholder only — no logic
         self.check_box_apply_profile_to_all_similar_device_ids.setEnabled(True)
@@ -292,9 +293,34 @@ class DeviceSettingMainWindow(QMainWindow):
         profile_layout.addWidget(QLabel("Profile log"))
         profile_layout.addWidget(self.profile_log_text_edit, stretch=1)
 
+
+        # ----- Commands tab -----
+        self.commands_tree_widget = QTreeWidget()
+        self.commands_tree_widget.setColumnCount(3)
+        self.commands_tree_widget.setHeaderLabels(["Name", "ModbusAddr", "DataType"])
+        self.commands_tree_widget.setUniformRowHeights(True)
+        self.push_button_execute_selected_command = QPushButton("Execute selected command")
+        self.push_button_execute_selected_command.clicked.connect(
+            self._on_execute_selected_command_clicked
+        )
+        self.commands_log_text_edit = QTextEdit()
+        self.commands_log_text_edit.setReadOnly(True)
+        self.commands_log_text_edit.setMaximumHeight(140)
+
+        commands_tab = QWidget()
+        commands_layout = QVBoxLayout(commands_tab)
+        commands_layout.addWidget(
+            QLabel("COMMAND parameters — select one and Execute (writes 0xFFFF, then polls)")
+        )
+        commands_layout.addWidget(self.commands_tree_widget, stretch=1)
+        commands_layout.addWidget(self.push_button_execute_selected_command)
+        commands_layout.addWidget(QLabel("Command log"))
+        commands_layout.addWidget(self.commands_log_text_edit)
+
         self.center_tab_widget = QTabWidget()
         self.center_tab_widget.addTab(parameters_tab, "Parameters")
         self.center_tab_widget.addTab(profile_tab, "Profile")
+        self.center_tab_widget.addTab(commands_tab, "Commands")
 
         center_container = QWidget()
         center_layout = QVBoxLayout(center_container)
@@ -331,9 +357,25 @@ class DeviceSettingMainWindow(QMainWindow):
             "Communicate: Connect. Devices: Identify, then double-click a device to load settings."
         )
 
-    def _append_log(self, message: str) -> None:
-        self.status_log_text_edit.append(message)
-        # Keep UI responsive and show Identify steps live
+    def _append_log(self, message: str, *, success: bool | None = None) -> None:
+        escaped = (
+            message.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+        if success is True:
+            html = f'<span style="color:#1b7a1b;">{escaped}</span>'
+        elif success is False:
+            html = f'<span style="color:#b00020;">{escaped}</span>'
+        else:
+            lower = message.lower()
+            if "fail" in lower or "abort" in lower or "error" in lower:
+                html = f'<span style="color:#b00020;">{escaped}</span>'
+            elif "finished ok" in lower or "done." in lower or "json:" in lower or "found deviceid" in lower or "assigned slaveid" in lower:
+                html = f'<span style="color:#1b7a1b;">{escaped}</span>'
+            else:
+                html = escaped
+        self.status_log_text_edit.append(html)
         from PyQt6.QtWidgets import QApplication
         app = QApplication.instance()
         if app is not None:
@@ -437,6 +479,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self.device_modbus_link.disconnect()
         self._remember_settings_tree_column_widths()
         self.settings_tree_widget.clear()
+        self.commands_tree_widget.clear()
         self._last_setting_tree_load_result = None
         self.label_selected_device.setText("Selected device: (none)")
         self._clear_monitoring_header_labels()
@@ -502,6 +545,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._last_setting_tree_load_result = result
         self._apply_monitoring_header_values(result.monitoring_header_values)
         self._populate_settings_tree_widget(result)
+        self._populate_commands_tree_widget(result)
         error_count = sum(
             1 for leaf in result.setting_leaf_values if leaf.read_error_message
         )
@@ -737,12 +781,6 @@ class DeviceSettingMainWindow(QMainWindow):
             QMessageBox.warning(self, "CSV missing", f"File not found:\n{csv_path}")
             return
 
-        if self.check_box_apply_profile_to_all_similar_device_ids.isChecked():
-            self._append_profile_log(
-                "Note: 'all similar DeviceId' is not implemented yet — "
-                "only the current connection is used."
-            )
-
         mode_label = "VERIFY" if verify_only else "APPLY"
         self._append_profile_log(f"===== {mode_label} {csv_path.name} =====")
 
@@ -755,70 +793,117 @@ class DeviceSettingMainWindow(QMainWindow):
                 success=False,
             )
 
+        target_slave_ids: list[tuple[int, str]] = []
+        current_unit = self.device_modbus_link.get_effective_modbus_unit_identifier()
+        current_device_id = load_result.device_id_from_device
+        if self.check_box_apply_profile_to_all_similar_device_ids.isChecked():
+            identify = self._last_device_identify_result
+            if identify is None or identify.root_node is None:
+                self._append_profile_log(
+                    "No Identify tree — applying only to current device.",
+                    success=False,
+                )
+                target_slave_ids.append((current_unit, "current"))
+            else:
+                for node in identify.root_node.iter_depth_first():
+                    if node.device_id == current_device_id:
+                        target_slave_ids.append(
+                            (
+                                node.permanent_modbus_slave_id,
+                                node.device_name,
+                            )
+                        )
+                if not target_slave_ids:
+                    self._append_profile_log(
+                        f"No topology nodes with DeviceId={current_device_id}.",
+                        success=False,
+                    )
+                    target_slave_ids.append((current_unit, "current"))
+                else:
+                    self._append_profile_log(
+                        f"Targets with DeviceId={current_device_id}: "
+                        + ", ".join(
+                            f"{name}(SlaveId={sid})" for sid, name in target_slave_ids
+                        )
+                    )
+        else:
+            target_slave_ids.append((current_unit, "current"))
+
         ok_count = 0
         fail_count = len(parse_result.issues)
 
-        for assignment in parse_result.assignments:
-            definition = assignment.parameter_definition
-            try:
-                if verify_only:
-                    registers = self.device_modbus_link.read_holding_registers_u16(
-                        definition.modbus_address,
-                        definition.modbus_register_size
-                        if definition.modbus_register_size > 0
-                        else 1,
-                    )
-                    # use modbus size from definition; codec expects matching type size
-                    from core.modbus_register_value_codec import (
-                        register_count_for_data_type_name,
+        previous_override = getattr(
+            self.device_modbus_link, "_modbus_unit_identifier_override", None
+        )
+
+        for slave_id, target_name in target_slave_ids:
+            self.device_modbus_link.set_modbus_unit_identifier_override(slave_id)
+            self._append_profile_log(
+                f"--- {mode_label} on {target_name} SlaveId={slave_id} ---"
+            )
+            for assignment in parse_result.assignments:
+                definition = assignment.parameter_definition
+                try:
+                    if verify_only:
+                        registers = self.device_modbus_link.read_holding_registers_u16(
+                            definition.modbus_address,
+                            definition.modbus_register_size
+                            if definition.modbus_register_size > 0
+                            else 1,
+                        )
+                        # use modbus size from definition; codec expects matching type size
+                        from core.modbus_register_value_codec import (
+                            register_count_for_data_type_name,
+                        )
+
+                        expected_count = definition.modbus_register_size
+                        if expected_count <= 0:
+                            expected_count = register_count_for_data_type_name(
+                                definition.data_type_name
+                            )
+                        if len(registers) < expected_count:
+                            registers = self.device_modbus_link.read_holding_registers_u16(
+                                definition.modbus_address, expected_count
+                            )
+                        device_value = decode_parameter_value_from_holding_registers(
+                            definition.data_type_name, registers[:expected_count]
+                        )
+                        if not _profile_values_equal(
+                            definition.data_type_name,
+                            device_value,
+                            assignment.parsed_value,
+                        ):
+                            raise DeviceModbusLinkError(
+                                f"Mismatch device={device_value!r} csv={assignment.parsed_value!r}"
+                            )
+                        self._append_profile_log(
+                            f"VERIFY OK {assignment.parameter_name} = {assignment.parsed_value!r}",
+                            success=True,
+                        )
+                    else:
+                        register_values = encode_parameter_value_to_holding_registers(
+                            definition.data_type_name, assignment.parsed_value
+                        )
+                        self.device_modbus_link.write_holding_registers_u16(
+                            definition.modbus_address, register_values
+                        )
+                        self._append_profile_log(
+                            f"APPLY OK {assignment.parameter_name} = {assignment.parsed_value!r}",
+                            success=True,
+                        )
+                    ok_count += 1
+                except (
+                    DeviceModbusLinkError,
+                    ModbusRegisterValueCodecError,
+                    ParameterValueValidationError,
+                ) as exc:
+                    fail_count += 1
+                    self._append_profile_log(
+                        f"{mode_label} FAIL {assignment.parameter_name}: {exc}",
+                        success=False,
                     )
 
-                    expected_count = definition.modbus_register_size
-                    if expected_count <= 0:
-                        expected_count = register_count_for_data_type_name(
-                            definition.data_type_name
-                        )
-                    if len(registers) < expected_count:
-                        registers = self.device_modbus_link.read_holding_registers_u16(
-                            definition.modbus_address, expected_count
-                        )
-                    device_value = decode_parameter_value_from_holding_registers(
-                        definition.data_type_name, registers[:expected_count]
-                    )
-                    if not _profile_values_equal(
-                        definition.data_type_name,
-                        device_value,
-                        assignment.parsed_value,
-                    ):
-                        raise DeviceModbusLinkError(
-                            f"Mismatch device={device_value!r} csv={assignment.parsed_value!r}"
-                        )
-                    self._append_profile_log(
-                        f"VERIFY OK {assignment.parameter_name} = {assignment.parsed_value!r}",
-                        success=True,
-                    )
-                else:
-                    register_values = encode_parameter_value_to_holding_registers(
-                        definition.data_type_name, assignment.parsed_value
-                    )
-                    self.device_modbus_link.write_holding_registers_u16(
-                        definition.modbus_address, register_values
-                    )
-                    self._append_profile_log(
-                        f"APPLY OK {assignment.parameter_name} = {assignment.parsed_value!r}",
-                        success=True,
-                    )
-                ok_count += 1
-            except (
-                DeviceModbusLinkError,
-                ModbusRegisterValueCodecError,
-                ParameterValueValidationError,
-            ) as exc:
-                fail_count += 1
-                self._append_profile_log(
-                    f"{mode_label} FAIL {assignment.parameter_name}: {exc}",
-                    success=False,
-                )
+        self.device_modbus_link.set_modbus_unit_identifier_override(previous_override)
 
         self._append_profile_log(
             f"===== {mode_label} done: ok={ok_count} fail={fail_count} ====="
@@ -950,6 +1035,70 @@ class DeviceSettingMainWindow(QMainWindow):
         self.devices_topology_tree_widget.expandAll()
         for column_index in range(5):
             self.devices_topology_tree_widget.resizeColumnToContents(column_index)
+
+
+    def _populate_commands_tree_widget(
+        self, result: DeviceSettingTreeLoadResult
+    ) -> None:
+        from core.codegen_parameter_list_models import ParameterAccessKind
+
+        self.commands_tree_widget.clear()
+        for parameter in result.parameter_list_package.parameters:
+            if parameter.parameter_access_kind != ParameterAccessKind.COMMAND_WRITE:
+                continue
+            item = QTreeWidgetItem(
+                [
+                    parameter.parameter_name,
+                    str(parameter.modbus_address),
+                    parameter.data_type_name,
+                ]
+            )
+            item.setData(0, Qt.ItemDataRole.UserRole, parameter.modbus_address)
+            item.setData(0, Qt.ItemDataRole.UserRole + 1, parameter.parameter_name)
+            self.commands_tree_widget.addTopLevelItem(item)
+        self.commands_tree_widget.resizeColumnToContents(0)
+
+    def _append_command_log(self, message: str, *, success: bool | None = None) -> None:
+        escaped = (
+            message.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+        if success is True:
+            html = f'<span style="color:#1b7a1b;">{escaped}</span>'
+        elif success is False:
+            html = f'<span style="color:#b00020;">{escaped}</span>'
+        else:
+            html = escaped
+        self.commands_log_text_edit.append(html)
+
+    def _on_execute_selected_command_clicked(self) -> None:
+        if not self.device_modbus_link.is_connected:
+            QMessageBox.warning(self, "Not connected", "Connect and open a device first.")
+            return
+        item = self.commands_tree_widget.currentItem()
+        if item is None:
+            QMessageBox.warning(self, "No selection", "Select a command in the list.")
+            return
+        modbus_address = item.data(0, Qt.ItemDataRole.UserRole)
+        command_name = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if modbus_address is None:
+            return
+        self._append_command_log(
+            f"Execute {command_name} @ addr={modbus_address} ..."
+        )
+        from PyQt6.QtWidgets import QApplication
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            executor = DeviceCommandExecutor(self.device_modbus_link)
+            result = executor.execute_command_at_modbus_address(int(modbus_address))
+        finally:
+            QApplication.restoreOverrideCursor()
+        self._append_command_log(result.message, success=result.success)
+        self._append_log(
+            f"Command {command_name}: {result.message}",
+            success=result.success,
+        )
 
     def _on_devices_topology_item_double_clicked(
         self, item: QTreeWidgetItem, column: int

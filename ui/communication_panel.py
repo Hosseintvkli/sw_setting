@@ -132,6 +132,13 @@ class CommunicationSettingsPanel(QWidget):
         self.spin_box_serial_write_timeout_milliseconds.setValue(1000)
         self.spin_box_serial_write_timeout_milliseconds.setSuffix(" ms")
 
+        self.spin_box_modbus_transaction_retry_count = QSpinBox()
+        self.spin_box_modbus_transaction_retry_count.setRange(1, 20)
+        self.spin_box_modbus_transaction_retry_count.setValue(3)
+        self.spin_box_modbus_transaction_retry_count.setToolTip(
+            "Total attempts: try immediately, then wait Read timeout and retry"
+        )
+
         serial_form_layout = QFormLayout()
         serial_form_layout.addRow("COM port:", serial_port_row)
         serial_form_layout.addRow("Baud rate:", baud_rate_row)
@@ -187,6 +194,9 @@ class CommunicationSettingsPanel(QWidget):
         common_form_layout = QFormLayout()
         common_form_layout.addRow(
             "Modbus unit ID (slave):", self.spin_box_modbus_unit_identifier
+        )
+        common_form_layout.addRow(
+            "Retries (per transaction):", self.spin_box_modbus_transaction_retry_count
         )
 
         root_layout = QVBoxLayout()
@@ -325,6 +335,7 @@ class CommunicationSettingsPanel(QWidget):
             serial_port_settings=serial_settings,
             ethernet_tcp_settings=ethernet_settings,
             modbus_unit_identifier=self.spin_box_modbus_unit_identifier.value(),
+            modbus_transaction_retry_count=self.spin_box_modbus_transaction_retry_count.value(),
         )
 
     def write_device_communication_settings(

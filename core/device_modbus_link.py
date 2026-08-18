@@ -136,9 +136,22 @@ class DeviceModbusLink:
         """
         Read consecutive holding registers.
 
-        modbus_unit_identifier: override unit/slave id; None = connection default.
-        Returns a list of unsigned 16-bit values (0..65535).
+        Tries immediately; on failure waits Read timeout and retries
+        (modbus_transaction_retry_count total attempts).
         """
+        return self._execute_with_timeout_retries(
+            operation_label=f"READ addr={modbus_start_address} count={register_count}",
+            operation=lambda: self._read_holding_registers_u16_once(
+                modbus_start_address, register_count, modbus_unit_identifier
+            ),
+        )
+
+    def _read_holding_registers_u16_once(
+        self,
+        modbus_start_address: int,
+        register_count: int,
+        modbus_unit_identifier: int | None,
+    ) -> list[int]:
         client, unit_id = self._require_connected_client_and_unit_id(
             modbus_unit_identifier_override=modbus_unit_identifier
         )
@@ -149,7 +162,6 @@ class DeviceModbusLink:
                 device_id=unit_id,
             )
         except TypeError:
-            # Older pymodbus versions use slave= instead of device_id=
             response = client.read_holding_registers(
                 address=modbus_start_address,
                 count=register_count,
@@ -169,6 +181,25 @@ class DeviceModbusLink:
                 f"Expected {register_count} registers, got {len(values)}."
             )
         return values
+
+    def _execute_with_timeout_retries(self, operation_label: str, operation):
+        import time
+
+        attempts = self.get_active_transaction_retry_count()
+        wait_s = self.get_active_read_timeout_seconds()
+        last_error: Exception | None = None
+        for attempt_index in range(1, attempts + 1):
+            try:
+                return operation()
+            except DeviceModbusLinkError as exc:
+                last_error = exc
+                if attempt_index >= attempts:
+                    break
+                time.sleep(wait_s)
+        assert last_error is not None
+        raise DeviceModbusLinkError(
+            f"{operation_label} failed after {attempts} attempt(s): {last_error}"
+        ) from last_error
 
     def write_holding_register_u16(
         self,
@@ -278,6 +309,12 @@ class DeviceModbusLink:
         else:
             ms = settings.ethernet_tcp_settings.write_timeout_milliseconds
         return max(int(ms), 1) / 1000.0
+
+    def get_active_transaction_retry_count(self) -> int:
+        settings = self._active_communication_settings
+        if settings is None:
+            return 3
+        return max(1, int(settings.modbus_transaction_retry_count))
 
     def get_active_read_timeout_seconds(self) -> float:
         """Read timeout from the active communication settings (seconds)."""
