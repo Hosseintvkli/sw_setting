@@ -1,0 +1,17 @@
+{
+  "device_id.xlsx": {
+    "excelHash": "1fae7ce96ee532456338a5c308a4c92393df33be554f3305e2eeec2d39ada874",
+    "outputsVersion": "00000",
+    "appVersion": "3.0.11"
+  },
+  "parameter_list_test1.xlsx": {
+    "excelHash": "83e74c116f1e548563c418563f7d3af9ec8780902883594fe1b9a0ecab92d70e",
+    "outputsVersion": "00001",
+    "appVersion": "3.0.11"
+  },
+  "parameter_list_test2.xlsx": {
+    "excelHash": "fe83cc564853b46b0b19fbcbb1f9669e9c301c55a6e83c96bed148a8a3996428",
+    "outputsVersion": "00001",
+    "appVersion": "3.0.11"
+  }
+}

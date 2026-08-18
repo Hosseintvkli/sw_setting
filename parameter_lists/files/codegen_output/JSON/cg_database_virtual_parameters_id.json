@@ -1,0 +1,58 @@
+[
+  {
+    "Name": "eVirtualParameterId_RastaNormalFrame",
+    "Value": 64000,
+    "Description": "",
+    "Unit": "",
+    "Type": "RastaNormalFrame",
+    "Size": 29
+  },
+  {
+    "Name": "eVirtualParameterId_DragonNormalFrame",
+    "Value": 64001,
+    "Description": "",
+    "Unit": "",
+    "Type": "DragonNormalFrame",
+    "Size": 56
+  },
+  {
+    "Name": "eVirtualParameterId_PardisNormalFrame",
+    "Value": 64002,
+    "Description": "",
+    "Unit": "",
+    "Type": "PardisNormalFrame",
+    "Size": 28
+  },
+  {
+    "Name": "eVirtualParameterId_MatchboxNormalFrame",
+    "Value": 64003,
+    "Description": "",
+    "Unit": "",
+    "Type": "MatchboxNormalFrame",
+    "Size": 56
+  },
+  {
+    "Name": "eVirtualParameterId_ScNormalFrame",
+    "Value": 64004,
+    "Description": "",
+    "Unit": "",
+    "Type": "ScNormalFrame",
+    "Size": 30
+  },
+  {
+    "Name": "eVirtualParameterId_ScMNormalFrame",
+    "Value": 64005,
+    "Description": "",
+    "Unit": "",
+    "Type": "ScMNormalFrame",
+    "Size": 34
+  },
+  {
+    "Name": "eVirtualParameterId_BlueDragonNormalFrame",
+    "Value": 64006,
+    "Description": "",
+    "Unit": "",
+    "Type": "BlueDragonNormalFrame",
+    "Size": 70
+  }
+]

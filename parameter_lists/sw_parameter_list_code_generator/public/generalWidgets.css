@@ -1,0 +1,217 @@
+
+
+.button-30 {
+  align-items: center;
+  appearance: none;
+  background-color: #FCFCFD;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(45, 35, 66, 0.4) 0 2px 4px
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px
+    #D6D6E7 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395A;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: "Patua One";
+  /* font-family: inherit; */
+  /* height: 30px; */
+  /* height: 75%; */
+  justify-content: center;
+  line-height: 1;
+  list-style: none;
+  overflow: hidden;
+  /* padding-left: 16px;
+  padding-right: 16px; */
+  display: grid;
+  place-content: center;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition: box-shadow .15s,transform .15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  will-change: box-shadow,transform;
+  /* font-size: 18px; */
+}
+
+.button-30:focus {
+  box-shadow: #D6D6E7 0 0 0 1.5px inset, rgba(45, 35, 66, 0.4) 0 2px 4px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset;
+}
+
+.button-30:hover {
+  box-shadow: rgba(45, 35, 66, 0.4) 0 4px 8px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset;
+  transform: translateY(-2px);
+}
+
+.button-30.pressed,
+.button-30:active {
+  box-shadow:
+    #D6D6E7 0 3px 7px inset,
+    0 0 20px 0 white;
+  transform: translateY(2px);
+}
+
+.button-30.red-glow.pressed,
+.button-30.red-glow:active {
+  box-shadow:
+    #D6D6E7 0 3px 7px inset,
+    0 0 20px 0 red;
+  background-color: red;
+  color: white;
+  transform: translateY(2px);
+}
+
+.button-30.disabled {
+  pointer-events: none;
+  opacity: .5;
+}
+
+.pop-up-cards-container {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: end;
+  gap: 0.5rem;
+  
+  pointer-events: none;
+}
+
+.pop-up-card {
+  --width: 300px;
+  --height: 30px;
+  --background-color: gray;
+  --animation-time: 1s;
+  padding: 0.5rem 1rem;
+  background-color: var(--background-color);
+  position: relative;
+  box-shadow: 0 0 20px 0 rgba(0, 0, 0, 1);
+  color: white;
+  display: grid;
+  place-content: center;
+  border-radius: 5px;
+  outline: 1px solid white;
+  z-index: 100;
+  
+  animation: pop-up-card-animate var(--animation-time) linear forwards;
+}
+
+.pop-up-card.farsi, .pop-up-card.farsi * {
+  direction: rtl;
+}
+
+.pop-up-card .card-label {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0px 0px 10px black;
+}
+
+@keyframes pop-up-card-animate {
+  0% {
+    bottom: calc(-1 * var(--height));
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  5% {
+    bottom: 10px;
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  95% {
+    bottom: 10px;
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    bottom: 30px;
+    opacity: 0;
+    transform: scaleY(0);
+  }
+}
+
+.serial-connection-popup-container {
+  position: absolute;
+  background-color: rgba(0, 0, 0, .6);
+  z-index: 9999;
+  transition: all 0.3s cubic-bezier(0.075, 0.82, 0.165, 1);
+  width: 100%;
+  height: 100vh;
+  left: 0;
+  top: 0;
+}
+
+.serial-connection-popup-container.hidden {
+  transform: scale(0);
+}
+
+.waiting-for-serial-connection-loader {
+  --width: 300px;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: var(--width);
+  height: var(--width);
+  border-radius: 50%;
+  box-shadow: 0 0 0 15px #080b1d;
+}
+.waiting-for-serial-connection-loader::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  background: linear-gradient(45deg,#0b0f25 30%,#2196f3);
+  border-radius: 50%;
+  animation: waiting-for-serial-connection-loader-animate 3s linear infinite;
+}
+.waiting-for-serial-connection-loader::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  right: 8px;
+  left: 8px;
+  background: #0b0f25;
+  border-radius: 50%;
+  box-shadow: inset 0 0 5px #080b1d;
+}
+@keyframes waiting-for-serial-connection-loader-animate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.waiting-for-serial-connection-label svg {
+  position: absolute;
+  fill: orangered;
+  width: 200px;
+  animation: waiting-for-serial-connection-label-animate 1s linear infinite;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+@keyframes waiting-for-serial-connection-label-animate {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "Group": "Infrastructure",
+    "Name": "datalogger_v3_main",
+    "DeviceId": 2,
+    "Decription": ""
+  },
+  {
+    "Group": "Infrastructure",
+    "Name": "datalogger_v3_slave",
+    "DeviceId": 3,
+    "Decription": ""
+  },
+  {
+    "Group": "Infrastructure",
+    "Name": "p_imu_master_v1",
+    "DeviceId": 4,
+    "Decription": ""
+  },
+  {
+    "Group": "Infrastructure",
+    "Name": "sc_mb_imu_master_v1p4",
+    "DeviceId": 5,
+    "Decription": ""
+  },
+  {
+    "Group": "Infrastructure",
+    "Name": "mini_host",
+    "DeviceId": 6,
+    "Decription": ""
+  },
+  {
+    "Group": "Infrastructure",
+    "Name": "host",
+    "DeviceId": 7,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "test1",
+    "DeviceId": 1000,
+    "Decription": "آدرس محصولات از 1000 شروع میشود"
+  },
+  {
+    "Group": "Product",
+    "Name": "test2",
+    "DeviceId": 1001,
+    "Decription": ""
+  }
+]
