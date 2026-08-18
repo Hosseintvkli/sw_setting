@@ -15,7 +15,6 @@ The application generates the following files:
 | parameter_list_matchbox - Internal.txt | - |
 | parameter_list_matchbox - Info.txt | - |
 | parameter_list_matchbox - ParameterList.txt | - |
-| parameter_list_matchbox - eTag2_Group.txt | - |
 | parameter_list_matchbox - sPrtlFrame1.txt | - |
 | parameter_list_matchbox - eTag1_SettingGroup.txt | - |
 | parameter_list_matchbox - sProfilerData.txt | - |
@@ -55,4 +54,4 @@ The application generates the following files:
 
 ---
 
-*Generated on: 2026-08-18 - 08:31:15*  
+*Generated on: 2026-07-18 - 20:17:29*  

@@ -12,7 +12,6 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported defines ----------------------------------------------------------*/
-#define eTag2_Gurup_MEMBER_QTY               9
 #define eTag1_SettingGroup_MEMBER_QTY        7
 #define eFogType_MEMBER_QTY                  7
 #define eAccType_MEMBER_QTY                  2
@@ -8209,22 +8208,6 @@ typedef uint16_t eParameterId_t;
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_SC_MNORMAL_FRAME                              ((eParameterId_t)64005)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_BLUE_DRAGON_NORMAL_FRAME                      ((eParameterId_t)64006)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_MATCHBOX_FRAME1                               ((eParameterId_t)64007)
-
-/**
-* @brief
-* 
-*/
-typedef uint16_t eTag2_Gurup_t;
-
-#define Tag2_Info                   ((eTag2_Gurup_t)1)
-#define Tag2_RappBaseParameterList  ((eTag2_Gurup_t)2)
-#define Tag2_RappBaseSystem         ((eTag2_Gurup_t)3)
-#define Tag2_RappSerialExpander     ((eTag2_Gurup_t)4)
-#define Tag2_RappModbusSlave        ((eTag2_Gurup_t)5)
-#define Tag2_RappModbusExtEvents    ((eTag2_Gurup_t)6)
-#define Tag2_RappPrtlStreamer       ((eTag2_Gurup_t)7)
-#define Tag2_RappBaseBoardStartup   ((eTag2_Gurup_t)8)
-#define Tag2_RappMain               ((eTag2_Gurup_t)9)
 
 /**
 * @brief

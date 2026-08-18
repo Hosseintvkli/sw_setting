@@ -58,6 +58,75 @@ def list_available_serial_port_device_names() -> list[str]:
     return sorted(set(port_names), key=lambda name: name.lower())
 
 
+def list_available_ipv4_network_interfaces() -> list[tuple[str, str]]:
+    """
+    Return (interface_name, ipv4_address) for non-loopback IPv4 adapters.
+    Tries psutil, then a Windows PowerShell fallback.
+    """
+    results: list[tuple[str, str]] = []
+
+    try:
+        import psutil  # type: ignore
+
+        for interface_name, address_list in psutil.net_if_addrs().items():
+            for address in address_list:
+                family = getattr(address, "family", None)
+                # AF_INET is often 2; on some systems AddressFamily.AF_INET
+                if str(family).endswith("AF_INET") or family == 2:
+                    ip = address.address
+                    if not ip or ip.startswith("127."):
+                        continue
+                    results.append((interface_name, ip))
+        if results:
+            # stable unique by name+ip
+            seen: set[tuple[str, str]] = set()
+            unique: list[tuple[str, str]] = []
+            for item in sorted(results, key=lambda x: (x[0].lower(), x[1])):
+                if item not in seen:
+                    seen.add(item)
+                    unique.append(item)
+            return unique
+    except Exception:
+        pass
+
+    # Windows fallback
+    try:
+        import json
+        import subprocess
+
+        command = (
+            "Get-NetIPAddress -AddressFamily IPv4 | "
+            "Where-Object { $_.IPAddress -notlike '127.*' } | "
+            "Select-Object InterfaceAlias, IPAddress | ConvertTo-Json -Compress"
+        )
+        completed = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", command],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        if completed.returncode == 0 and completed.stdout.strip():
+            payload = json.loads(completed.stdout)
+            if isinstance(payload, dict):
+                payload = [payload]
+            for row in payload:
+                name = str(row.get("InterfaceAlias", "")).strip()
+                ip = str(row.get("IPAddress", "")).strip()
+                if name and ip:
+                    results.append((name, ip))
+    except Exception:
+        pass
+
+    seen2: set[tuple[str, str]] = set()
+    unique2: list[tuple[str, str]] = []
+    for item in sorted(results, key=lambda x: (x[0].lower(), x[1])):
+        if item not in seen2:
+            seen2.add(item)
+            unique2.append(item)
+    return unique2
+
+
 class CommunicationSettingsPanel(QWidget):
     """
     Top-of-window block for link type and timeouts.
@@ -152,6 +221,17 @@ class CommunicationSettingsPanel(QWidget):
 
         # --- ethernet fields ---
         self.ethernet_settings_group_box = QGroupBox("Ethernet (TCP)")
+
+        self.combo_box_local_network_interface = QComboBox()
+        self.combo_box_local_network_interface.setMinimumWidth(260)
+        self.push_button_refresh_network_interface_list = QPushButton("Refresh networks")
+        self.push_button_refresh_network_interface_list.clicked.connect(
+            self.refresh_available_network_interface_list
+        )
+        network_row = QHBoxLayout()
+        network_row.addWidget(self.combo_box_local_network_interface, stretch=1)
+        network_row.addWidget(self.push_button_refresh_network_interface_list)
+
         self.line_edit_device_ip_address = QLineEdit("192.168.1.100")
         self.spin_box_modbus_tcp_port_number = QSpinBox()
         self.spin_box_modbus_tcp_port_number.setRange(1, 65535)
@@ -173,7 +253,8 @@ class CommunicationSettingsPanel(QWidget):
         self.spin_box_ethernet_write_timeout_milliseconds.setSuffix(" ms")
 
         ethernet_form_layout = QFormLayout()
-        ethernet_form_layout.addRow("IP address:", self.line_edit_device_ip_address)
+        ethernet_form_layout.addRow("Local network:", network_row)
+        ethernet_form_layout.addRow("Device IP:", self.line_edit_device_ip_address)
         ethernet_form_layout.addRow("TCP port:", self.spin_box_modbus_tcp_port_number)
         ethernet_form_layout.addRow(
             "Connect timeout:", self.spin_box_ethernet_connect_timeout_milliseconds
@@ -186,15 +267,8 @@ class CommunicationSettingsPanel(QWidget):
         )
         self.ethernet_settings_group_box.setLayout(ethernet_form_layout)
 
-        # --- common Modbus unit id ---
-        self.spin_box_modbus_unit_identifier = QSpinBox()
-        self.spin_box_modbus_unit_identifier.setRange(0, 247)
-        self.spin_box_modbus_unit_identifier.setValue(1)
-
+        # --- common (no SlaveId on connect screen) ---
         common_form_layout = QFormLayout()
-        common_form_layout.addRow(
-            "Modbus unit ID (slave):", self.spin_box_modbus_unit_identifier
-        )
         common_form_layout.addRow(
             "Retries (per transaction):", self.spin_box_modbus_transaction_retry_count
         )
@@ -208,6 +282,7 @@ class CommunicationSettingsPanel(QWidget):
         self.setLayout(root_layout)
 
         self.refresh_available_serial_port_list()
+        self.refresh_available_network_interface_list()
         self._update_link_kind_panels_visibility()
         self._update_custom_baud_rate_spin_box_enabled_state()
         self._connect_widget_signals()
@@ -235,9 +310,13 @@ class CommunicationSettingsPanel(QWidget):
             self.spin_box_ethernet_connect_timeout_milliseconds,
             self.spin_box_ethernet_read_timeout_milliseconds,
             self.spin_box_ethernet_write_timeout_milliseconds,
-            self.spin_box_modbus_unit_identifier,
+            self.spin_box_modbus_transaction_retry_count,
         ):
             widget.valueChanged.connect(self._emit_settings_changed)
+
+        self.combo_box_local_network_interface.currentIndexChanged.connect(
+            self._emit_settings_changed
+        )
 
     def refresh_available_serial_port_list(self) -> None:
         """Rebuild COM list from the OS; keep selection if still present."""
@@ -265,6 +344,42 @@ class CommunicationSettingsPanel(QWidget):
         finally:
             self._suppress_change_signal = False
 
+        self._emit_settings_changed()
+
+
+    def refresh_available_network_interface_list(self) -> None:
+        """List local IPv4 adapters so the user can pick which network to use."""
+        previous_name = ""
+        previous_data = self.combo_box_local_network_interface.currentData()
+        if isinstance(previous_data, tuple) and len(previous_data) == 2:
+            previous_name = str(previous_data[0])
+
+        interfaces = list_available_ipv4_network_interfaces()
+
+        self._suppress_change_signal = True
+        try:
+            self.combo_box_local_network_interface.clear()
+            if not interfaces:
+                self.combo_box_local_network_interface.addItem(
+                    "(no IPv4 networks found)", ("", "")
+                )
+            else:
+                for interface_name, ipv4_address in interfaces:
+                    label = f"{interface_name}  —  {ipv4_address}"
+                    self.combo_box_local_network_interface.addItem(
+                        label, (interface_name, ipv4_address)
+                    )
+                for index in range(self.combo_box_local_network_interface.count()):
+                    data = self.combo_box_local_network_interface.itemData(index)
+                    if (
+                        isinstance(data, tuple)
+                        and len(data) == 2
+                        and data[0] == previous_name
+                    ):
+                        self.combo_box_local_network_interface.setCurrentIndex(index)
+                        break
+        finally:
+            self._suppress_change_signal = False
         self._emit_settings_changed()
 
     def _on_baud_rate_combo_box_changed(self, _index: int) -> None:
@@ -322,7 +437,16 @@ class CommunicationSettingsPanel(QWidget):
             write_timeout_milliseconds=self.spin_box_serial_write_timeout_milliseconds.value(),
         )
 
+        network_data = self.combo_box_local_network_interface.currentData()
+        local_name = ""
+        local_ip = ""
+        if isinstance(network_data, tuple) and len(network_data) == 2:
+            local_name = str(network_data[0] or "")
+            local_ip = str(network_data[1] or "")
+
         ethernet_settings = EthernetTcpCommunicationSettings(
+            local_network_interface_name=local_name,
+            local_network_ipv4_address=local_ip,
             device_ip_address=self.line_edit_device_ip_address.text().strip(),
             modbus_tcp_port_number=self.spin_box_modbus_tcp_port_number.value(),
             connect_timeout_milliseconds=self.spin_box_ethernet_connect_timeout_milliseconds.value(),
@@ -334,7 +458,7 @@ class CommunicationSettingsPanel(QWidget):
             link_kind=link_kind,
             serial_port_settings=serial_settings,
             ethernet_tcp_settings=ethernet_settings,
-            modbus_unit_identifier=self.spin_box_modbus_unit_identifier.value(),
+            modbus_unit_identifier=1,
             modbus_transaction_retry_count=self.spin_box_modbus_transaction_retry_count.value(),
         )
 
@@ -376,6 +500,16 @@ class CommunicationSettingsPanel(QWidget):
             )
 
             ethernet = settings.ethernet_tcp_settings
+            self.refresh_available_network_interface_list()
+            for index in range(self.combo_box_local_network_interface.count()):
+                data = self.combo_box_local_network_interface.itemData(index)
+                if (
+                    isinstance(data, tuple)
+                    and len(data) == 2
+                    and data[0] == ethernet.local_network_interface_name
+                ):
+                    self.combo_box_local_network_interface.setCurrentIndex(index)
+                    break
             self.line_edit_device_ip_address.setText(ethernet.device_ip_address)
             self.spin_box_modbus_tcp_port_number.setValue(ethernet.modbus_tcp_port_number)
             self.spin_box_ethernet_connect_timeout_milliseconds.setValue(
@@ -388,7 +522,9 @@ class CommunicationSettingsPanel(QWidget):
                 ethernet.write_timeout_milliseconds
             )
 
-            self.spin_box_modbus_unit_identifier.setValue(settings.modbus_unit_identifier)
+            self.spin_box_modbus_transaction_retry_count.setValue(
+                settings.modbus_transaction_retry_count
+            )
             self._update_link_kind_panels_visibility()
             self._update_custom_baud_rate_spin_box_enabled_state()
         finally:

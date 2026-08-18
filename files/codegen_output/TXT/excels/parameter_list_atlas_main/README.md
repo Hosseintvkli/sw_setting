@@ -16,7 +16,6 @@ The application generates the following files:
 | parameter_list_atlas_main - Info.txt | - |
 | parameter_list_atlas_main - DefaultUnit.txt | - |
 | parameter_list_atlas_main - ParameterList.txt | - |
-| parameter_list_atlas_main - eTag2_Gurup.txt | - |
 | parameter_list_atlas_main - sDownStreamStatistics.txt | - |
 | parameter_list_atlas_main - sDownStreamSetting.txt | - |
 | parameter_list_atlas_main - eTag1_SettingGroup.txt | - |
@@ -50,4 +49,4 @@ The application generates the following files:
 
 ---
 
-*Generated on: 2026-08-18 - 08:31:15*  
+*Generated on: 2026-08-15 - 10:17:23*  

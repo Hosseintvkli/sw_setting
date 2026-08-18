@@ -178,8 +178,8 @@ class DeviceSettingMainWindow(QMainWindow):
         self.left_tab_widget.addTab(devices_tab, "Devices")
 
         left_container = QWidget()
-        left_container.setMinimumWidth(self._LEFT_PANEL_WIDTH_PIXELS)
-        left_container.setMaximumWidth(self._LEFT_PANEL_WIDTH_PIXELS)
+        left_container.setMinimumWidth(280)
+        # No maximum: user can resize Communicate/Devices panel via splitter
         left_container.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
         )
@@ -982,14 +982,31 @@ class DeviceSettingMainWindow(QMainWindow):
             )
             result = session.run_identify()
         except DeviceIdentifySessionError as exc:
-            self._append_log(f"IDENTIFY FAILED: {exc}")
-            QMessageBox.critical(self, "Identify failed", str(exc))
-            self._set_loading_ui_state(False)
+            self._append_log(f"IDENTIFY FAILED: {exc}", success=False)
+            partial = getattr(exc, "partial_result", None)
+            if partial is not None and partial.root_node is not None:
+                self._last_device_identify_result = partial
+                self._populate_devices_topology_tree(partial)
+                self._append_log(
+                    "Showing partial topology "
+                    f"({partial.assigned_slave_id_count} SlaveId(s) before failure).",
+                    success=True,
+                )
+                self.left_tab_widget.setCurrentIndex(1)
+            QMessageBox.warning(
+                self,
+                "Identify incomplete",
+                str(exc)
+                + (
+                    "\n\nDevices found before the error are shown in Devices."
+                    if partial is not None and partial.root_node is not None
+                    else ""
+                ),
+            )
             return
         except Exception as exc:
-            self._append_log(f"IDENTIFY FAILED (unexpected): {exc}")
+            self._append_log(f"IDENTIFY FAILED (unexpected): {exc}", success=False)
             QMessageBox.critical(self, "Identify failed", str(exc))
-            self._set_loading_ui_state(False)
             return
         finally:
             self._set_loading_ui_state(False)
@@ -997,41 +1014,70 @@ class DeviceSettingMainWindow(QMainWindow):
         self._last_device_identify_result = result
         self._populate_devices_topology_tree(result)
         self._append_log(
-            f"Identify done. Assigned slave ids: {result.assigned_slave_id_count}"
+            f"Identify done. Assigned slave ids: {result.assigned_slave_id_count}",
+            success=True,
         )
         self.left_tab_widget.setCurrentIndex(1)
 
     def _populate_devices_topology_tree(self, result: DeviceIdentifyResult) -> None:
+        """
+        Under each hub, list EVERY port as sibling rows:
+          port[i]: deviceName   or   port[i]: (no connection)
+        Nested hubs list their ports under the device row (not under a separate port-only node).
+        """
         self.devices_topology_tree_widget.clear()
         if result.root_node is None:
             return
 
-        def add_node(node: IdentifiedDeviceNode, parent_item: QTreeWidgetItem | None) -> None:
-            label = node.device_name or f"DeviceId={node.device_id}"
-            item = QTreeWidgetItem(
-                [
-                    label,
-                    str(node.permanent_modbus_slave_id),
-                    str(node.device_id),
-                    str(node.parameter_list_version),
-                    str(node.downstream_port_quantity),
-                ]
-            )
-            item.setData(0, Qt.ItemDataRole.UserRole, node)
-            if parent_item is None:
-                self.devices_topology_tree_widget.addTopLevelItem(item)
-            else:
-                parent_item.addChild(item)
-            for port_index in sorted(node.children_by_port_index):
-                child = node.children_by_port_index[port_index]
-                port_item = QTreeWidgetItem(
-                    [f"port[{port_index}]", "", "", "", ""]
+        def add_ports_under_device(
+            device_node: IdentifiedDeviceNode, device_item: QTreeWidgetItem
+        ) -> None:
+            for port_index in range(device_node.downstream_port_quantity):
+                child = device_node.children_by_port_index.get(port_index)
+                if child is None:
+                    device_item.addChild(
+                        QTreeWidgetItem(
+                            [
+                                f"port[{port_index}]: (no connection)",
+                                "",
+                                "",
+                                "",
+                                "",
+                            ]
+                        )
+                    )
+                    continue
+                child_label = child.device_name or f"DeviceId={child.device_id}"
+                row = QTreeWidgetItem(
+                    [
+                        f"port[{port_index}]: {child_label}",
+                        str(child.permanent_modbus_slave_id),
+                        str(child.device_id),
+                        str(child.parameter_list_version),
+                        str(child.downstream_port_quantity),
+                    ]
                 )
-                # port rows are not selectable targets for settings load
-                item.addChild(port_item)
-                add_node(child, port_item)
+                row.setData(0, Qt.ItemDataRole.UserRole, child)
+                device_item.addChild(row)
+                if child.downstream_port_quantity > 0:
+                    add_ports_under_device(child, row)
 
-        add_node(result.root_node, None)
+        root = result.root_node
+        root_label = root.device_name or f"DeviceId={root.device_id}"
+        root_item = QTreeWidgetItem(
+            [
+                root_label,
+                str(root.permanent_modbus_slave_id),
+                str(root.device_id),
+                str(root.parameter_list_version),
+                str(root.downstream_port_quantity),
+            ]
+        )
+        root_item.setData(0, Qt.ItemDataRole.UserRole, root)
+        self.devices_topology_tree_widget.addTopLevelItem(root_item)
+        if root.downstream_port_quantity > 0:
+            add_ports_under_device(root, root_item)
+
         self.devices_topology_tree_widget.expandAll()
         for column_index in range(5):
             self.devices_topology_tree_widget.resizeColumnToContents(column_index)

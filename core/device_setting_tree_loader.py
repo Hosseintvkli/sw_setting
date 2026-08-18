@@ -106,12 +106,15 @@ class DeviceSettingTreeLoader:
                 progress_callback(step, total, message)
 
         report(0, 1, "Reading DeviceId and ParameterListVersion...")
+        unit = self._modbus_slave_unit_identifier
         try:
             device_id = self._device_modbus_link.read_holding_register_u16(
-                DEVICE_ID_HOLDING_REGISTER_ADDRESS
+                DEVICE_ID_HOLDING_REGISTER_ADDRESS,
+                modbus_unit_identifier=unit,
             )
             parameter_list_version = self._device_modbus_link.read_holding_register_u16(
-                PARAMETER_LIST_VERSION_HOLDING_REGISTER_ADDRESS
+                PARAMETER_LIST_VERSION_HOLDING_REGISTER_ADDRESS,
+                modbus_unit_identifier=unit,
             )
         except DeviceModbusLinkError as exc:
             raise DeviceSettingTreeLoaderError(
@@ -181,10 +184,12 @@ class DeviceSettingTreeLoader:
 
         try:
             fw_major = self._device_modbus_link.read_holding_register_u16(
-                FIRMWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS
+FIRMWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS,
+                modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             fw_minor = self._device_modbus_link.read_holding_register_u16(
-                FIRMWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS
+FIRMWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
+                modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             firmware_version_text = f"{fw_major}.{fw_minor}"
         except DeviceModbusLinkError:
@@ -192,10 +197,12 @@ class DeviceSettingTreeLoader:
 
         try:
             hw_major = self._device_modbus_link.read_holding_register_u16(
-                HARDWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS
+HARDWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS,
+                modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             hw_minor = self._device_modbus_link.read_holding_register_u16(
-                HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS
+HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
+                modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             hardware_version_text = f"{hw_major}.{hw_minor}"
         except DeviceModbusLinkError:
@@ -261,10 +268,12 @@ class DeviceSettingTreeLoader:
                     values = self._device_modbus_link.read_holding_registers_u16(
                         modbus_start_address=address,
                         register_count=count,
+                        modbus_unit_identifier=self._modbus_slave_unit_identifier,
                     )
                     for offset, value in enumerate(values):
                         register_map[address + offset] = int(value) & 0xFFFF
                 except DeviceModbusLinkError:
+                    # Leave gaps; decoder marks those parameters as read errors
                     pass
                 registers_done += count
                 address += count

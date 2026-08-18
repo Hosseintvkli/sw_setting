@@ -6092,22 +6092,6 @@ namespace ACCUNAV_IMU_Setting
             }
         }
 
-        public enum eTag2_Group : ushort
-        {
-            Tag2_Info = 1,
-            Tag2_RappBaseParameterList = 2,
-            Tag2_RappBaseSystem = 3,
-            Tag2_RappSerialExpander = 4,
-            Tag2_RappModbusSlave = 5,
-            Tag2_RappModbusExtEvents = 6,
-            Tag2_RappPrtlStreamer = 7,
-            Tag2_RappBaseBoardStartup = 8,
-            Tag2_Hardware = 9,
-            Tag2_RappSpiSlave = 10,
-            Tag2_RappMain = 11,
-            Tag2_RappPrtlFrame1 = 12
-        }
-
         public enum eTag1_SettingGroup : ushort
         {
             eSETTING_INFO = 1,

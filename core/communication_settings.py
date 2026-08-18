@@ -35,6 +35,10 @@ class SerialPortCommunicationSettings:
 class EthernetTcpCommunicationSettings:
     """Settings for Modbus TCP over Ethernet."""
 
+    # Local NIC chosen by the user (from OS network list)
+    local_network_interface_name: str = ""
+    local_network_ipv4_address: str = ""
+    # Remote device on that network
     device_ip_address: str = "192.168.1.100"
     modbus_tcp_port_number: int = 502
     connect_timeout_milliseconds: int = 2000
@@ -57,7 +61,7 @@ class DeviceCommunicationSettings:
     ethernet_tcp_settings: EthernetTcpCommunicationSettings = field(
         default_factory=EthernetTcpCommunicationSettings
     )
-    # Modbus unit / slave id (often same idea as device addressing on the bus)
+    # Default unit before Identify / device selection (not shown in Connect UI)
     modbus_unit_identifier: int = 1
     # Total attempts per Modbus transaction (try immediately, then wait timeout & retry)
     modbus_transaction_retry_count: int = 3

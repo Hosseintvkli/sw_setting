@@ -36,7 +36,9 @@ LogCallback = Callable[[str], None]
 
 
 class DeviceIdentifySessionError(Exception):
-    pass
+    def __init__(self, message: str, partial_result=None) -> None:
+        super().__init__(message)
+        self.partial_result = partial_result
 
 
 class DeviceIdentifySession:
@@ -136,8 +138,21 @@ class DeviceIdentifySession:
                 self._log("  → IdentifyStatus cleared")
             except Exception as clear_exc:
                 self._log(f"  → could not clear IdentifyStatus: {clear_exc}")
+            assigned = max(0, FIRST_PERMANENT_MODBUS_SLAVE_ID - self._next_permanent_slave_id)
+            partial = DeviceIdentifyResult(
+                root_node=root,
+                assigned_slave_id_count=assigned,
+                log_lines=list(self._log_lines),
+            )
+            if root is not None:
+                n = sum(1 for _ in root.iter_depth_first())
+                self._log(f"Partial topology kept: {n} device(s) before failure.")
             self._log("========== IDENTIFY FAILED ==========")
-            raise
+            if isinstance(exc, DeviceIdentifySessionError):
+                if getattr(exc, "partial_result", None) is None:
+                    exc.partial_result = partial
+                raise
+            raise DeviceIdentifySessionError(str(exc), partial_result=partial) from exc
 
         assigned = FIRST_PERMANENT_MODBUS_SLAVE_ID - self._next_permanent_slave_id
         self._log(f"Total permanent SlaveIds assigned: {assigned}")
@@ -255,43 +270,84 @@ class DeviceIdentifySession:
         )
 
         for port_index in range(qty):
-            self._log(
-                f"Port[{port_index}] of hub {hub_node.permanent_modbus_slave_id}: "
-                f"configure discovery (Min=Max=1 on this port)"
-            )
-            self._configure_hub_ports_for_discovery_scan(hub_node, package, port_index)
-
-            child = self._discover_node_on_temporary_slave_one(
-                parent_node=hub_node, port_index_on_parent=port_index
-            )
-            if child is None:
+            try:
                 self._log(
-                    f"Port[{port_index}] empty — close Min=Max=0"
+                    f"Port[{port_index}] of hub {hub_node.permanent_modbus_slave_id}: "
+                    f"configure discovery (Min=Max=1 on this port)"
                 )
-                self._write_port_min_max(hub_node, package, port_index, 0, 0)
-                hub_node.downstream_port_slave_id_min[port_index] = 0
-                hub_node.downstream_port_slave_id_max[port_index] = 0
+                self._configure_hub_ports_for_discovery_scan(
+                    hub_node, package, port_index
+                )
+
+                child = self._discover_node_on_temporary_slave_one(
+                    parent_node=hub_node, port_index_on_parent=port_index
+                )
+                if child is None:
+                    self._log(f"Port[{port_index}] empty — close Min=Max=0")
+                    try:
+                        self._write_port_min_max(hub_node, package, port_index, 0, 0)
+                    except Exception as close_exc:
+                        self._log(f"Port[{port_index}] close failed: {close_exc}")
+                    hub_node.downstream_port_slave_id_min[port_index] = 0
+                    hub_node.downstream_port_slave_id_max[port_index] = 0
+                    continue
+
+                self._log(
+                    f"Port[{port_index}] child SlaveId={child.permanent_modbus_slave_id} "
+                    f"— set port range Min=Max={child.permanent_modbus_slave_id}"
+                )
+                self._write_port_min_max(
+                    hub_node,
+                    package,
+                    port_index,
+                    child.permanent_modbus_slave_id,
+                    child.permanent_modbus_slave_id,
+                )
+                hub_node.downstream_port_slave_id_min[port_index] = (
+                    child.permanent_modbus_slave_id
+                )
+                hub_node.downstream_port_slave_id_max[port_index] = (
+                    child.permanent_modbus_slave_id
+                )
+
+                self._scan_downstream_ports_recursively(child)
+                # After subtree is done, drop temp id 1 from this port range
+                perm_min, perm_max = self._permanent_slave_id_range_for_port(
+                    hub_node, port_index
+                )
+                self._write_port_min_max(
+                    hub_node, package, port_index, perm_min, perm_max
+                )
+                hub_node.downstream_port_slave_id_min[port_index] = perm_min
+                hub_node.downstream_port_slave_id_max[port_index] = perm_max
+                self._log(
+                    f"Port[{port_index}] sealed permanent range {perm_min}..{perm_max}"
+                )
+            except Exception as port_exc:
+                # Do not abort remaining ports on this hub
+                self._log(
+                    f"Port[{port_index}] ERROR — skip and continue: {port_exc}"
+                )
                 continue
 
-            self._log(
-                f"Port[{port_index}] child SlaveId={child.permanent_modbus_slave_id} "
-                f"— set port range Min=Max={child.permanent_modbus_slave_id}"
-            )
-            self._write_port_min_max(
-                hub_node,
-                package,
-                port_index,
-                child.permanent_modbus_slave_id,
-                child.permanent_modbus_slave_id,
-            )
-            hub_node.downstream_port_slave_id_min[port_index] = (
-                child.permanent_modbus_slave_id
-            )
-            hub_node.downstream_port_slave_id_max[port_index] = (
-                child.permanent_modbus_slave_id
-            )
-
-            self._scan_downstream_ports_recursively(child)
+    def _permanent_slave_id_range_for_port(
+        self, hub_node: IdentifiedDeviceNode, port_index: int
+    ) -> tuple[int, int]:
+        """
+        Min/Max of permanent SlaveIds under this port only (never includes
+        temporary discovery id 1). Used so the next discovery open port is
+        the only path that accepts unit=1.
+        """
+        child = hub_node.children_by_port_index.get(port_index)
+        if child is None:
+            return 0, 0
+        permanent_ids = [
+            n.permanent_modbus_slave_id for n in child.iter_depth_first()
+        ]
+        if not permanent_ids:
+            sid = child.permanent_modbus_slave_id
+            return sid, sid
+        return min(permanent_ids), max(permanent_ids)
 
     def _configure_hub_ports_for_discovery_scan(
         self,
@@ -299,6 +355,11 @@ class DeviceIdentifySession:
         package: CodeGenParameterListPackage,
         discovery_port_index: int,
     ) -> None:
+        """
+        Only the discovery port may accept temporary SlaveId=1.
+        Already-discovered ports keep permanent-only ranges (exclude 1),
+        otherwise the hub forwards unit=1 to an old port and new ports look empty.
+        """
         for port_index in range(hub_node.downstream_port_quantity):
             if port_index == discovery_port_index:
                 self._log(
@@ -306,25 +367,28 @@ class DeviceIdentifySession:
                     f"port[{port_index}] → 1..1 (discovery open)"
                 )
                 self._write_port_min_max(hub_node, package, port_index, 1, 1)
+                hub_node.downstream_port_slave_id_min[port_index] = 1
+                hub_node.downstream_port_slave_id_max[port_index] = 1
             elif port_index in hub_node.children_by_port_index:
-                child = hub_node.children_by_port_index[port_index]
-                min_id = hub_node.downstream_port_slave_id_min.get(
-                    port_index, child.permanent_modbus_slave_id
-                )
-                max_id = hub_node.downstream_port_slave_id_max.get(
-                    port_index, child.permanent_modbus_slave_id
+                min_id, max_id = self._permanent_slave_id_range_for_port(
+                    hub_node, port_index
                 )
                 self._log(
                     f"  hub {hub_node.permanent_modbus_slave_id} "
-                    f"port[{port_index}] keep {min_id}..{max_id}"
+                    f"port[{port_index}] permanent-only {min_id}..{max_id} "
+                    f"(exclude temp id 1)"
                 )
                 self._write_port_min_max(hub_node, package, port_index, min_id, max_id)
+                hub_node.downstream_port_slave_id_min[port_index] = min_id
+                hub_node.downstream_port_slave_id_max[port_index] = max_id
             else:
                 self._log(
                     f"  hub {hub_node.permanent_modbus_slave_id} "
                     f"port[{port_index}] → 0..0 (closed)"
                 )
                 self._write_port_min_max(hub_node, package, port_index, 0, 0)
+                hub_node.downstream_port_slave_id_min[port_index] = 0
+                hub_node.downstream_port_slave_id_max[port_index] = 0
 
         self._ensure_ancestors_forward_temporary_slave_one(hub_node)
 

@@ -12,7 +12,6 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported defines ----------------------------------------------------------*/
-#define eTag2_Group_MEMBER_QTY               12
 #define eTag1_SettingGroup_MEMBER_QTY        7
 #define eFilterType_MEMBER_QTY               7
 #define eAccChipSource_MEMBER_QTY            3
@@ -7791,25 +7790,6 @@ typedef uint16_t eParameterId_t;
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_SC_MNORMAL_FRAME                              ((eParameterId_t)64005)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_BLUE_DRAGON_NORMAL_FRAME                      ((eParameterId_t)64006)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_MATCHBOX_FRAME1                               ((eParameterId_t)64007)
-
-/**
-* @brief
-* 
-*/
-typedef uint16_t eTag2_Group_t;
-
-#define Tag2_Info                   ((eTag2_Group_t)1)
-#define Tag2_RappBaseParameterList  ((eTag2_Group_t)2)
-#define Tag2_RappBaseSystem         ((eTag2_Group_t)3)
-#define Tag2_RappSerialExpander     ((eTag2_Group_t)4)
-#define Tag2_RappModbusSlave        ((eTag2_Group_t)5)
-#define Tag2_RappModbusExtEvents    ((eTag2_Group_t)6)
-#define Tag2_RappPrtlStreamer       ((eTag2_Group_t)7)
-#define Tag2_RappBaseBoardStartup   ((eTag2_Group_t)8)
-#define Tag2_Hardware               ((eTag2_Group_t)9)
-#define Tag2_RappSpiSlave           ((eTag2_Group_t)10)
-#define Tag2_RappMain               ((eTag2_Group_t)11)
-#define Tag2_RappPrtlFrame1         ((eTag2_Group_t)12)
 
 /**
 * @brief
