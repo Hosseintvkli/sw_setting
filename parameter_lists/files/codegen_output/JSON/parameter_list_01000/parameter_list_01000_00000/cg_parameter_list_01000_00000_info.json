@@ -1,5 +1,5 @@
 {
-  "Name": "test1",
-  "DeviceId": 1000,
-  "DownStreamQty": 0
+  "Name": "datalogger_v3_main",
+  "DeviceId": 2,
+  "DownStreamQty": 3
 }

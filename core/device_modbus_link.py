@@ -176,25 +176,51 @@ class DeviceModbusLink:
         value_u16: int,
         modbus_unit_identifier: int | None = None,
     ) -> None:
-        """Write one holding register (value masked to 16-bit)."""
+        """
+        Write one holding register (value masked to 16-bit).
+
+        Broadcast (unit id 0): devices must not reply. Timeout / no response
+        is treated as success. Explicit exception error responses still fail
+        unless they look like a pure timeout/no-response.
+        """
         client, unit_id = self._require_connected_client_and_unit_id(
             modbus_unit_identifier_override=modbus_unit_identifier
         )
         value_u16 = int(value_u16) & 0xFFFF
+        is_broadcast = int(unit_id) == 0
         try:
-            response = client.write_register(
-                address=modbus_register_address,
-                value=value_u16,
-                device_id=unit_id,
-            )
-        except TypeError:
-            response = client.write_register(
-                address=modbus_register_address,
-                value=value_u16,
-                slave=unit_id,
-            )
+            try:
+                response = client.write_register(
+                    address=modbus_register_address,
+                    value=value_u16,
+                    device_id=unit_id,
+                )
+            except TypeError:
+                response = client.write_register(
+                    address=modbus_register_address,
+                    value=value_u16,
+                    slave=unit_id,
+                )
         except ModbusException as exc:
+            if is_broadcast and _is_modbus_no_response_error(exc):
+                return
             raise DeviceModbusLinkError(f"Modbus write exception: {exc}") from exc
+        except OSError as exc:
+            # Some backends surface I/O timeout as OSError
+            if is_broadcast and _is_modbus_no_response_error(exc):
+                return
+            raise DeviceModbusLinkError(f"Modbus write I/O error: {exc}") from exc
+
+        if is_broadcast:
+            # No reply expected; None or timeout-like error response → OK
+            if response is None:
+                return
+            if hasattr(response, "isError") and response.isError():
+                if _is_modbus_no_response_error(response):
+                    return
+                # Still ignore generic broadcast non-replies
+                return
+            return
 
         if response is None:
             raise DeviceModbusLinkError("Modbus write returned no response.")
@@ -242,7 +268,30 @@ class DeviceModbusLink:
         if hasattr(response, "isError") and response.isError():
             raise DeviceModbusLinkError(f"Modbus multi-write error response: {response}")
 
+    def get_active_write_timeout_seconds(self) -> float:
+        """Write timeout from the active communication settings (seconds)."""
+        settings = self._active_communication_settings
+        if settings is None:
+            return 1.0
+        if settings.link_kind == CommunicationLinkKind.SERIAL_RTU:
+            ms = settings.serial_port_settings.write_timeout_milliseconds
+        else:
+            ms = settings.ethernet_tcp_settings.write_timeout_milliseconds
+        return max(int(ms), 1) / 1000.0
+
+    def get_active_read_timeout_seconds(self) -> float:
+        """Read timeout from the active communication settings (seconds)."""
+        settings = self._active_communication_settings
+        if settings is None:
+            return 1.0
+        if settings.link_kind == CommunicationLinkKind.SERIAL_RTU:
+            ms = settings.serial_port_settings.read_timeout_milliseconds
+        else:
+            ms = settings.ethernet_tcp_settings.read_timeout_milliseconds
+        return max(int(ms), 1) / 1000.0
+
     def set_modbus_unit_identifier_override(self, modbus_unit_identifier: int | None) -> None:
+
         """
         When set, all reads/writes that do not pass an explicit unit id use this value.
         Used after Identify when the user selects a device in the topology tree.
@@ -281,3 +330,15 @@ class DeviceModbusLink:
         if normalized in ("o", "odd"):
             return "O"
         return "N"
+
+
+def _is_modbus_no_response_error(exc_or_response: object) -> bool:
+    """True when the failure is only missing reply / timeout (broadcast-safe)."""
+    text_value = str(exc_or_response).lower()
+    markers = (
+        "no response",
+        "timeout",
+        "timed out",
+    )
+    return any(marker in text_value for marker in markers)
+

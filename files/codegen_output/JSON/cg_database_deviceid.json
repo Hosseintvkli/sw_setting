@@ -37,14 +37,92 @@
   },
   {
     "Group": "Product",
-    "Name": "test1",
+    "Name": "rasta",
     "DeviceId": 1000,
     "Decription": "آدرس محصولات از 1000 شروع میشود"
   },
   {
     "Group": "Product",
-    "Name": "test2",
+    "Name": "dragon",
     "DeviceId": 1001,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "ani_sc",
+    "DeviceId": 1002,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "ani_sc_m",
+    "DeviceId": 1003,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "matchbox",
+    "DeviceId": 1004,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "pardis",
+    "DeviceId": 1005,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "pstar_main",
+    "DeviceId": 1006,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "pstar_alg",
+    "DeviceId": 1007,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "blue_dragon_main",
+    "DeviceId": 1008,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "blue_dragon_alg",
+    "DeviceId": 1009,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "atlas_main",
+    "DeviceId": 1010,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "atlas_alg",
+    "DeviceId": 1011,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "mohajer",
+    "DeviceId": 1012,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "ccpu",
+    "DeviceId": 1013,
+    "Decription": ""
+  },
+  {
+    "Group": "Product",
+    "Name": "sayyad",
+    "DeviceId": 1014,
     "Decription": ""
   }
 ]

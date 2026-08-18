@@ -333,6 +333,11 @@ class DeviceSettingMainWindow(QMainWindow):
 
     def _append_log(self, message: str) -> None:
         self.status_log_text_edit.append(message)
+        # Keep UI responsive and show Identify steps live
+        from PyQt6.QtWidgets import QApplication
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents()
 
     def _append_profile_log(self, message: str, *, success: bool | None = None) -> None:
         """success True=green, False=red, None=default."""
@@ -562,7 +567,7 @@ class DeviceSettingMainWindow(QMainWindow):
         branch_items: dict[tuple[str, tuple[str, ...]], QTreeWidgetItem],
     ) -> None:
         parameter = leaf.parameter
-        category_name = parameter.category_tag_1.strip() or "(No Tag1)"
+        category_name = parameter.tag_2.strip() or "(No Tag2)"
 
         if category_name not in category_items:
             category_item = QTreeWidgetItem([category_name, "", "", ""])
@@ -945,6 +950,28 @@ class DeviceSettingMainWindow(QMainWindow):
         self.devices_topology_tree_widget.expandAll()
         for column_index in range(5):
             self.devices_topology_tree_widget.resizeColumnToContents(column_index)
+
+    def _on_devices_topology_item_double_clicked(
+        self, item: QTreeWidgetItem, column: int
+    ) -> None:
+        node = item.data(0, Qt.ItemDataRole.UserRole)
+        if not isinstance(node, IdentifiedDeviceNode):
+            return
+        if not self.device_modbus_link.is_connected:
+            QMessageBox.warning(self, "Not connected", "Connect first.")
+            return
+        slave_id = node.permanent_modbus_slave_id
+        self.device_modbus_link.set_modbus_unit_identifier_override(slave_id)
+        self.label_selected_device.setText(
+            f"Selected device: {node.device_name}  SlaveId={slave_id}  "
+            f"DeviceId={node.device_id}"
+        )
+        self._append_log(
+            f"Selected topology device SlaveId={slave_id} "
+            f"DeviceId={node.device_id} — loading settings..."
+        )
+        self.center_tab_widget.setCurrentIndex(0)
+        self._on_load_or_reload_settings_tree_clicked()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if self._load_settings_worker_thread is not None and (

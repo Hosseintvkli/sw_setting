@@ -1,0 +1,9 @@
+{
+  "files.associations": {
+    "cg_modbus_ext_memory_map_rasta_ssensorgyrodata_type.h": "c",
+    "cg_modbus_ext_memory_map_rasta_soutputcalibgain_type.h": "c",
+    "cg_modbus_ext_memory_map_rasta_sdownstreamconfig_type.h": "c",
+    "cg_modbus_ext_memory_map_rasta_ssensorgyrocalibcoef_type.h": "c",
+    "cg_modbus_ext_memory_map_rasta_ssensoracccalibcoef_type.h": "c"
+  }
+}

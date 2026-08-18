@@ -1,0 +1,7 @@
+{
+  "Name": "rasta",
+  "DeviceId": 1000,
+  "ShodowRegisterQty": 1000,
+  "SensorCalibCoefBankQty": 4000,
+  "DownStreamQty": 0
+}

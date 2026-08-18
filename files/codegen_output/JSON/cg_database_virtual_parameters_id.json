@@ -54,5 +54,13 @@
     "Unit": "",
     "Type": "BlueDragonNormalFrame",
     "Size": 70
+  },
+  {
+    "Name": "eVirtualParameterId_MatchboxFrame1",
+    "Value": 64007,
+    "Description": "",
+    "Unit": "",
+    "Type": "MatchboxFrame1",
+    "Size": 30
   }
 ]
