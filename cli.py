@@ -17,8 +17,8 @@ _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from commands.context import CommandSessionContext
-from commands.processor import CommandProcessor
+from commands.context import CommandSessionContext  # noqa: E402
+from commands.processor import CommandProcessor     # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:

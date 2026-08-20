@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
 from core.codegen_parameter_list_models import CodeGenParameterListPackage
 from core.device_modbus_link import DeviceModbusLink
