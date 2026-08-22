@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-import time
+# import time
 
 from core.codegen_parameter_list_catalog import (
     CodeGenParameterListCatalog,
