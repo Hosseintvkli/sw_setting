@@ -28,6 +28,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not argv:
         print("sw_setting CLI — type a command, or 'help'. Empty line / exit to quit.")
+        print("Do not re-type the prompt; only the command, e.g. connect --device-ip ...")
         while True:
             try:
                 line = input("sw_setting> ").strip()
@@ -44,10 +45,8 @@ def main(argv: list[str] | None = None) -> int:
                 pass  # interactive: stay in loop
         return 0
 
-    # Single-shot: join argv as one command line
-    # Re-quote is imperfect; prefer interactive or pass as one string
-    line = " ".join(argv)
-    result = processor.execute_line(line)
+    # Single-shot: pass argv tokens directly (keeps "Ethernet 5" as one value)
+    result = processor.execute_tokens(argv)
     print(result.to_json_text())
     return result.exit_code
 

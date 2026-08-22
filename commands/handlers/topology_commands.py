@@ -23,6 +23,8 @@ def register(registry: CommandRegistry) -> None:
 
 
 def handle_identify(context: CommandSessionContext, args) -> CommandResult:
+    import time
+
     try:
         context.require_connected()
     except RuntimeError as exc:
@@ -39,22 +41,60 @@ def handle_identify(context: CommandSessionContext, args) -> CommandResult:
         codegen_json_root_directory=json_root,
         log_callback=context.log,
     )
+    started_at = time.perf_counter()
     try:
         result = session.run_identify()
     except DeviceIdentifySessionError as exc:
+        elapsed_seconds = time.perf_counter() - started_at
         partial = getattr(exc, "partial_result", None)
         if partial is not None and partial.root_node is not None:
             context.last_identify_result = partial
+            discovered = _discovered_device_count(partial)
+            _log_identify_summary(context, discovered, elapsed_seconds, ok=False)
             return CommandResult_from_topology(
                 "identify",
                 partial,
                 ok=False,
                 error=str(exc),
+                duration_seconds=elapsed_seconds,
+                discovered_device_count=discovered,
             )
+        context.log(
+            f"Identify failed after {elapsed_seconds:.3f}s — discovered devices: 0"
+        )
         return failure("identify", str(exc))
 
+    elapsed_seconds = time.perf_counter() - started_at
     context.last_identify_result = result
-    return CommandResult_from_topology("identify", result, ok=True)
+    discovered = _discovered_device_count(result)
+    _log_identify_summary(context, discovered, elapsed_seconds, ok=True)
+    return CommandResult_from_topology(
+        "identify",
+        result,
+        ok=True,
+        duration_seconds=elapsed_seconds,
+        discovered_device_count=discovered,
+    )
+
+
+def _discovered_device_count(result) -> int:
+    if result is None or result.root_node is None:
+        return 0
+    return sum(1 for _ in result.root_node.iter_depth_first())
+
+
+def _log_identify_summary(
+    context: CommandSessionContext,
+    discovered_device_count: int,
+    duration_seconds: float,
+    ok: bool,
+) -> None:
+    status = "OK" if ok else "FAILED (partial or error)"
+    context.log(
+        f"Identify finished [{status}] — "
+        f"discovered devices: {discovered_device_count}, "
+        f"duration: {duration_seconds:.3f}s"
+    )
 
 
 def handle_show_topology(context: CommandSessionContext, args) -> CommandResult:
@@ -135,14 +175,24 @@ def handle_clear_device_selection(context: CommandSessionContext, args) -> Comma
 
 
 def CommandResult_from_topology(
-    command: str, result, ok: bool, error: str | None = None
+    command: str,
+    result,
+    ok: bool,
+    error: str | None = None,
+    duration_seconds: float | None = None,
+    discovered_device_count: int | None = None,
 ) -> CommandResult:
     from commands.result import CommandResult
 
-    data = {
+    if discovered_device_count is None:
+        discovered_device_count = _discovered_device_count(result)
+    data: dict[str, Any] = {
         "assigned_slave_id_count": result.assigned_slave_id_count,
+        "discovered_device_count": discovered_device_count,
         "root": node_to_dict(result.root_node) if result.root_node else None,
     }
+    if duration_seconds is not None:
+        data["duration_seconds"] = round(duration_seconds, 3)
     return CommandResult(
         ok=ok,
         command=command,

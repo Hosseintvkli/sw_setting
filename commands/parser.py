@@ -25,16 +25,25 @@ def build_argument_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command_name", required=True)
 
     # --- connection ---
+    # Defaults: TCP lab setup. --port selects serial instead of --device-ip.
     p = sub.add_parser("connect", help="Open Modbus link (serial or TCP)")
-    g = p.add_mutually_exclusive_group(required=True)
-    g.add_argument("--port", help="Serial COM port, e.g. COM3")
-    g.add_argument("--device-ip", help="Modbus TCP device IP")
+    g = p.add_mutually_exclusive_group(required=False)
+    g.add_argument("--port", default=None, help="Serial COM port, e.g. COM3")
+    g.add_argument(
+        "--device-ip",
+        default="192.168.1.110",
+        help="Modbus TCP device IP (default: 192.168.1.110)",
+    )
     p.add_argument("--baud", type=int, default=115200)
     p.add_argument("--tcp-port", type=int, default=502)
     p.add_argument("--local-interface", default="", help="Local NIC name (optional)")
-    p.add_argument("--local-ip", default="", help="Local NIC IPv4 (optional)")
-    p.add_argument("--read-timeout-ms", type=int, default=1000)
-    p.add_argument("--write-timeout-ms", type=int, default=1000)
+    p.add_argument(
+        "--local-ip",
+        default="192.168.1.120",
+        help="Local NIC IPv4 (default: 192.168.1.120)",
+    )
+    p.add_argument("--read-timeout-ms", type=int, default=200)
+    p.add_argument("--write-timeout-ms", type=int, default=200)
     p.add_argument("--connect-timeout-ms", type=int, default=2000)
     p.add_argument("--retries", type=int, default=3)
 
@@ -154,18 +163,32 @@ def build_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def parse_command_line(line: str) -> ParsedCommandLine:
-    line = line.strip()
-    if not line:
+def parse_command_tokens(tokens: list[str]) -> ParsedCommandLine:
+    """
+    Parse an already-split argv-style token list.
+
+    Prefer this for single-shot CLI so multi-word values (e.g. "Ethernet 5")
+    stay as one argument — unlike join + shlex which can break them.
+    """
+    if not tokens:
         raise ValueError("Empty command line")
-    tokens = shlex.split(line, posix=False)
     parser = build_argument_parser()
     try:
-        namespace = parser.parse_args(tokens)
+        namespace = parser.parse_args(list(tokens))
     except SystemExit as exc:
-        # argparse tries to exit the process; convert to error for embedded use
-        raise ValueError(f"Invalid command or arguments: {line}") from exc
+        raise ValueError(
+            f"Invalid command or arguments: {' '.join(tokens)}"
+        ) from exc
     command_name = getattr(namespace, "command_name", None)
     if not command_name:
         raise ValueError("No command name parsed")
     return ParsedCommandLine(command_name=command_name, arguments=namespace)
+
+
+def parse_command_line(line: str) -> ParsedCommandLine:
+    """Parse a single typed line (interactive CLI / GUI console)."""
+    line = line.strip()
+    if not line:
+        raise ValueError("Empty command line")
+    tokens = shlex.split(line, posix=False)
+    return parse_command_tokens(tokens)
