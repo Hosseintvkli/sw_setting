@@ -36,10 +36,12 @@ def handle_identify(context: CommandSessionContext, args) -> CommandResult:
         else context.codegen_json_root_directory
     )
 
+    cancel_check = getattr(context, "cancel_check", None)
     session = DeviceIdentifySession(
         device_modbus_link=context.device_modbus_link,
         codegen_json_root_directory=json_root,
         log_callback=context.log,
+        cancel_check=cancel_check,
     )
     started_at = time.perf_counter()
     try:

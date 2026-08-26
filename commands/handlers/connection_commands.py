@@ -131,17 +131,16 @@ def handle_list_networks(context: CommandSessionContext, args) -> CommandResult:
 
 
 def handle_set_timeouts(context: CommandSessionContext, args) -> CommandResult:
-    """
-    Timeouts are applied on next connect via settings snapshot.
-    If already connected, store hint in log; full apply requires reconnect
-    unless link exposes live timeout setters (current core applies at connect).
-    """
-    data = {
-        "read_timeout_ms": int(args.read_timeout_ms),
-        "write_timeout_ms": int(args.write_timeout_ms),
-        "connect_timeout_ms": args.connect_timeout_ms,
-        "retries": args.retries,
-        "note": "Reconnect for timeouts to take full effect on pymodbus client.",
-    }
-    context.log(f"Timeout preferences updated: {data}")
+    try:
+        context.require_connected()
+        data = context.device_modbus_link.update_active_timeouts_and_retries(
+            read_timeout_milliseconds=int(args.read_timeout_ms),
+            write_timeout_milliseconds=int(args.write_timeout_ms),
+            connect_timeout_milliseconds=args.connect_timeout_ms,
+            transaction_retry_count=args.retries,
+        )
+    except (RuntimeError, DeviceModbusLinkError, ValueError) as exc:
+        return failure("set-timeouts", str(exc))
+
+    context.log(f"Active timeouts updated: {data}")
     return success("set-timeouts", data)

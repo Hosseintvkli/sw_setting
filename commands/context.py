@@ -32,6 +32,8 @@ class CommandSessionContext:
     selected_slave_id: int | None = None
     last_settings_load_result: DeviceSettingTreeLoadResult | None = None
     log_callback: LogCallback | None = None
+    # Optional cooperative cancel for long commands (e.g. identify)
+    cancel_check: Callable[[], bool] | None = None
 
     def log(self, message: str) -> None:
         if self.log_callback is not None:

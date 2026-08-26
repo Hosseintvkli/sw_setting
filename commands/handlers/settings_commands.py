@@ -41,6 +41,21 @@ def handle_reload_settings(context: CommandSessionContext, args) -> CommandResul
     return _load_settings_impl(context, args, command_name="reload-settings")
 
 
+def _loaded_package_for_slave(context: CommandSessionContext, slave_id: int):
+    """Return loaded parameter metadata only when it belongs to this slave."""
+    load = context.last_settings_load_result
+    if load is None:
+        raise RuntimeError("Settings not loaded. Run: load-settings")
+
+    loaded_slave_id = load.monitoring_header_values.modbus_slave_unit_identifier
+    if loaded_slave_id != slave_id:
+        raise RuntimeError(
+            f"Settings are loaded for SlaveId {loaded_slave_id}, not {slave_id}. "
+            f"Run: load-settings --slave-id {slave_id}"
+        )
+    return load.parameter_list_package
+
+
 def _load_settings_impl(
     context: CommandSessionContext, args, command_name: str
 ) -> CommandResult:
@@ -94,7 +109,7 @@ def handle_get_parameter(context: CommandSessionContext, args) -> CommandResult:
     try:
         context.require_connected()
         slave_id = context.effective_slave_id(getattr(args, "slave_id", None))
-        package = context.loaded_package()
+        package = _loaded_package_for_slave(context, slave_id)
     except RuntimeError as exc:
         return failure("get-parameter", str(exc))
 
@@ -125,7 +140,7 @@ def handle_get_parameter(context: CommandSessionContext, args) -> CommandResult:
         "get-parameter",
         {
             "name": name,
-            "value": value if not isinstance(value, float) else value,
+            "value": value,
             "display": text,
             "data_type": parameter.data_type_name,
             "modbus_addr": parameter.modbus_address,
@@ -138,7 +153,7 @@ def handle_set_parameter(context: CommandSessionContext, args) -> CommandResult:
     try:
         context.require_connected()
         slave_id = context.effective_slave_id(getattr(args, "slave_id", None))
-        package = context.loaded_package()
+        package = _loaded_package_for_slave(context, slave_id)
     except RuntimeError as exc:
         return failure("set-parameter", str(exc))
 
@@ -147,10 +162,11 @@ def handle_set_parameter(context: CommandSessionContext, args) -> CommandResult:
     if parameter is None:
         return failure("set-parameter", f"Unknown parameter: {name}")
     if parameter.parameter_access_kind != ParameterAccessKind.SETTING_READ_WRITE:
-        # allow SETTING kinds only
-        if "SETTING" not in str(parameter.parameter_access_kind).upper():
-            # models may use SETTING differently
-            pass
+        return failure(
+            "set-parameter",
+            f"Parameter '{name}' is not writable as a setting "
+            f"(kind: {parameter.parameter_access_kind.value}).",
+        )
 
     try:
         parsed_value = parse_and_validate_parameter_value_text(
@@ -194,10 +210,7 @@ def handle_list_parameters(context: CommandSessionContext, args) -> CommandResul
     for parameter in package.parameters:
         kind = parameter.parameter_access_kind
         if filter_kind == "setting" and kind != ParameterAccessKind.SETTING_READ_WRITE:
-            if kind != getattr(ParameterAccessKind, "SETTING", ParameterAccessKind.SETTING_READ_WRITE):
-                # accept any setting-like
-                if "setting" not in kind.value.lower():
-                    continue
+            continue
         elif filter_kind == "command" and kind != ParameterAccessKind.COMMAND_WRITE:
             continue
         if tag2 is not None and parameter.tag_2 != tag2:
@@ -221,9 +234,12 @@ def handle_get_monitoring_header(context: CommandSessionContext, args) -> Comman
     except RuntimeError as exc:
         return failure("get-monitoring-header", str(exc))
 
-    # Prefer last load header if same unit
+    # Prefer the cached header only when it belongs to the requested unit.
     load = context.last_settings_load_result
-    if load is not None:
+    if (
+        load is not None
+        and load.monitoring_header_values.modbus_slave_unit_identifier == slave_id
+    ):
         header = load.monitoring_header_values
         return success(
             "get-monitoring-header",

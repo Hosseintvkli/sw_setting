@@ -41,6 +41,7 @@ class DeviceModbusLink:
     def __init__(self) -> None:
         self._modbus_client: ModbusSerialClient | ModbusTcpClient | None = None
         self._active_communication_settings: DeviceCommunicationSettings | None = None
+        self._modbus_unit_identifier_override: int | None = None
         self._link_state: DeviceModbusLinkState = DeviceModbusLinkState.DISCONNECTED
 
     @property
@@ -78,7 +79,9 @@ class DeviceModbusLink:
             )
         elif communication_settings.link_kind == CommunicationLinkKind.ETHERNET_TCP:
             ethernet = communication_settings.ethernet_tcp_settings
-            timeout_seconds = max(ethernet.read_timeout_milliseconds, 1) / 1000.0
+            timeout_seconds = (
+                max(ethernet.connect_timeout_milliseconds, 1) / 1000.0
+            )
             client = ModbusTcpClient(
                 host=ethernet.device_ip_address,
                 port=ethernet.modbus_tcp_port_number,
@@ -102,6 +105,10 @@ class DeviceModbusLink:
         self._active_communication_settings = communication_settings
         self._modbus_unit_identifier_override = None
         self._link_state = DeviceModbusLinkState.CONNECTED
+        self._set_client_timeout_seconds(
+            client, self.get_active_read_timeout_seconds()
+        )
+        client.retries = self.get_active_transaction_retry_count()
 
     def disconnect(self) -> None:
         """Close the underlying client if any; safe to call repeatedly."""
@@ -154,6 +161,9 @@ class DeviceModbusLink:
     ) -> list[int]:
         client, unit_id = self._require_connected_client_and_unit_id(
             modbus_unit_identifier_override=modbus_unit_identifier
+        )
+        self._set_client_timeout_seconds(
+            client, self.get_active_read_timeout_seconds()
         )
         try:
             response = client.read_holding_registers(
@@ -217,6 +227,9 @@ class DeviceModbusLink:
         client, unit_id = self._require_connected_client_and_unit_id(
             modbus_unit_identifier_override=modbus_unit_identifier
         )
+        self._set_client_timeout_seconds(
+            client, self.get_active_write_timeout_seconds()
+        )
         value_u16 = int(value_u16) & 0xFFFF
         is_broadcast = int(unit_id) == 0
         try:
@@ -278,6 +291,9 @@ class DeviceModbusLink:
         client, unit_id = self._require_connected_client_and_unit_id(
             modbus_unit_identifier_override=modbus_unit_identifier
         )
+        self._set_client_timeout_seconds(
+            client, self.get_active_write_timeout_seconds()
+        )
         values = [int(v) & 0xFFFF for v in register_values_u16]
         try:
             response = client.write_registers(
@@ -327,6 +343,62 @@ class DeviceModbusLink:
             ms = settings.ethernet_tcp_settings.read_timeout_milliseconds
         return max(int(ms), 1) / 1000.0
 
+    def update_active_timeouts_and_retries(
+        self,
+        *,
+        read_timeout_milliseconds: int,
+        write_timeout_milliseconds: int,
+        connect_timeout_milliseconds: int | None = None,
+        transaction_retry_count: int | None = None,
+    ) -> dict[str, int | str]:
+        """Update the active session settings without reconnecting."""
+        client, _unit_id = self._require_connected_client_and_unit_id()
+        settings = self._active_communication_settings
+        assert settings is not None
+
+        read_ms = int(read_timeout_milliseconds)
+        write_ms = int(write_timeout_milliseconds)
+        if read_ms <= 0 or write_ms <= 0:
+            raise DeviceModbusLinkError("Read and write timeouts must be positive.")
+        if connect_timeout_milliseconds is not None:
+            connect_ms = int(connect_timeout_milliseconds)
+            if connect_ms <= 0:
+                raise DeviceModbusLinkError("Connect timeout must be positive.")
+        else:
+            connect_ms = None
+        if transaction_retry_count is not None:
+            retry_count = int(transaction_retry_count)
+            if retry_count < 1:
+                raise DeviceModbusLinkError("Retries must be at least 1.")
+        else:
+            retry_count = int(settings.modbus_transaction_retry_count)
+
+        if settings.link_kind == CommunicationLinkKind.SERIAL_RTU:
+            settings.serial_port_settings.read_timeout_milliseconds = read_ms
+            settings.serial_port_settings.write_timeout_milliseconds = write_ms
+        else:
+            ethernet = settings.ethernet_tcp_settings
+            ethernet.read_timeout_milliseconds = read_ms
+            ethernet.write_timeout_milliseconds = write_ms
+            if connect_ms is not None:
+                ethernet.connect_timeout_milliseconds = connect_ms
+
+        settings.modbus_transaction_retry_count = retry_count
+        client.retries = retry_count
+        self._set_client_timeout_seconds(client, read_ms / 1000.0)
+
+        result: dict[str, int | str] = {
+            "link_kind": settings.link_kind.value,
+            "read_timeout_ms": read_ms,
+            "write_timeout_ms": write_ms,
+            "retries": retry_count,
+        }
+        if settings.link_kind == CommunicationLinkKind.ETHERNET_TCP:
+            result["connect_timeout_ms"] = (
+                settings.ethernet_tcp_settings.connect_timeout_milliseconds
+            )
+        return result
+
     def set_modbus_unit_identifier_override(self, modbus_unit_identifier: int | None) -> None:
 
         """
@@ -358,6 +430,19 @@ class DeviceModbusLink:
         return (self._modbus_client, unit_id)
 
     @staticmethod
+    def _set_client_timeout_seconds(
+        client: ModbusSerialClient | ModbusTcpClient,
+        timeout_seconds: float,
+    ) -> None:
+        """Apply a transaction timeout across supported pymodbus versions."""
+        seconds = max(float(timeout_seconds), 0.001)
+        comm_params = getattr(client, "comm_params", None)
+        if comm_params is not None and hasattr(comm_params, "timeout_connect"):
+            comm_params.timeout_connect = seconds
+        elif hasattr(client, "timeout"):
+            client.timeout = seconds
+
+    @staticmethod
     def _parity_label_to_pymodbus_char(parity_label: str) -> str:
         normalized = parity_label.strip().lower()
         if normalized in ("n", "none"):
@@ -378,4 +463,3 @@ def _is_modbus_no_response_error(exc_or_response: object) -> bool:
         "timed out",
     )
     return any(marker in text_value for marker in markers)
-

@@ -47,6 +47,7 @@ class DeviceIdentifySession:
         device_modbus_link: DeviceModbusLink,
         codegen_json_root_directory: Path | None = None,
         log_callback: LogCallback | None = None,
+        cancel_check: Callable[[], bool] | None = None,
     ) -> None:
         self._device_modbus_link = device_modbus_link
         self._codegen_json_root_directory = (
@@ -55,6 +56,7 @@ class DeviceIdentifySession:
             else get_fixed_codegen_json_root_directory()
         )
         self._log_callback = log_callback
+        self._cancel_check = cancel_check
         self._next_permanent_slave_id = FIRST_PERMANENT_MODBUS_SLAVE_ID
         self._log_lines: list[str] = []
         self._catalog = CodeGenParameterListCatalog(self._codegen_json_root_directory)
@@ -505,6 +507,12 @@ class DeviceIdentifySession:
         return self._device_modbus_link.get_active_write_timeout_seconds()
 
     def _log(self, message: str) -> None:
+        if self._cancel_check is not None and self._cancel_check():
+            # Consume cancellation once. Failure handling logs additional
+            # messages and must be allowed to clear IdentifyStatus and keep
+            # the partial topology instead of raising cancellation again.
+            self._cancel_check = None
+            raise DeviceIdentifySessionError("Identify cancelled by user")
         self._log_lines.append(message)
         if self._log_callback is not None:
             self._log_callback(message)
