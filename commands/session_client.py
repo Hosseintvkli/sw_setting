@@ -3,24 +3,47 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
 
 class HttpSessionClientError(Exception):
     """Raised when the HTTP server/session cannot be reached or used."""
 
 
 HTTP_SESSION_STATE_FILE_NAME = ".sw_setting_http_session.json"
+_SESSION_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 
-def http_session_state_file_path(project_root: Path) -> Path:
-    return project_root / HTTP_SESSION_STATE_FILE_NAME
+def validate_http_session_name(session_name: str | None) -> str | None:
+    """Validate a CLI session alias before using it in a state-file name."""
+    if session_name is None:
+        return None
+    normalized = session_name.strip()
+    if not _SESSION_NAME_PATTERN.fullmatch(normalized):
+        raise HttpSessionClientError(
+            "Invalid session name. Use 1..64 ASCII letters, digits, '.', '_' or '-' "
+            "and start with a letter or digit."
+        )
+    return normalized
 
 
-def read_http_session_state(project_root: Path) -> dict[str, Any] | None:
-    path = http_session_state_file_path(project_root)
+def http_session_state_file_path(
+    project_root: Path, session_name: str | None = None
+) -> Path:
+    normalized = validate_http_session_name(session_name)
+    if normalized is None:
+        return project_root / HTTP_SESSION_STATE_FILE_NAME
+    return project_root / f".sw_setting_http_session.{normalized}.json"
+
+
+def read_http_session_state(
+    project_root: Path, session_name: str | None = None
+) -> dict[str, Any] | None:
+    path = http_session_state_file_path(project_root, session_name)
     if not path.is_file():
         return None
     try:
@@ -32,9 +55,11 @@ def read_http_session_state(project_root: Path) -> dict[str, Any] | None:
     return payload
 
 
-def clear_http_session_state(project_root: Path) -> None:
+def clear_http_session_state(
+    project_root: Path, session_name: str | None = None
+) -> None:
     try:
-        http_session_state_file_path(project_root).unlink(missing_ok=True)
+        http_session_state_file_path(project_root, session_name).unlink(missing_ok=True)
     except OSError:
         pass
 
@@ -78,7 +103,11 @@ def _http_json_request(
     return result
 
 
-def open_http_session(project_root: Path, base_url: str) -> dict[str, Any]:
+def open_http_session(
+    project_root: Path,
+    base_url: str,
+    session_name: str | None = None,
+) -> dict[str, Any]:
     """Create a server-side session and persist its id for future CLI calls."""
     normalized_base_url = base_url.rstrip("/")
     response = _http_json_request("POST", f"{normalized_base_url}/sessions", {})
@@ -87,8 +116,12 @@ def open_http_session(project_root: Path, base_url: str) -> dict[str, Any]:
         raise HttpSessionClientError(
             f"Server did not return a session_id: {response!r}"
         )
-    state = {"base_url": normalized_base_url, "session_id": session_id}
-    http_session_state_file_path(project_root).write_text(
+    state = {
+        "base_url": normalized_base_url,
+        "session_id": session_id,
+        "session_name": validate_http_session_name(session_name),
+    }
+    http_session_state_file_path(project_root, session_name).write_text(
         json.dumps(state, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
@@ -99,12 +132,14 @@ def call_http_session_tokens(
     project_root: Path,
     tokens: list[str],
     timeout_seconds: float = 600.0,
+    session_name: str | None = None,
 ) -> dict[str, Any]:
     """Execute argv-style tokens in the currently stored HTTP session."""
-    state = read_http_session_state(project_root)
+    state = read_http_session_state(project_root, session_name)
     if state is None:
+        selector = f" --session {session_name}" if session_name else ""
         raise HttpSessionClientError(
-            "No active HTTP session. Run: python cli.py serve"
+            f"No active HTTP session. Run: python cli.py{selector} serve"
         )
     base_url = str(state["base_url"]).rstrip("/")
     session_id = str(state["session_id"])
@@ -116,11 +151,13 @@ def call_http_session_tokens(
     )
 
 
-def close_http_session(project_root: Path) -> dict[str, Any]:
+def close_http_session(
+    project_root: Path, session_name: str | None = None
+) -> dict[str, Any]:
     """Delete the stored server-side session and remove the local pointer."""
-    state = read_http_session_state(project_root)
+    state = read_http_session_state(project_root, session_name)
     if state is None:
-        clear_http_session_state(project_root)
+        clear_http_session_state(project_root, session_name)
         raise HttpSessionClientError("No active HTTP session to close.")
     base_url = str(state["base_url"]).rstrip("/")
     session_id = str(state["session_id"])
@@ -131,7 +168,7 @@ def close_http_session(project_root: Path) -> dict[str, Any]:
             timeout_seconds=30.0,
         )
     finally:
-        clear_http_session_state(project_root)
+        clear_http_session_state(project_root, session_name)
 
 
 def print_result_dict(result: dict[str, Any]) -> int:

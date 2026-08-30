@@ -56,7 +56,16 @@ python cli.py identify
 python cli.py serve-stop       # حذف session و فایل اشاره‌گر محلی
 ```
 
-`serve-http` خود سرور است و تا زمان توقف process ادامه دارد. `serve` فقط روی سرور موجود session می‌سازد. فایل `.sw_setting_http_session.json` در ریشه، `base_url` و `session_id` را نگه می‌دارد. sessionها فقط در حافظه سرورند؛ restart سرور آن‌ها را از بین می‌برد و ممکن است فایل اشاره‌گر محلی stale شود.
+`serve-http` خود سرور است و تا زمان توقف process ادامه دارد. `serve` فقط روی سرور موجود session می‌سازد. فایل `.sw_setting_http_session.json` در ریشه، `base_url` و `session_id` نشست پیش‌فرض را نگه می‌دارد. برای نشست‌های مستقل می‌توان `--session NAME` را پیش یا پس از نام فرمان نوشت:
+
+```text
+python cli.py --session gui serve
+python cli.py --session gui connect --port COM3
+python cli.py --session gui identify
+python cli.py --session gui serve-stop
+```
+
+نشست نام‌دار در `.sw_setting_http_session.<NAME>.json` ذخیره می‌شود؛ نام فقط می‌تواند شامل حروف و ارقام ASCII و `. _ -` باشد. نبودن نشست نام‌دار خطاست و به اجرای محلی یک‌باره fallback نمی‌شود. sessionها فقط در حافظه سرورند؛ restart سرور آن‌ها را از بین می‌برد و ممکن است فایل‌های اشاره‌گر محلی stale شوند.
 
 ### GUI
 
@@ -121,7 +130,7 @@ Unit صریح همان فراخوانی → override لینک → Unit پیش‌
 | `commands/context.py` | state طول‌عمر نشست، انتخاب Slave، package بارگذاری‌شده و helperهای پیش‌شرط. |
 | `commands/registry.py` | نگاشت نام command به handler و ثبت همه گروه‌های handler. فرمانی که parse می‌شود ولی handler ندارد یا برعکس، این فایل و `register()` همان handler را بررسی کنید. |
 | `commands/processor.py` | parse، dispatch و تبدیل exception کنترل‌نشده handler به `failure`. تمام مسیرهای CLI/HTTP به این نقطه می‌رسند. |
-| `commands/session_client.py` | کلاینت HTTP مبتنی بر `urllib`؛ ساخت/خواندن/حذف `.sw_setting_http_session.json`، فراخوانی command و بستن session. خطاهای server unreachable، state stale یا پاسخ JSON نامعتبر اینجاست. |
+| `commands/session_client.py` | کلاینت HTTP مبتنی بر `urllib`؛ ساخت/خواندن/حذف فایل اشاره‌گر نشست پیش‌فرض یا نام‌دار، فراخوانی command و بستن session. خطاهای server unreachable، state stale یا پاسخ JSON نامعتبر اینجاست. |
 | `commands/http_session_server.py` | FastAPI چندنشستی؛ هر session یک context و processor مستقل دارد. endpointهای health/session/command/cancel/log، قفل global sessionها و قفل busy هر session، اجرای handler در worker thread و شروع uvicorn. |
 
 endpointهای HTTP:

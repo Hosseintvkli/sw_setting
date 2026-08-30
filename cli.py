@@ -17,8 +17,51 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 
+def _extract_session_name(argv: list[str]) -> tuple[list[str], str | None]:
+    """Remove the CLI-only --session option before command parsing."""
+    cleaned: list[str] = []
+    session_name: str | None = None
+    i = 0
+    while i < len(argv):
+        token = argv[i]
+        if token == "--session":
+            if session_name is not None:
+                raise ValueError("--session may be specified only once.")
+            if i + 1 >= len(argv):
+                raise ValueError("--session requires a name.")
+            session_name = argv[i + 1]
+            i += 2
+            continue
+        if token.startswith("--session="):
+            if session_name is not None:
+                raise ValueError("--session may be specified only once.")
+            session_name = token.split("=", 1)[1]
+            if not session_name:
+                raise ValueError("--session requires a name.")
+            i += 1
+            continue
+        cleaned.append(token)
+        i += 1
+    return cleaned, session_name
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    try:
+        argv, session_name = _extract_session_name(argv)
+        from commands.session_client import (
+            HttpSessionClientError,
+            validate_http_session_name,
+        )
+
+        validate_http_session_name(session_name)
+    except (ValueError, HttpSessionClientError) as exc:
+        print(f"Invalid CLI arguments: {exc}", file=sys.stderr)
+        return 2
+
+    if argv and argv[0] == "serve-http" and session_name is not None:
+        print("--session does not apply to serve-http.", file=sys.stderr)
+        return 2
 
     if argv and argv[0] == "serve-http":
         host = "0.0.0.0"
@@ -68,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
 
         base_url = f"http://{host}:{port}"
         try:
-            state = open_http_session(_ROOT, base_url)
+            state = open_http_session(_ROOT, base_url, session_name=session_name)
         except HttpSessionClientError as exc:
             print(
                 json.dumps(
@@ -86,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
                     "data": {
                         "base_url": state["base_url"],
                         "session_id": state["session_id"],
+                        "session_name": session_name or "default",
                         "message": "Persistent HTTP session created.",
                     },
                 },
@@ -103,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         try:
-            response = close_http_session(_ROOT)
+            response = close_http_session(_ROOT, session_name=session_name)
             return print_result_dict(
                 {
                     "ok": bool(response.get("ok", True)),
@@ -125,9 +169,9 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "Usage:\n"
             "  python cli.py serve-http [--host 0.0.0.0] [--port 8000]\n"
-            "  python cli.py serve [--host 127.0.0.1] [--port 8000]\n"
-            "  python cli.py <command> [args...]   # uses HTTP session if active\n"
-            "  python cli.py serve-stop\n",
+            "  python cli.py [--session NAME] serve [--host 127.0.0.1] [--port 8000]\n"
+            "  python cli.py [--session NAME] <command> [args...]\n"
+            "  python cli.py [--session NAME] serve-stop\n",
             file=sys.stderr,
         )
         return 2
@@ -141,9 +185,15 @@ def main(argv: list[str] | None = None) -> int:
         read_http_session_state,
     )
 
-    if read_http_session_state(_ROOT) is not None:
+    if read_http_session_state(_ROOT, session_name=session_name) is not None:
         try:
-            return print_result_dict(call_http_session_tokens(_ROOT, argv))
+            return print_result_dict(
+                call_http_session_tokens(
+                    _ROOT,
+                    argv,
+                    session_name=session_name,
+                )
+            )
         except HttpSessionClientError as exc:
             print(
                 json.dumps(
@@ -153,6 +203,23 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
             return 1
+
+    if session_name is not None:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "command": argv[0],
+                    "error": (
+                        f"No active HTTP session named {session_name!r}. Run: "
+                        f"python cli.py --session {session_name} serve"
+                    ),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 1
 
     from commands.context import CommandSessionContext
     from commands.processor import CommandProcessor
