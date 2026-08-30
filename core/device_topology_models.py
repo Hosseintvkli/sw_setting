@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.codegen_parameter_list_models import CodeGenParameterListPackage
 
 
 @dataclass
@@ -14,6 +18,9 @@ class IdentifiedDeviceNode:
     device_name: str
     permanent_modbus_slave_id: int
     downstream_port_quantity: int
+    parameter_list_package: CodeGenParameterListPackage = field(
+        repr=False, compare=False
+    )
     parent_node: IdentifiedDeviceNode | None = None
     port_index_on_parent: int | None = None
     # port_index -> child node (only ports that answered)

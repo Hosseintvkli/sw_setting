@@ -60,7 +60,6 @@ class DeviceIdentifySession:
         self._next_permanent_slave_id = FIRST_PERMANENT_MODBUS_SLAVE_ID
         self._log_lines: list[str] = []
         self._catalog = CodeGenParameterListCatalog(self._codegen_json_root_directory)
-        self._step_number = 0
 
     def run_identify(self) -> DeviceIdentifyResult:
         if not self._device_modbus_link.is_connected:
@@ -68,7 +67,6 @@ class DeviceIdentifySession:
 
         self._next_permanent_slave_id = FIRST_PERMANENT_MODBUS_SLAVE_ID
         self._log_lines = []
-        self._step_number = 0
         self._log("========== IDENTIFY START ==========")
         self._log(
             "Note: real hubs change SlaveId at holding 4000; "
@@ -140,16 +138,20 @@ class DeviceIdentifySession:
                 self._log("  → IdentifyStatus cleared")
             except Exception as clear_exc:
                 self._log(f"  → could not clear IdentifyStatus: {clear_exc}")
-            assigned = max(0, FIRST_PERMANENT_MODBUS_SLAVE_ID - self._next_permanent_slave_id)
+            if root is not None:
+                n = sum(1 for _ in root.iter_depth_first())
+                self._log(f"Partial topology kept: {n} device(s) before failure.")
+            self._log("========== IDENTIFY FAILED ==========")
+            assigned = max(
+                0,
+                FIRST_PERMANENT_MODBUS_SLAVE_ID
+                - self._next_permanent_slave_id,
+            )
             partial = DeviceIdentifyResult(
                 root_node=root,
                 assigned_slave_id_count=assigned,
                 log_lines=list(self._log_lines),
             )
-            if root is not None:
-                n = sum(1 for _ in root.iter_depth_first())
-                self._log(f"Partial topology kept: {n} device(s) before failure.")
-            self._log("========== IDENTIFY FAILED ==========")
             if isinstance(exc, DeviceIdentifySessionError):
                 if getattr(exc, "partial_result", None) is None:
                     exc.partial_result = partial
@@ -220,10 +222,10 @@ class DeviceIdentifySession:
             device_name=package.info.device_name,
             permanent_modbus_slave_id=permanent_slave_id,
             downstream_port_quantity=0,
+            parameter_list_package=package,
             parent_node=parent_node,
             port_index_on_parent=port_index_on_parent,
         )
-        node._parameter_list_package = package  # type: ignore[attr-defined]
 
         if parent_node is not None and port_index_on_parent is not None:
             parent_node.children_by_port_index[port_index_on_parent] = node
@@ -264,7 +266,7 @@ class DeviceIdentifySession:
             )
             return
 
-        package: CodeGenParameterListPackage = hub_node._parameter_list_package  # type: ignore[attr-defined]
+        package = hub_node.parameter_list_package
         qty = hub_node.downstream_port_quantity
         self._log(
             f"=== Scan ports on hub SlaveId={hub_node.permanent_modbus_slave_id} "
@@ -401,7 +403,7 @@ class DeviceIdentifySession:
         while node.parent_node is not None and node.port_index_on_parent is not None:
             parent = node.parent_node
             port_index = node.port_index_on_parent
-            package: CodeGenParameterListPackage = parent._parameter_list_package  # type: ignore[attr-defined]
+            package = parent.parameter_list_package
             min_id = parent.downstream_port_slave_id_min.get(
                 port_index, node.permanent_modbus_slave_id
             )
@@ -430,7 +432,7 @@ class DeviceIdentifySession:
         while node.parent_node is not None and node.port_index_on_parent is not None:
             parent = node.parent_node
             port_index = node.port_index_on_parent
-            package: CodeGenParameterListPackage = parent._parameter_list_package  # type: ignore[attr-defined]
+            package = parent.parameter_list_package
             old_min = parent.downstream_port_slave_id_min.get(
                 port_index, permanent_slave_id
             )
