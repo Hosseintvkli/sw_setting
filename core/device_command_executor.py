@@ -54,7 +54,7 @@ class DeviceCommandExecutor:
         attempts = self._device_modbus_link.get_active_transaction_retry_count()
         wait_s = self._device_modbus_link.get_active_read_timeout_seconds()
         # Poll longer than a single register read: use retries as poll budget
-        poll_attempts = max(attempts * 3, attempts)
+        poll_attempts = attempts * 3
 
         last_value: int | None = None
         for poll_index in range(1, poll_attempts + 1):
