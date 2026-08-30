@@ -27,7 +27,7 @@ def list_available_serial_port_device_names() -> list[str]:
 def list_available_ipv4_network_interfaces() -> list[tuple[str, str]]:
     """
     Return (interface_name, ipv4_address) for non-loopback IPv4 adapters.
-    Tries psutil first, then a Windows PowerShell fallback.
+    Returns an empty list when psutil is unavailable or finds no adapters.
     """
     results: list[tuple[str, str]] = []
 
@@ -45,35 +45,7 @@ def list_available_ipv4_network_interfaces() -> list[tuple[str, str]]:
         if results:
             return _unique_sorted_name_ip_pairs(results)
     except Exception:
-        pass
-
-    try:
-        import json
-        import subprocess
-
-        command = (
-            "Get-NetIPAddress -AddressFamily IPv4 | "
-            "Where-Object { $_.IPAddress -notlike '127.*' } | "
-            "Select-Object InterfaceAlias, IPAddress | ConvertTo-Json -Compress"
-        )
-        completed = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", command],
-            capture_output=True,
-            text=True,
-            timeout=8,
-            check=False,
-        )
-        if completed.returncode == 0 and completed.stdout.strip():
-            payload = json.loads(completed.stdout)
-            if isinstance(payload, dict):
-                payload = [payload]
-            for row in payload:
-                name = str(row.get("InterfaceAlias", "")).strip()
-                ip = str(row.get("IPAddress", "")).strip()
-                if name and ip:
-                    results.append((name, ip))
-    except Exception:
-        pass
+        return []
 
     return _unique_sorted_name_ip_pairs(results)
 
