@@ -1,5 +1,5 @@
 """
-CSV setting profiles: load/save and expand array rows.
+CSV profiles: load/save settings and optionally execute commands.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ _ARRAY_NAME_PATTERN = re.compile(r"^(?P<base>.+)\[(?P<index>\d+)\]$")
 
 @dataclass(frozen=True)
 class SettingProfileAssignment:
-    """One concrete parameter write/verify target after CSV expansion."""
+    """One concrete setting or command target after CSV expansion."""
 
     parameter_name: str
     value_text: str
@@ -75,6 +75,8 @@ def build_array_base_name_to_sorted_indices(
 def load_setting_profile_assignments_from_csv(
     csv_file_path: Path,
     parameter_list_package: CodeGenParameterListPackage,
+    *,
+    include_commands: bool = False,
 ) -> SettingProfileParseResult:
     """
     Parse CSV into validated assignments.
@@ -82,9 +84,20 @@ def load_setting_profile_assignments_from_csv(
     Row forms:
       Name,value
       ArrayName[start],v0,v1,v2,...  -> ArrayName[start], ArrayName[start+1], ...
+      CommandName,0xFFFF
     """
-    setting_by_name = build_setting_parameter_definition_by_name(parameter_list_package)
-    array_indices = build_array_base_name_to_sorted_indices(setting_by_name)
+    profile_parameter_by_name = build_setting_parameter_definition_by_name(
+        parameter_list_package
+    )
+    if include_commands:
+        profile_parameter_by_name.update(
+            {
+                parameter.parameter_name: parameter
+                for parameter in parameter_list_package.parameters
+                if parameter.parameter_access_kind == ParameterAccessKind.COMMAND_WRITE
+            }
+        )
+    array_indices = build_array_base_name_to_sorted_indices(profile_parameter_by_name)
 
     assignments: list[SettingProfileAssignment] = []
     issues: list[SettingProfileParseIssue] = []
@@ -110,16 +123,24 @@ def load_setting_profile_assignments_from_csv(
             continue
 
         parameter_name = row[0].strip()
-        value_cells = [cell.strip() for cell in row[1:] if cell.strip() != ""]
+        value_cells = [cell.strip() for cell in row[1:]]
         if not parameter_name:
             issues.append(
                 SettingProfileParseIssue(line_number, "Missing parameter name.")
             )
             continue
-        if not value_cells:
+        if not value_cells or all(value == "" for value in value_cells):
             issues.append(
                 SettingProfileParseIssue(
                     line_number, f"No value cells for {parameter_name!r}."
+                )
+            )
+            continue
+        if any(value == "" for value in value_cells):
+            issues.append(
+                SettingProfileParseIssue(
+                    line_number,
+                    f"Empty value cell in row for {parameter_name!r}.",
                 )
             )
             continue
@@ -133,7 +154,8 @@ def load_setting_profile_assignments_from_csv(
                 issues.append(
                     SettingProfileParseIssue(
                         line_number,
-                        f"Array base {base_name!r} not found among SETTING parameters.",
+                        f"Array base {base_name!r} not found among allowed "
+                        "profile parameters.",
                     )
                 )
                 continue
@@ -154,7 +176,7 @@ def load_setting_profile_assignments_from_csv(
                 _append_single_assignment(
                     assignments=assignments,
                     issues=issues,
-                    setting_by_name=setting_by_name,
+                    profile_parameter_by_name=profile_parameter_by_name,
                     parameter_name=target_name,
                     value_text=value_text,
                     source_csv_line_number=line_number,
@@ -174,7 +196,7 @@ def load_setting_profile_assignments_from_csv(
             _append_single_assignment(
                 assignments=assignments,
                 issues=issues,
-                setting_by_name=setting_by_name,
+                profile_parameter_by_name=profile_parameter_by_name,
                 parameter_name=parameter_name,
                 value_text=value_cells[0],
                 source_csv_line_number=line_number,
@@ -187,17 +209,17 @@ def _append_single_assignment(
     *,
     assignments: list[SettingProfileAssignment],
     issues: list[SettingProfileParseIssue],
-    setting_by_name: dict[str, CodeGenParameterDefinition],
+    profile_parameter_by_name: dict[str, CodeGenParameterDefinition],
     parameter_name: str,
     value_text: str,
     source_csv_line_number: int,
 ) -> None:
-    definition = setting_by_name.get(parameter_name)
+    definition = profile_parameter_by_name.get(parameter_name)
     if definition is None:
         issues.append(
             SettingProfileParseIssue(
                 source_csv_line_number,
-                f"Parameter {parameter_name!r} is not a SETTING on this device list.",
+                f"Parameter {parameter_name!r} is not allowed in this profile.",
             )
         )
         return
@@ -210,6 +232,19 @@ def _append_single_assignment(
             SettingProfileParseIssue(
                 source_csv_line_number,
                 f"{parameter_name}: {exc}",
+            )
+        )
+        return
+
+    if (
+        definition.parameter_access_kind == ParameterAccessKind.COMMAND_WRITE
+        and parsed_value != 0xFFFF
+    ):
+        issues.append(
+            SettingProfileParseIssue(
+                source_csv_line_number,
+                f"COMMAND {parameter_name!r} must use trigger value "
+                "0xFFFF (65535).",
             )
         )
         return
@@ -233,6 +268,5 @@ def save_setting_profile_csv(
     csv_file_path.parent.mkdir(parents=True, exist_ok=True)
     with csv_file_path.open("w", encoding="utf-8", newline="") as file_handle:
         writer = csv.writer(file_handle)
-        writer.writerow(["Name", "Value"])
         for parameter_name, value_text in rows:
             writer.writerow([parameter_name, value_text])

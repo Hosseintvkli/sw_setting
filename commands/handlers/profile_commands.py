@@ -7,6 +7,8 @@ from pathlib import Path
 from commands.context import CommandSessionContext
 from commands.registry import CommandRegistry
 from commands.result import CommandResult, failure, success
+from core.codegen_parameter_list_models import ParameterAccessKind
+from core.device_command_executor import DeviceCommandExecutor
 from core.device_modbus_link import DeviceModbusLinkError
 from core.device_setting_tree_loader import (
     DeviceSettingTreeLoader,
@@ -53,7 +55,9 @@ def _run_profile(
     if not csv_path.is_file():
         return failure(command_name, f"File not found: {csv_path}")
 
-    parse_result = load_setting_profile_assignments_from_csv(csv_path, package)
+    parse_result = load_setting_profile_assignments_from_csv(
+        csv_path, package, include_commands=True
+    )
     issues = [
         {"line": i.source_csv_line_number, "message": i.message}
         for i in parse_result.issues
@@ -88,7 +92,9 @@ def _run_profile(
     )
     ok_count = 0
     fail_count = len(issues)
+    skipped_count = 0
     details: list[dict] = []
+    command_executor = DeviceCommandExecutor(context.device_modbus_link)
 
     try:
         for slave_id, target_name in targets:
@@ -96,6 +102,45 @@ def _run_profile(
             for assignment in parse_result.assignments:
                 definition = assignment.parameter_definition
                 try:
+                    if definition.parameter_access_kind == ParameterAccessKind.COMMAND_WRITE:
+                        if verify_only:
+                            skipped_count += 1
+                            if args.verbose:
+                                details.append(
+                                    {
+                                        "slave_id": slave_id,
+                                        "name": assignment.parameter_name,
+                                        "ok": True,
+                                        "skipped": True,
+                                        "message": (
+                                            "COMMAND skipped: verify-profile does not "
+                                            "execute device actions."
+                                        ),
+                                    }
+                                )
+                            continue
+
+                        command_result = (
+                            command_executor.execute_command_at_modbus_address(
+                                definition.modbus_address
+                            )
+                        )
+                        if not command_result.success:
+                            raise DeviceModbusLinkError(command_result.message)
+                        ok_count += 1
+                        if args.verbose:
+                            details.append(
+                                {
+                                    "slave_id": slave_id,
+                                    "name": assignment.parameter_name,
+                                    "ok": True,
+                                    "command": True,
+                                    "message": command_result.message,
+                                    "last_read_value": command_result.last_read_value,
+                                }
+                            )
+                        continue
+
                     if verify_only:
                         count = definition.modbus_register_size
                         if count <= 0:
@@ -171,6 +216,7 @@ def _run_profile(
         "targets": [{"slave_id": s, "name": n} for s, n in targets],
         "ok_count": ok_count,
         "fail_count": fail_count,
+        "skipped_count": skipped_count,
         "parse_issues": issues,
     }
     if args.verbose:
@@ -238,7 +284,9 @@ def handle_parse_profile(context: CommandSessionContext, args) -> CommandResult:
     if not csv_path.is_file():
         return failure("parse-profile", f"File not found: {csv_path}")
 
-    parse_result = load_setting_profile_assignments_from_csv(csv_path, package)
+    parse_result = load_setting_profile_assignments_from_csv(
+        csv_path, package, include_commands=True
+    )
     return success(
         "parse-profile",
         {
