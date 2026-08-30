@@ -37,6 +37,11 @@ SERIAL_NUMBER_REGISTER_COUNT = 2
 HARDWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS = 9
 HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS = 10
 MAX_HOLDING_REGISTERS_PER_MODBUS_READ = 125
+PROGRESS_TOTAL = 100
+PROGRESS_IDENTIFICATION_DONE = 10
+PROGRESS_HEADER_DONE = 20
+PROGRESS_CATALOG_DONE = 30
+PROGRESS_REGISTER_READS_DONE = 85
 
 ProgressCallback = Callable[[int, int, str], None]
 
@@ -105,7 +110,7 @@ class DeviceSettingTreeLoader:
             if progress_callback is not None:
                 progress_callback(step, total, message)
 
-        report(0, 1, "Reading DeviceId and ParameterListVersion...")
+        report(0, PROGRESS_TOTAL, "Reading DeviceId and ParameterListVersion...")
         unit = self._modbus_slave_unit_identifier
         try:
             device_id = self._device_modbus_link.read_holding_register_u16(
@@ -121,12 +126,21 @@ class DeviceSettingTreeLoader:
                 f"Failed to read DeviceId/ParameterListVersion: {exc}"
             ) from exc
 
+        report(
+            PROGRESS_IDENTIFICATION_DONE,
+            PROGRESS_TOTAL,
+            "Reading monitoring header...",
+        )
         monitoring_header_values = self._read_monitoring_header_values(
             device_id=device_id,
             parameter_list_version=parameter_list_version,
         )
 
-        report(0, 1, "Loading parameter-list JSON from catalog...")
+        report(
+            PROGRESS_HEADER_DONE,
+            PROGRESS_TOTAL,
+            "Loading parameter-list JSON from catalog...",
+        )
         try:
             catalog = CodeGenParameterListCatalog(self._codegen_json_root_directory)
             catalog.scan_catalog_from_disk()
@@ -146,27 +160,49 @@ class DeviceSettingTreeLoader:
             if parameter.parameter_access_kind == ParameterAccessKind.SETTING_READ_WRITE
         ]
 
-        register_map = self._read_holding_registers_for_parameters_batched(
-            setting_parameters,
-            progress_callback=progress_callback,
+        def report_register_progress(current: int, total: int, message: str) -> None:
+            safe_total = max(total, 1)
+            phase_size = PROGRESS_REGISTER_READS_DONE - PROGRESS_CATALOG_DONE
+            global_current = PROGRESS_CATALOG_DONE + int(
+                phase_size * min(max(current, 0), safe_total) / safe_total
+            )
+            report(global_current, PROGRESS_TOTAL, message)
+
+        report(
+            PROGRESS_CATALOG_DONE,
+            PROGRESS_TOTAL,
+            "Reading holding registers (batched)...",
+        )
+        register_map, register_error_map = (
+            self._read_holding_registers_for_parameters_batched(
+                setting_parameters,
+                progress_callback=report_register_progress,
+            )
         )
 
         setting_leaf_values: list[SettingParameterTreeLeafValue] = []
         total_params = max(len(setting_parameters), 1)
         for index, parameter in enumerate(setting_parameters):
             if index % 50 == 0:
+                decode_progress = PROGRESS_REGISTER_READS_DONE + int(
+                    (PROGRESS_TOTAL - PROGRESS_REGISTER_READS_DONE)
+                    * index
+                    / total_params
+                )
                 report(
-                    index,
-                    total_params,
+                    decode_progress,
+                    PROGRESS_TOTAL,
                     f"Decoding settings... {index}/{total_params}",
                 )
             setting_leaf_values.append(
                 self._decode_setting_parameter_from_register_map(
-                    parameter, register_map
+                    parameter,
+                    register_map,
+                    register_error_map,
                 )
             )
 
-        report(total_params, total_params, "Done.")
+        report(PROGRESS_TOTAL, PROGRESS_TOTAL, "Done.")
         return DeviceSettingTreeLoadResult(
             device_id_from_device=device_id,
             parameter_list_version_from_device=parameter_list_version,
@@ -212,6 +248,7 @@ HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
             serial_regs = self._device_modbus_link.read_holding_registers_u16(
                 SERIAL_NUMBER_HOLDING_REGISTER_ADDRESS,
                 SERIAL_NUMBER_REGISTER_COUNT,
+                modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             serial_number = int(
                 decode_parameter_value_from_holding_registers("U32", serial_regs)
@@ -237,7 +274,7 @@ HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
         self,
         parameters: list[CodeGenParameterDefinition],
         progress_callback: ProgressCallback | None,
-    ) -> dict[int, int]:
+    ) -> tuple[dict[int, int], dict[int, str]]:
         intervals: list[tuple[int, int]] = []
         for parameter in parameters:
             try:
@@ -252,6 +289,7 @@ HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
         total_registers_to_read = max(total_registers_to_read, 1)
 
         register_map: dict[int, int] = {}
+        register_error_map: dict[int, str] = {}
         registers_done = 0
 
         def report_read_progress(message: str) -> None:
@@ -272,21 +310,27 @@ HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
                     )
                     for offset, value in enumerate(values):
                         register_map[address + offset] = int(value) & 0xFFFF
-                except DeviceModbusLinkError:
-                    # Leave gaps; decoder marks those parameters as read errors
-                    pass
+                except DeviceModbusLinkError as exc:
+                    range_end_inclusive = address + count - 1
+                    error_message = (
+                        f"Failed to read register range {address}.."
+                        f"{range_end_inclusive}: {exc}"
+                    )
+                    for offset in range(count):
+                        register_error_map[address + offset] = error_message
                 registers_done += count
                 address += count
                 report_read_progress(
                     f"Read registers... {registers_done}/{total_registers_to_read}"
                 )
 
-        return register_map
+        return register_map, register_error_map
 
     def _decode_setting_parameter_from_register_map(
         self,
         parameter: CodeGenParameterDefinition,
         register_map: dict[int, int],
+        register_error_map: dict[int, str] | None = None,
     ) -> SettingParameterTreeLeafValue:
         try:
             count = self._register_count_for_parameter(parameter)
@@ -294,6 +338,9 @@ HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
             for offset in range(count):
                 address = parameter.modbus_address + offset
                 if address not in register_map:
+                    original_read_error = (register_error_map or {}).get(address)
+                    if original_read_error is not None:
+                        raise DeviceModbusLinkError(original_read_error)
                     raise DeviceModbusLinkError(
                         f"Missing register data at address {address}"
                     )
