@@ -39,6 +39,7 @@ class DeviceIdentifySessionError(Exception):
     def __init__(self, message: str, partial_result=None) -> None:
         super().__init__(message)
         self.partial_result = partial_result
+        self.routing_restored = False
 
 
 class DeviceIdentifySession:
@@ -274,6 +275,13 @@ class DeviceIdentifySession:
         )
 
         for port_index in range(qty):
+            routing_snapshot = [
+                (
+                    hub_node.downstream_port_slave_id_min.get(index, 0),
+                    hub_node.downstream_port_slave_id_max.get(index, 0),
+                )
+                for index in range(qty)
+            ]
             try:
                 self._log(
                     f"Port[{port_index}] of hub {hub_node.permanent_modbus_slave_id}: "
@@ -328,11 +336,54 @@ class DeviceIdentifySession:
                     f"Port[{port_index}] sealed permanent range {perm_min}..{perm_max}"
                 )
             except Exception as port_exc:
-                # Do not abort remaining ports on this hub
                 self._log(
-                    f"Port[{port_index}] ERROR — skip and continue: {port_exc}"
+                    f"Port[{port_index}] ERROR — abort Identify: {port_exc}"
                 )
-                continue
+                routing_already_restored = bool(
+                    getattr(port_exc, "routing_restored", False)
+                )
+                if not routing_already_restored:
+                    self._restore_hub_port_routing_after_failure(
+                        hub_node,
+                        package,
+                        routing_snapshot,
+                    )
+                if isinstance(port_exc, DeviceIdentifySessionError):
+                    port_exc.routing_restored = True
+                    raise
+                wrapped = DeviceIdentifySessionError(
+                    f"Port[{port_index}] scan failed: {port_exc}"
+                )
+                wrapped.routing_restored = True
+                raise wrapped from port_exc
+
+    def _restore_hub_port_routing_after_failure(
+        self,
+        hub_node: IdentifiedDeviceNode,
+        package: CodeGenParameterListPackage,
+        routing_snapshot: list[tuple[int, int]],
+    ) -> None:
+        """Best-effort rollback of the hub modified by an interrupted port scan."""
+        self._log(
+            f"Restore routing on hub SlaveId={hub_node.permanent_modbus_slave_id}"
+        )
+        for port_index, (slave_id_min, slave_id_max) in enumerate(
+            routing_snapshot
+        ):
+            try:
+                self._write_port_min_max(
+                    hub_node,
+                    package,
+                    port_index,
+                    slave_id_min,
+                    slave_id_max,
+                )
+                hub_node.downstream_port_slave_id_min[port_index] = slave_id_min
+                hub_node.downstream_port_slave_id_max[port_index] = slave_id_max
+            except Exception as restore_exc:
+                self._log(
+                    f"  Port[{port_index}] routing restore failed: {restore_exc}"
+                )
 
     def _permanent_slave_id_range_for_port(
         self, hub_node: IdentifiedDeviceNode, port_index: int

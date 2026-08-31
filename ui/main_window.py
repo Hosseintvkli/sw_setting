@@ -34,7 +34,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ui.cli_console_panel import CliConsolePanel
+from ui.cli_console_panel import CliConsolePanel, parse_cli_invocation
 from ui.communication_panel import CommunicationSettingsPanel
 
 _ROLE_KIND = Qt.ItemDataRole.UserRole
@@ -54,6 +54,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._connected = False
         self._cli_busy = False
         self._identify_running = False
+        self._identify_cancel_requested = False
         self._session_ready_flag = False
         self._settings_loaded = False
         self._suppress_setting_change = False
@@ -319,6 +320,15 @@ class DeviceSettingMainWindow(QMainWindow):
     def _on_any_cli_command_completed(
         self, command_text: str, exit_code: int, payload: object
     ) -> None:
+        try:
+            completed_command = parse_cli_invocation(command_text).command_name
+        except ValueError:
+            completed_command = ""
+        if completed_command == "identify":
+            self._identify_running = False
+            self._identify_cancel_requested = False
+            self._update_action_states()
+
         ok = exit_code == 0
         self._append_log(
             f"{'OK' if ok else 'FAILED'} exit={exit_code}: {command_text}",
@@ -327,12 +337,14 @@ class DeviceSettingMainWindow(QMainWindow):
         if not isinstance(payload, dict):
             return
         command = str(payload.get("command") or "")
-        if command == "identify":
-            self._identify_running = False
-            self._update_action_states()
         data = payload.get("data")
         data = data if isinstance(data, dict) else {}
         error = payload.get("error")
+        if command == "cancel":
+            cancel_was_sent_to_running_command = bool(data.get("busy"))
+            if not ok or not cancel_was_sent_to_running_command:
+                self._identify_cancel_requested = False
+                self._update_action_states()
         if error:
             self._append_log(str(error), success=False)
 
@@ -453,7 +465,14 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_disconnect.setEnabled(ready and self._connected)
         self.push_button_run_identify.setEnabled(ready and self._connected)
         self.push_button_cancel_identify.setEnabled(
-            self._session_ready_flag and self._identify_running
+            self._session_ready_flag
+            and self._identify_running
+            and not self._identify_cancel_requested
+        )
+        self.push_button_cancel_identify.setText(
+            "Cancelling..."
+            if self._identify_running and self._identify_cancel_requested
+            else "Cancel Identify"
         )
         self.push_button_reload_settings_tree.setEnabled(ready and self._connected)
         self.communication_settings_panel.setEnabled(ready and not self._connected)
@@ -479,6 +498,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self.devices_topology_tree_widget.clear()
         if self._execute("identify"):
             self._identify_running = True
+            self._identify_cancel_requested = False
             self._update_action_states()
 
     def _on_cancel_identify_clicked(self) -> None:
@@ -488,7 +508,9 @@ class DeviceSettingMainWindow(QMainWindow):
             QMessageBox.warning(self, "Cancel Identify", str(exc))
             return
         self._append_log(f"> {visible}")
-        self.cli_console_panel.request_session_cancel()
+        if self.cli_console_panel.request_session_cancel():
+            self._identify_cancel_requested = True
+            self._update_action_states()
 
     def _populate_topology(self, root: dict[str, Any]) -> None:
         self.devices_topology_tree_widget.clear()
