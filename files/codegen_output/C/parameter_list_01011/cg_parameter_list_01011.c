@@ -21861,274 +21861,499 @@ const sParameterSpec ParametersSpec[] = {
     .pValue = &(ParametersValue.RappMain.Setting.SensorGyroI32_Range),
     .ModbusAddr = 6717
     },
-  { /* SensorTemperature */
+  { /* SensorAccTemperature.X */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 8,
-    .pValue = &(ParametersValue.RappMain.Monitoring.SensorTemperature),
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperature.X),
     .ModbusAddr = 6721
     },
-  { /* SensorTemperatureI16 */
+  { /* SensorAccTemperature.Y */
     .Type = PARAMETER_TYPE_MONITORING,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappMain.Monitoring.SensorTemperatureI16),
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Y),
     .ModbusAddr = 6725
     },
-  { /* SensorTemperatureI16_Range */
+  { /* SensorAccTemperature.Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Z),
+    .ModbusAddr = 6729
+    },
+  { /* SensorAccTemperatureI16.X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.X),
+    .ModbusAddr = 6733
+    },
+  { /* SensorAccTemperatureI16.Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.Y),
+    .ModbusAddr = 6734
+    },
+  { /* SensorAccTemperatureI16.Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.Z),
+    .ModbusAddr = 6735
+    },
+  { /* SensorAccTemperatureI16_Range */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
-    .pValue = &(ParametersValue.RappMain.Setting.SensorTemperatureI16_Range),
-    .ModbusAddr = 6726
+    .pValue = &(ParametersValue.RappMain.Setting.SensorAccTemperatureI16_Range),
+    .ModbusAddr = 6736
+    },
+  { /* SensorGyroTemperature.X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.X),
+    .ModbusAddr = 6740
+    },
+  { /* SensorGyroTemperature.Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Y),
+    .ModbusAddr = 6744
+    },
+  { /* SensorGyroTemperature.Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Z),
+    .ModbusAddr = 6748
+    },
+  { /* SensorGyroTemperatureI16.X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.X),
+    .ModbusAddr = 6752
+    },
+  { /* SensorGyroTemperatureI16.Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.Y),
+    .ModbusAddr = 6753
+    },
+  { /* SensorGyroTemperatureI16.Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.Z),
+    .ModbusAddr = 6754
+    },
+  { /* SensorGyroTemperatureI16_Range */
+    .Type = PARAMETER_TYPE_SETTING,
+    .Tag1 = eSETTING_FUNCTIONAL,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Setting.SensorGyroTemperatureI16_Range),
+    .ModbusAddr = 6755
+    },
+  { /* SensorAccTemperatureRate.X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.X),
+    .ModbusAddr = 6759
+    },
+  { /* SensorAccTemperatureRate.Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Y),
+    .ModbusAddr = 6763
+    },
+  { /* SensorAccTemperatureRate.Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Z),
+    .ModbusAddr = 6767
+    },
+  { /* SensorAccTemperatureRateI16.X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.X),
+    .ModbusAddr = 6771
+    },
+  { /* SensorAccTemperatureRateI16.Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.Y),
+    .ModbusAddr = 6772
+    },
+  { /* SensorAccTemperatureRateI16.Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.Z),
+    .ModbusAddr = 6773
+    },
+  { /* SensorAccTemperatureRateI16_Range */
+    .Type = PARAMETER_TYPE_SETTING,
+    .Tag1 = eSETTING_FUNCTIONAL,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Setting.SensorAccTemperatureRateI16_Range),
+    .ModbusAddr = 6774
+    },
+  { /* SensorGyroTemperatureRate.X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.X),
+    .ModbusAddr = 6778
+    },
+  { /* SensorGyroTemperatureRate.Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Y),
+    .ModbusAddr = 6782
+    },
+  { /* SensorGyroTemperatureRate.Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Z),
+    .ModbusAddr = 6786
+    },
+  { /* SensorGyroTemperatureRateI16.X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.X),
+    .ModbusAddr = 6790
+    },
+  { /* SensorGyroTemperatureRateI16.Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.Y),
+    .ModbusAddr = 6791
+    },
+  { /* SensorGyroTemperatureRateI16.Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.Z),
+    .ModbusAddr = 6792
+    },
+  { /* SensorGyroTemperatureRateI16_Range */
+    .Type = PARAMETER_TYPE_SETTING,
+    .Tag1 = eSETTING_FUNCTIONAL,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Setting.SensorGyroTemperatureRateI16_Range),
+    .ModbusAddr = 6793
     },
   { /* CalcFaultDetection_WarmUpTempRateWarningLevel */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
     .pValue = &(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel),
-    .ModbusAddr = 6730
+    .ModbusAddr = 6797
     },
   { /* CalcFaultDetection_AfterWarmUpTempRateWarningLevel */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
     .pValue = &(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel),
-    .ModbusAddr = 6734
+    .ModbusAddr = 6801
     },
   { /* CalcFaultDetection_InitIdleTimeS */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Setting.CalcFaultDetection_InitIdleTimeS),
-    .ModbusAddr = 6738
+    .ModbusAddr = 6805
     },
   { /* CalcFaultDetection_AddedWarmUpTimeS */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Setting.CalcFaultDetection_AddedWarmUpTimeS),
-    .ModbusAddr = 6739
+    .ModbusAddr = 6806
     },
   { /* CalcFaultDetection_AfterAlgReset_IdleTimeS */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
     .pValue = &(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS),
-    .ModbusAddr = 6740
+    .ModbusAddr = 6807
     },
   { /* CalcFaultDetection_Counter */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_Counter),
-    .ModbusAddr = 6744
+    .ModbusAddr = 6811
     },
   { /* CalcFaultDetection_VersionMajor */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionMajor),
-    .ModbusAddr = 6746
+    .ModbusAddr = 6813
     },
   { /* CalcFaultDetection_VersionMinor */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionMinor),
-    .ModbusAddr = 6747
+    .ModbusAddr = 6814
     },
   { /* CalcFaultDetection_VersionBuild1 */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionBuild1),
-    .ModbusAddr = 6748
+    .ModbusAddr = 6815
     },
   { /* CalcFaultDetection_VersionBuild2 */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionBuild2),
-    .ModbusAddr = 6749
+    .ModbusAddr = 6816
     },
   { /* CalcFaultDetection_FaultStatus[0] */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[0]),
-    .ModbusAddr = 6751
+    .ModbusAddr = 6818
     },
   { /* CalcFaultDetection_FaultStatus[1] */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[1]),
-    .ModbusAddr = 6753
+    .ModbusAddr = 6820
     },
   { /* CalcFaultDetection_FaultStatus[2] */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[2]),
-    .ModbusAddr = 6755
+    .ModbusAddr = 6822
     },
   { /* CalcFaultDetection_FaultStatus[3] */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[3]),
-    .ModbusAddr = 6757
+    .ModbusAddr = 6824
     },
   { /* CalcFaultDetection_WarningStatus[0] */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[0]),
-    .ModbusAddr = 6759
+    .ModbusAddr = 6826
     },
   { /* CalcFaultDetection_WarningStatus[1] */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[1]),
-    .ModbusAddr = 6761
+    .ModbusAddr = 6828
     },
   { /* CalcFaultDetection_WarningStatus[2] */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[2]),
-    .ModbusAddr = 6763
+    .ModbusAddr = 6830
     },
   { /* CalcFaultDetection_WarningStatus[3] */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[3]),
-    .ModbusAddr = 6765
+    .ModbusAddr = 6832
     },
   { /* RotationCoordinateAnglesDegree[0] */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
     .pValue = &(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]),
-    .ModbusAddr = 6767
+    .ModbusAddr = 6834
     },
   { /* RotationCoordinateAnglesDegree[1] */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
     .pValue = &(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]),
-    .ModbusAddr = 6771
+    .ModbusAddr = 6838
     },
   { /* RotationCoordinateAnglesDegree[2] */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
     .pValue = &(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]),
-    .ModbusAddr = 6775
+    .ModbusAddr = 6842
     },
-  { /* CalcPreProcessAlgorithm_Acc.X */
+  { /* CalcPreProcessAlgorithm_Acc[0].X */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 8,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.X),
-    .ModbusAddr = 6779
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].X),
+    .ModbusAddr = 6846
     },
-  { /* CalcPreProcessAlgorithm_Acc.Y */
+  { /* CalcPreProcessAlgorithm_Acc[0].Y */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 8,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Y),
-    .ModbusAddr = 6783
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Y),
+    .ModbusAddr = 6850
     },
-  { /* CalcPreProcessAlgorithm_Acc.Z */
+  { /* CalcPreProcessAlgorithm_Acc[0].Z */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 8,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Z),
-    .ModbusAddr = 6787
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Z),
+    .ModbusAddr = 6854
     },
-  { /* CalcPreProcessAlgorithm_Gyro.X */
+  { /* CalcPreProcessAlgorithm_Acc[1].X */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 8,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.X),
-    .ModbusAddr = 6791
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].X),
+    .ModbusAddr = 6858
     },
-  { /* CalcPreProcessAlgorithm_Gyro.Y */
+  { /* CalcPreProcessAlgorithm_Acc[1].Y */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 8,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Y),
-    .ModbusAddr = 6795
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Y),
+    .ModbusAddr = 6862
     },
-  { /* CalcPreProcessAlgorithm_Gyro.Z */
+  { /* CalcPreProcessAlgorithm_Acc[1].Z */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 8,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Z),
-    .ModbusAddr = 6799
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Z),
+    .ModbusAddr = 6866
     },
-  { /* CalcPreProcessAlgorithm_AccI32.X */
+  { /* CalcPreProcessAlgorithm_Gyro[0].X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].X),
+    .ModbusAddr = 6870
+    },
+  { /* CalcPreProcessAlgorithm_Gyro[0].Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Y),
+    .ModbusAddr = 6874
+    },
+  { /* CalcPreProcessAlgorithm_Gyro[0].Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Z),
+    .ModbusAddr = 6878
+    },
+  { /* CalcPreProcessAlgorithm_Gyro[1].X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].X),
+    .ModbusAddr = 6882
+    },
+  { /* CalcPreProcessAlgorithm_Gyro[1].Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Y),
+    .ModbusAddr = 6886
+    },
+  { /* CalcPreProcessAlgorithm_Gyro[1].Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Z),
+    .ModbusAddr = 6890
+    },
+  { /* CalcPreProcessAlgorithm_AccI32[0].X */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.X),
-    .ModbusAddr = 6803
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].X),
+    .ModbusAddr = 6894
     },
-  { /* CalcPreProcessAlgorithm_AccI32.Y */
+  { /* CalcPreProcessAlgorithm_AccI32[0].Y */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.Y),
-    .ModbusAddr = 6805
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].Y),
+    .ModbusAddr = 6896
     },
-  { /* CalcPreProcessAlgorithm_AccI32.Z */
+  { /* CalcPreProcessAlgorithm_AccI32[0].Z */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.Z),
-    .ModbusAddr = 6807
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].Z),
+    .ModbusAddr = 6898
     },
-  { /* CalcPreProcessAlgorithm_GyroI32.X */
+  { /* CalcPreProcessAlgorithm_AccI32[1].X */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.X),
-    .ModbusAddr = 6809
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].X),
+    .ModbusAddr = 6900
     },
-  { /* CalcPreProcessAlgorithm_GyroI32.Y */
+  { /* CalcPreProcessAlgorithm_AccI32[1].Y */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.Y),
-    .ModbusAddr = 6811
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].Y),
+    .ModbusAddr = 6902
     },
-  { /* CalcPreProcessAlgorithm_GyroI32.Z */
+  { /* CalcPreProcessAlgorithm_AccI32[1].Z */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
-    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.Z),
-    .ModbusAddr = 6813
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].Z),
+    .ModbusAddr = 6904
+    },
+  { /* CalcPreProcessAlgorithm_GyroI32[0].X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 4,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].X),
+    .ModbusAddr = 6906
+    },
+  { /* CalcPreProcessAlgorithm_GyroI32[0].Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 4,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].Y),
+    .ModbusAddr = 6908
+    },
+  { /* CalcPreProcessAlgorithm_GyroI32[0].Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 4,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].Z),
+    .ModbusAddr = 6910
+    },
+  { /* CalcPreProcessAlgorithm_GyroI32[1].X */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 4,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].X),
+    .ModbusAddr = 6912
+    },
+  { /* CalcPreProcessAlgorithm_GyroI32[1].Y */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 4,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].Y),
+    .ModbusAddr = 6914
+    },
+  { /* CalcPreProcessAlgorithm_GyroI32[1].Z */
+    .Type = PARAMETER_TYPE_MONITORING,
+    .ValueSize = 4,
+    .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].Z),
+    .ModbusAddr = 6916
     },
   { /* CalcPreProcessAlgorithm_AccI32_Range */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
     .pValue = &(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range),
-    .ModbusAddr = 6815
+    .ModbusAddr = 6918
     },
   { /* CalcPreProcessAlgorithm_GyroI32_Range */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_FUNCTIONAL,
     .ValueSize = 8,
     .pValue = &(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range),
-    .ModbusAddr = 6819
+    .ModbusAddr = 6922
     },
   { /* CalcPreProcessAlgorithm_VersionMajor */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionMajor),
-    .ModbusAddr = 6823
+    .ModbusAddr = 6926
     },
   { /* CalcPreProcessAlgorithm_VersionMinor */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionMinor),
-    .ModbusAddr = 6824
+    .ModbusAddr = 6927
     },
   { /* CalcPreProcessAlgorithm_VersionBuild1 */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild1),
-    .ModbusAddr = 6825
+    .ModbusAddr = 6928
     },
   { /* CalcPreProcessAlgorithm_VersionBuild2 */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild2),
-    .ModbusAddr = 6826
+    .ModbusAddr = 6929
     },
   { /* GeneralStatusSummary */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappMain.Monitoring.GeneralStatusSummary),
-    .ModbusAddr = 6828
+    .ModbusAddr = 6931
     }
 };
 
@@ -28854,115 +29079,218 @@ const sModbusSlaveMemoryMapItem ParametersModbusSlaveMemoryMap[MODBUS_SLAVE_MEMO
   /* 6718   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroI32_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_I32_RANGE },
   /* 6719   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroI32_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_I32_RANGE },
   /* 6720   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroI32_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_I32_RANGE },
-  /* 6721   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorTemperature))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE },
-  /* 6722   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorTemperature))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE },
-  /* 6723   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorTemperature))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE },
-  /* 6724   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorTemperature))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE },
-  /* 6725   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorTemperatureI16))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE_I16 },
-  /* 6726   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorTemperatureI16_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE_I16_RANGE },
-  /* 6727   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorTemperatureI16_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE_I16_RANGE },
-  /* 6728   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorTemperatureI16_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE_I16_RANGE },
-  /* 6729   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorTemperatureI16_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_TEMPERATURE_I16_RANGE },
-  /* 6730   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL },
-  /* 6731   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL },
-  /* 6732   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL },
-  /* 6733   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL },
-  /* 6734   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL },
-  /* 6735   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL },
-  /* 6736   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL },
-  /* 6737   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL },
-  /* 6738   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_InitIdleTimeS))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_INIT_IDLE_TIME_S },
-  /* 6739   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AddedWarmUpTimeS))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_ADDED_WARM_UP_TIME_S },
-  /* 6740   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S },
-  /* 6741   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S },
-  /* 6742   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S },
-  /* 6743   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S },
-  /* 6744   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_Counter))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_COUNTER },
-  /* 6745   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_Counter))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_COUNTER },
-  /* 6746   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionMajor))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_MAJOR },
-  /* 6747   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionMinor))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_MINOR },
-  /* 6748   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionBuild1))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD1 },
-  /* 6749   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionBuild2))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD2 },
-  /* 6750   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionBuild2))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD2 },
-  /* 6751   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[0]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_0 },
-  /* 6752   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[0]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_0 },
-  /* 6753   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[1]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_1 },
-  /* 6754   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[1]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_1 },
-  /* 6755   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[2]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_2 },
-  /* 6756   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[2]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_2 },
-  /* 6757   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[3]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_3 },
-  /* 6758   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[3]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_3 },
-  /* 6759   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[0]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_0 },
-  /* 6760   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[0]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_0 },
-  /* 6761   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[1]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_1 },
-  /* 6762   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[1]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_1 },
-  /* 6763   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[2]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_2 },
-  /* 6764   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[2]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_2 },
-  /* 6765   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[3]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_3 },
-  /* 6766   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[3]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_3 },
-  /* 6767   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0 },
-  /* 6768   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0 },
-  /* 6769   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0 },
-  /* 6770   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0 },
-  /* 6771   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1 },
-  /* 6772   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1 },
-  /* 6773   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1 },
-  /* 6774   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1 },
-  /* 6775   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2 },
-  /* 6776   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2 },
-  /* 6777   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2 },
-  /* 6778   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2 },
-  /* 6779   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_X },
-  /* 6780   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_X },
-  /* 6781   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_X },
-  /* 6782   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_X },
-  /* 6783   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Y },
-  /* 6784   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Y },
-  /* 6785   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Y },
-  /* 6786   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Y },
-  /* 6787   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Z },
-  /* 6788   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Z },
-  /* 6789   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Z },
-  /* 6790   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Z },
-  /* 6791   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_X },
-  /* 6792   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_X },
-  /* 6793   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_X },
-  /* 6794   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_X },
-  /* 6795   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y },
-  /* 6796   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y },
-  /* 6797   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y },
-  /* 6798   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y },
-  /* 6799   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z },
-  /* 6800   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z },
-  /* 6801   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z },
-  /* 6802   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z },
-  /* 6803   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_X },
-  /* 6804   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_X },
-  /* 6805   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Y },
-  /* 6806   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Y },
-  /* 6807   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Z },
-  /* 6808   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Z },
-  /* 6809   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_X },
-  /* 6810   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_X },
-  /* 6811   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Y },
-  /* 6812   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Y },
-  /* 6813   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Z },
-  /* 6814   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Z },
-  /* 6815   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE },
-  /* 6816   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE },
-  /* 6817   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE },
-  /* 6818   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE },
-  /* 6819   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE },
-  /* 6820   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE },
-  /* 6821   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE },
-  /* 6822   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE },
-  /* 6823   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionMajor))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_MAJOR },
-  /* 6824   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionMinor))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_MINOR },
-  /* 6825   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild1))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD1 },
-  /* 6826   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild2))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2 },
-  /* 6827   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild2))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2 },
-  /* 6828   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.GeneralStatusSummary))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_GENERAL_STATUS_SUMMARY },
-  /* 6829   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.GeneralStatusSummary))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_GENERAL_STATUS_SUMMARY }
+  /* 6721   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_X },
+  /* 6722   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_X },
+  /* 6723   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_X },
+  /* 6724   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_X },
+  /* 6725   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Y },
+  /* 6726   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Y },
+  /* 6727   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Y },
+  /* 6728   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Y },
+  /* 6729   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Z },
+  /* 6730   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Z },
+  /* 6731   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Z },
+  /* 6732   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperature.Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Z },
+  /* 6733   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_X },
+  /* 6734   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_Y },
+  /* 6735   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_Z },
+  /* 6736   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorAccTemperatureI16_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_RANGE },
+  /* 6737   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorAccTemperatureI16_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_RANGE },
+  /* 6738   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorAccTemperatureI16_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_RANGE },
+  /* 6739   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorAccTemperatureI16_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_RANGE },
+  /* 6740   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_X },
+  /* 6741   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_X },
+  /* 6742   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_X },
+  /* 6743   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_X },
+  /* 6744   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Y },
+  /* 6745   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Y },
+  /* 6746   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Y },
+  /* 6747   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Y },
+  /* 6748   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Z },
+  /* 6749   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Z },
+  /* 6750   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Z },
+  /* 6751   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Z },
+  /* 6752   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_X },
+  /* 6753   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_Y },
+  /* 6754   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_Z },
+  /* 6755   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroTemperatureI16_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_RANGE },
+  /* 6756   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroTemperatureI16_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_RANGE },
+  /* 6757   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroTemperatureI16_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_RANGE },
+  /* 6758   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroTemperatureI16_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_RANGE },
+  /* 6759   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_X },
+  /* 6760   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_X },
+  /* 6761   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_X },
+  /* 6762   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_X },
+  /* 6763   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Y },
+  /* 6764   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Y },
+  /* 6765   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Y },
+  /* 6766   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Y },
+  /* 6767   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Z },
+  /* 6768   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Z },
+  /* 6769   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Z },
+  /* 6770   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Z },
+  /* 6771   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_X },
+  /* 6772   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_Y },
+  /* 6773   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_Z },
+  /* 6774   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorAccTemperatureRateI16_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE },
+  /* 6775   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorAccTemperatureRateI16_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE },
+  /* 6776   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorAccTemperatureRateI16_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE },
+  /* 6777   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorAccTemperatureRateI16_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE },
+  /* 6778   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_X },
+  /* 6779   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_X },
+  /* 6780   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_X },
+  /* 6781   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_X },
+  /* 6782   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Y },
+  /* 6783   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Y },
+  /* 6784   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Y },
+  /* 6785   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Y },
+  /* 6786   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Z },
+  /* 6787   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Z },
+  /* 6788   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Z },
+  /* 6789   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Z },
+  /* 6790   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_X },
+  /* 6791   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_Y },
+  /* 6792   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_Z },
+  /* 6793   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroTemperatureRateI16_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE },
+  /* 6794   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroTemperatureRateI16_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE },
+  /* 6795   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroTemperatureRateI16_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE },
+  /* 6796   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorGyroTemperatureRateI16_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE },
+  /* 6797   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL },
+  /* 6798   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL },
+  /* 6799   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL },
+  /* 6800   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL },
+  /* 6801   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL },
+  /* 6802   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL },
+  /* 6803   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL },
+  /* 6804   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL },
+  /* 6805   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_InitIdleTimeS))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_INIT_IDLE_TIME_S },
+  /* 6806   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AddedWarmUpTimeS))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_ADDED_WARM_UP_TIME_S },
+  /* 6807   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S },
+  /* 6808   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S },
+  /* 6809   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S },
+  /* 6810   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcFaultDetection_AfterAlgReset_IdleTimeS))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S },
+  /* 6811   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_Counter))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_COUNTER },
+  /* 6812   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_Counter))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_COUNTER },
+  /* 6813   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionMajor))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_MAJOR },
+  /* 6814   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionMinor))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_MINOR },
+  /* 6815   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionBuild1))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD1 },
+  /* 6816   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionBuild2))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD2 },
+  /* 6817   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionBuild2))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD2 },
+  /* 6818   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[0]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_0 },
+  /* 6819   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[0]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_0 },
+  /* 6820   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[1]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_1 },
+  /* 6821   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[1]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_1 },
+  /* 6822   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[2]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_2 },
+  /* 6823   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[2]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_2 },
+  /* 6824   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[3]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_3 },
+  /* 6825   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_FaultStatus[3]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_3 },
+  /* 6826   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[0]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_0 },
+  /* 6827   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[0]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_0 },
+  /* 6828   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[1]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_1 },
+  /* 6829   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[1]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_1 },
+  /* 6830   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[2]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_2 },
+  /* 6831   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[2]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_2 },
+  /* 6832   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[3]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_3 },
+  /* 6833   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[3]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_3 },
+  /* 6834   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0 },
+  /* 6835   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0 },
+  /* 6836   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0 },
+  /* 6837   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[0]))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0 },
+  /* 6838   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1 },
+  /* 6839   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1 },
+  /* 6840   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1 },
+  /* 6841   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[1]))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1 },
+  /* 6842   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2 },
+  /* 6843   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2 },
+  /* 6844   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2 },
+  /* 6845   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.RotationCoordinateAnglesDegree[2]))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2 },
+  /* 6846   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X },
+  /* 6847   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X },
+  /* 6848   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X },
+  /* 6849   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X },
+  /* 6850   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y },
+  /* 6851   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y },
+  /* 6852   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y },
+  /* 6853   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y },
+  /* 6854   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z },
+  /* 6855   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z },
+  /* 6856   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z },
+  /* 6857   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[0].Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z },
+  /* 6858   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X },
+  /* 6859   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X },
+  /* 6860   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X },
+  /* 6861   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X },
+  /* 6862   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y },
+  /* 6863   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y },
+  /* 6864   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y },
+  /* 6865   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y },
+  /* 6866   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z },
+  /* 6867   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z },
+  /* 6868   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z },
+  /* 6869   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[1].Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z },
+  /* 6870   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X },
+  /* 6871   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X },
+  /* 6872   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X },
+  /* 6873   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X },
+  /* 6874   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y },
+  /* 6875   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y },
+  /* 6876   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y },
+  /* 6877   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y },
+  /* 6878   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z },
+  /* 6879   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z },
+  /* 6880   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z },
+  /* 6881   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[0].Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z },
+  /* 6882   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X },
+  /* 6883   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X },
+  /* 6884   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].X))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X },
+  /* 6885   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].X))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X },
+  /* 6886   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y },
+  /* 6887   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y },
+  /* 6888   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Y))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y },
+  /* 6889   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Y))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y },
+  /* 6890   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z },
+  /* 6891   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z },
+  /* 6892   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Z))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z },
+  /* 6893   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[1].Z))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z },
+  /* 6894   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_X },
+  /* 6895   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_X },
+  /* 6896   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Y },
+  /* 6897   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Y },
+  /* 6898   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Z },
+  /* 6899   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[0].Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Z },
+  /* 6900   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_X },
+  /* 6901   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_X },
+  /* 6902   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Y },
+  /* 6903   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Y },
+  /* 6904   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Z },
+  /* 6905   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[1].Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Z },
+  /* 6906   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_X },
+  /* 6907   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_X },
+  /* 6908   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Y },
+  /* 6909   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Y },
+  /* 6910   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Z },
+  /* 6911   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[0].Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Z },
+  /* 6912   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].X))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_X },
+  /* 6913   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].X))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_X },
+  /* 6914   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].Y))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Y },
+  /* 6915   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].Y))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Y },
+  /* 6916   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].Z))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Z },
+  /* 6917   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[1].Z))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Z },
+  /* 6918   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE },
+  /* 6919   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE },
+  /* 6920   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE },
+  /* 6921   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_AccI32_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE },
+  /* 6922   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE },
+  /* 6923   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE },
+  /* 6924   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE },
+  /* 6925   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.CalcPreProcessAlgorithm_GyroI32_Range))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE },
+  /* 6926   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionMajor))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_MAJOR },
+  /* 6927   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionMinor))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_MINOR },
+  /* 6928   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild1))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD1 },
+  /* 6929   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild2))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2 },
+  /* 6930   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild2))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2 },
+  /* 6931   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.GeneralStatusSummary))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_GENERAL_STATUS_SUMMARY },
+  /* 6932   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.GeneralStatusSummary))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_GENERAL_STATUS_SUMMARY }
 };
 
 /*
@@ -29073,7 +29401,7 @@ uint8_t fCgParameterList_RestoreDefaultValue(void) {
   ParametersValue.RappPrtlStreamer.Setting.StreamerPrescaler = 19;
 
   for(uint32_t i0 = 0; i0 < 200; i0++) {
-    ParametersValue.RappPrtlStreamer.Setting.StreamerParameterIds[i0] = 65535;
+    ParametersValue.RappPrtlStreamer.Setting.StreamerParameterIds[i0] = (eParameterId_t)65535; // TEST: This is an enum
   }
 
 
@@ -29358,8 +29686,30 @@ uint8_t fCgParameterList_RestoreDefaultValue(void) {
   ParametersValue.RappMain.Monitoring.SensorGyroI32.X = 0;
   ParametersValue.RappMain.Monitoring.SensorGyroI32.Y = 0;
   ParametersValue.RappMain.Monitoring.SensorGyroI32.Z = 0;
-  ParametersValue.RappMain.Monitoring.SensorTemperature = 0;
-  ParametersValue.RappMain.Monitoring.SensorTemperatureI16 = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperature.X = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperature.Y = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperature.Z = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.X = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.Y = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureI16.Z = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperature.X = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Y = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperature.Z = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.X = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.Y = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureI16.Z = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.X = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Y = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureRate.Z = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.X = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.Y = 0;
+  ParametersValue.RappMain.Monitoring.SensorAccTemperatureRateI16.Z = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.X = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Y = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRate.Z = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.X = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.Y = 0;
+  ParametersValue.RappMain.Monitoring.SensorGyroTemperatureRateI16.Z = 0;
   ParametersValue.RappMain.Monitoring.CalcFaultDetection_Counter = 0;
   ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionMajor = 0;
   ParametersValue.RappMain.Monitoring.CalcFaultDetection_VersionMinor = 0;
@@ -29374,19 +29724,30 @@ uint8_t fCgParameterList_RestoreDefaultValue(void) {
     ParametersValue.RappMain.Monitoring.CalcFaultDetection_WarningStatus[i0] = 0;
   }
 
+  for(uint32_t i0 = 0; i0 < 2; i0++) {
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[i0].X = 0;
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[i0].Y = 0;
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc[i0].Z = 0;
+  }
 
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.X = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Y = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Acc.Z = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.X = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Y = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro.Z = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.X = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.Y = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32.Z = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.X = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.Y = 0;
-  ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32.Z = 0;
+  for(uint32_t i0 = 0; i0 < 2; i0++) {
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[i0].X = 0;
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[i0].Y = 0;
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_Gyro[i0].Z = 0;
+  }
+
+  for(uint32_t i0 = 0; i0 < 2; i0++) {
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[i0].X = 0;
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[i0].Y = 0;
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_AccI32[i0].Z = 0;
+  }
+
+  for(uint32_t i0 = 0; i0 < 2; i0++) {
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[i0].X = 0;
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[i0].Y = 0;
+    ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_GyroI32[i0].Z = 0;
+  }
+
   ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionMajor = 0;
   ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionMinor = 0;
   ParametersValue.RappMain.Monitoring.CalcPreProcessAlgorithm_VersionBuild1 = 0;
@@ -29442,7 +29803,10 @@ uint8_t fCgParameterList_RestoreDefaultValue(void) {
   ParametersValue.RappMain.Setting.OutputDecimationRate = 0;
   ParametersValue.RappMain.Setting.SensorAccI32_Range = 0;
   ParametersValue.RappMain.Setting.SensorGyroI32_Range = 0;
-  ParametersValue.RappMain.Setting.SensorTemperatureI16_Range = 0;
+  ParametersValue.RappMain.Setting.SensorAccTemperatureI16_Range = 0;
+  ParametersValue.RappMain.Setting.SensorGyroTemperatureI16_Range = 0;
+  ParametersValue.RappMain.Setting.SensorAccTemperatureRateI16_Range = 0;
+  ParametersValue.RappMain.Setting.SensorGyroTemperatureRateI16_Range = 0;
   ParametersValue.RappMain.Setting.CalcFaultDetection_WarmUpTempRateWarningLevel = 0;
   ParametersValue.RappMain.Setting.CalcFaultDetection_AfterWarmUpTempRateWarningLevel = 0;
   ParametersValue.RappMain.Setting.CalcFaultDetection_InitIdleTimeS = 0;

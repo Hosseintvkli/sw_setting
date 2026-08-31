@@ -86,7 +86,10 @@ namespace ACCUNAV_IMU_Setting
         public UInt16 outputDecimationRate;
         public Double sensorAccI32_Range;
         public Double sensorGyroI32_Range;
-        public Double sensorTemperatureI16_Range;
+        public Double sensorAccTemperatureI16_Range;
+        public Double sensorGyroTemperatureI16_Range;
+        public Double sensorAccTemperatureRateI16_Range;
+        public Double sensorGyroTemperatureRateI16_Range;
         public Double calcFaultDetection_WarmUpTempRateWarningLevel;
         public Double calcFaultDetection_AfterWarmUpTempRateWarningLevel;
         public UInt16 calcFaultDetection_InitIdleTimeS;
@@ -165,7 +168,10 @@ namespace ACCUNAV_IMU_Setting
             outputDecimationRate = 0;
             sensorAccI32_Range = 0;
             sensorGyroI32_Range = 0;
-            sensorTemperatureI16_Range = 0;
+            sensorAccTemperatureI16_Range = 0;
+            sensorGyroTemperatureI16_Range = 0;
+            sensorAccTemperatureRateI16_Range = 0;
+            sensorGyroTemperatureRateI16_Range = 0;
             calcFaultDetection_WarmUpTempRateWarningLevel = 0;
             calcFaultDetection_AfterWarmUpTempRateWarningLevel = 0;
             calcFaultDetection_InitIdleTimeS = 0;
@@ -503,14 +509,28 @@ namespace ACCUNAV_IMU_Setting
         }
 
         [Category("RappPrtlStreamer"), ReadOnly(false), Description("")]
-        public UInt16[] StreamerParameterIds
+        public eParameterId[] StreamerParameterIds
         {
-            get { return streamerParameterIds; }
+            get
+            {
+                eParameterId[] propView = new eParameterId[200];
+                for (UInt16 i = 0; i < 200; i++)
+                {
+                    propView[i] = (eParameterId)streamerParameterIds[i];
+                }
+                return propView;
+            }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(4039, 0, value, typeof(UInt16), 200))
+                UInt16[] propViewOut = new UInt16[200];
+                for (UInt16 i = 0; i < 200; i++)
                 {
-                    streamerParameterIds = value;
+                    propViewOut[i] = (UInt16)value[i];
+                }
+
+                if(MainForm.modbusExt.ModbusWrite(4039, 0, propViewOut, typeof(ushort), 200))
+                {
+                    streamerParameterIds = propViewOut;
                 }
             }
         }
@@ -906,14 +926,53 @@ namespace ACCUNAV_IMU_Setting
         }
 
         [Category("RappMain"), ReadOnly(false), DefaultValue(0), Description("")]
-        public Double SensorTemperatureI16_Range
+        public Double SensorAccTemperatureI16_Range
         {
-            get { return sensorTemperatureI16_Range; }
+            get { return sensorAccTemperatureI16_Range; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6726, 0, value, typeof(Double), 1))
+                if(MainForm.modbusExt.ModbusWrite(6736, 0, value, typeof(Double), 1))
                 {
-                    sensorTemperatureI16_Range = value;
+                    sensorAccTemperatureI16_Range = value;
+                }
+            }
+        }
+
+        [Category("RappMain"), ReadOnly(false), DefaultValue(0), Description("")]
+        public Double SensorGyroTemperatureI16_Range
+        {
+            get { return sensorGyroTemperatureI16_Range; }
+            set
+            {
+                if(MainForm.modbusExt.ModbusWrite(6755, 0, value, typeof(Double), 1))
+                {
+                    sensorGyroTemperatureI16_Range = value;
+                }
+            }
+        }
+
+        [Category("RappMain"), ReadOnly(false), DefaultValue(0), Description("")]
+        public Double SensorAccTemperatureRateI16_Range
+        {
+            get { return sensorAccTemperatureRateI16_Range; }
+            set
+            {
+                if(MainForm.modbusExt.ModbusWrite(6774, 0, value, typeof(Double), 1))
+                {
+                    sensorAccTemperatureRateI16_Range = value;
+                }
+            }
+        }
+
+        [Category("RappMain"), ReadOnly(false), DefaultValue(0), Description("")]
+        public Double SensorGyroTemperatureRateI16_Range
+        {
+            get { return sensorGyroTemperatureRateI16_Range; }
+            set
+            {
+                if(MainForm.modbusExt.ModbusWrite(6793, 0, value, typeof(Double), 1))
+                {
+                    sensorGyroTemperatureRateI16_Range = value;
                 }
             }
         }
@@ -924,7 +983,7 @@ namespace ACCUNAV_IMU_Setting
             get { return calcFaultDetection_WarmUpTempRateWarningLevel; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6730, 0, value, typeof(Double), 1))
+                if(MainForm.modbusExt.ModbusWrite(6797, 0, value, typeof(Double), 1))
                 {
                     calcFaultDetection_WarmUpTempRateWarningLevel = value;
                 }
@@ -937,7 +996,7 @@ namespace ACCUNAV_IMU_Setting
             get { return calcFaultDetection_AfterWarmUpTempRateWarningLevel; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6734, 0, value, typeof(Double), 1))
+                if(MainForm.modbusExt.ModbusWrite(6801, 0, value, typeof(Double), 1))
                 {
                     calcFaultDetection_AfterWarmUpTempRateWarningLevel = value;
                 }
@@ -950,7 +1009,7 @@ namespace ACCUNAV_IMU_Setting
             get { return calcFaultDetection_InitIdleTimeS; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6738, 0, value, typeof(UInt16), 1))
+                if(MainForm.modbusExt.ModbusWrite(6805, 0, value, typeof(UInt16), 1))
                 {
                     calcFaultDetection_InitIdleTimeS = value;
                 }
@@ -963,7 +1022,7 @@ namespace ACCUNAV_IMU_Setting
             get { return calcFaultDetection_AddedWarmUpTimeS; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6739, 0, value, typeof(UInt16), 1))
+                if(MainForm.modbusExt.ModbusWrite(6806, 0, value, typeof(UInt16), 1))
                 {
                     calcFaultDetection_AddedWarmUpTimeS = value;
                 }
@@ -976,7 +1035,7 @@ namespace ACCUNAV_IMU_Setting
             get { return calcFaultDetection_AfterAlgReset_IdleTimeS; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6740, 0, value, typeof(Double), 1))
+                if(MainForm.modbusExt.ModbusWrite(6807, 0, value, typeof(Double), 1))
                 {
                     calcFaultDetection_AfterAlgReset_IdleTimeS = value;
                 }
@@ -989,7 +1048,7 @@ namespace ACCUNAV_IMU_Setting
             get { return rotationCoordinateAnglesDegree; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6767, 0, value, typeof(Double), 3))
+                if(MainForm.modbusExt.ModbusWrite(6834, 0, value, typeof(Double), 3))
                 {
                     rotationCoordinateAnglesDegree = value;
                 }
@@ -1002,7 +1061,7 @@ namespace ACCUNAV_IMU_Setting
             get { return calcPreProcessAlgorithm_AccI32_Range; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6815, 0, value, typeof(Double), 1))
+                if(MainForm.modbusExt.ModbusWrite(6918, 0, value, typeof(Double), 1))
                 {
                     calcPreProcessAlgorithm_AccI32_Range = value;
                 }
@@ -1015,7 +1074,7 @@ namespace ACCUNAV_IMU_Setting
             get { return calcPreProcessAlgorithm_GyroI32_Range; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(6819, 0, value, typeof(Double), 1))
+                if(MainForm.modbusExt.ModbusWrite(6922, 0, value, typeof(Double), 1))
                 {
                     calcPreProcessAlgorithm_GyroI32_Range = value;
                 }
@@ -1082,15 +1141,18 @@ namespace ACCUNAV_IMU_Setting
             _status &= MainForm.modbusExt.ModbusWrite(6366, 0, outputDecimationRate, typeof(UInt16), 1);
             _status &= MainForm.modbusExt.ModbusWrite(6695, 0, sensorAccI32_Range, typeof(Double), 1);
             _status &= MainForm.modbusExt.ModbusWrite(6717, 0, sensorGyroI32_Range, typeof(Double), 1);
-            _status &= MainForm.modbusExt.ModbusWrite(6726, 0, sensorTemperatureI16_Range, typeof(Double), 1);
-            _status &= MainForm.modbusExt.ModbusWrite(6730, 0, calcFaultDetection_WarmUpTempRateWarningLevel, typeof(Double), 1);
-            _status &= MainForm.modbusExt.ModbusWrite(6734, 0, calcFaultDetection_AfterWarmUpTempRateWarningLevel, typeof(Double), 1);
-            _status &= MainForm.modbusExt.ModbusWrite(6738, 0, calcFaultDetection_InitIdleTimeS, typeof(UInt16), 1);
-            _status &= MainForm.modbusExt.ModbusWrite(6739, 0, calcFaultDetection_AddedWarmUpTimeS, typeof(UInt16), 1);
-            _status &= MainForm.modbusExt.ModbusWrite(6740, 0, calcFaultDetection_AfterAlgReset_IdleTimeS, typeof(Double), 1);
-            _status &= MainForm.modbusExt.ModbusWrite(6767, 0, rotationCoordinateAnglesDegree, typeof(Double), 3);
-            _status &= MainForm.modbusExt.ModbusWrite(6815, 0, calcPreProcessAlgorithm_AccI32_Range, typeof(Double), 1);
-            _status &= MainForm.modbusExt.ModbusWrite(6819, 0, calcPreProcessAlgorithm_GyroI32_Range, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6736, 0, sensorAccTemperatureI16_Range, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6755, 0, sensorGyroTemperatureI16_Range, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6774, 0, sensorAccTemperatureRateI16_Range, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6793, 0, sensorGyroTemperatureRateI16_Range, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6797, 0, calcFaultDetection_WarmUpTempRateWarningLevel, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6801, 0, calcFaultDetection_AfterWarmUpTempRateWarningLevel, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6805, 0, calcFaultDetection_InitIdleTimeS, typeof(UInt16), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6806, 0, calcFaultDetection_AddedWarmUpTimeS, typeof(UInt16), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6807, 0, calcFaultDetection_AfterAlgReset_IdleTimeS, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6834, 0, rotationCoordinateAnglesDegree, typeof(Double), 3);
+            _status &= MainForm.modbusExt.ModbusWrite(6918, 0, calcPreProcessAlgorithm_AccI32_Range, typeof(Double), 1);
+            _status &= MainForm.modbusExt.ModbusWrite(6922, 0, calcPreProcessAlgorithm_GyroI32_Range, typeof(Double), 1);
             
             if (!_status)
             {
@@ -1168,15 +1230,18 @@ namespace ACCUNAV_IMU_Setting
                 outputDecimationRate = MainForm.modbusExt.ModbusRead(6366, 0, typeof(UInt16), 1);
                 sensorAccI32_Range = MainForm.modbusExt.ModbusRead(6695, 0, typeof(Double), 1);
                 sensorGyroI32_Range = MainForm.modbusExt.ModbusRead(6717, 0, typeof(Double), 1);
-                sensorTemperatureI16_Range = MainForm.modbusExt.ModbusRead(6726, 0, typeof(Double), 1);
-                calcFaultDetection_WarmUpTempRateWarningLevel = MainForm.modbusExt.ModbusRead(6730, 0, typeof(Double), 1);
-                calcFaultDetection_AfterWarmUpTempRateWarningLevel = MainForm.modbusExt.ModbusRead(6734, 0, typeof(Double), 1);
-                calcFaultDetection_InitIdleTimeS = MainForm.modbusExt.ModbusRead(6738, 0, typeof(UInt16), 1);
-                calcFaultDetection_AddedWarmUpTimeS = MainForm.modbusExt.ModbusRead(6739, 0, typeof(UInt16), 1);
-                calcFaultDetection_AfterAlgReset_IdleTimeS = MainForm.modbusExt.ModbusRead(6740, 0, typeof(Double), 1);
-                rotationCoordinateAnglesDegree = MainForm.modbusExt.ModbusRead(6767, 0, typeof(Double), 3);
-                calcPreProcessAlgorithm_AccI32_Range = MainForm.modbusExt.ModbusRead(6815, 0, typeof(Double), 1);
-                calcPreProcessAlgorithm_GyroI32_Range = MainForm.modbusExt.ModbusRead(6819, 0, typeof(Double), 1);
+                sensorAccTemperatureI16_Range = MainForm.modbusExt.ModbusRead(6736, 0, typeof(Double), 1);
+                sensorGyroTemperatureI16_Range = MainForm.modbusExt.ModbusRead(6755, 0, typeof(Double), 1);
+                sensorAccTemperatureRateI16_Range = MainForm.modbusExt.ModbusRead(6774, 0, typeof(Double), 1);
+                sensorGyroTemperatureRateI16_Range = MainForm.modbusExt.ModbusRead(6793, 0, typeof(Double), 1);
+                calcFaultDetection_WarmUpTempRateWarningLevel = MainForm.modbusExt.ModbusRead(6797, 0, typeof(Double), 1);
+                calcFaultDetection_AfterWarmUpTempRateWarningLevel = MainForm.modbusExt.ModbusRead(6801, 0, typeof(Double), 1);
+                calcFaultDetection_InitIdleTimeS = MainForm.modbusExt.ModbusRead(6805, 0, typeof(UInt16), 1);
+                calcFaultDetection_AddedWarmUpTimeS = MainForm.modbusExt.ModbusRead(6806, 0, typeof(UInt16), 1);
+                calcFaultDetection_AfterAlgReset_IdleTimeS = MainForm.modbusExt.ModbusRead(6807, 0, typeof(Double), 1);
+                rotationCoordinateAnglesDegree = MainForm.modbusExt.ModbusRead(6834, 0, typeof(Double), 3);
+                calcPreProcessAlgorithm_AccI32_Range = MainForm.modbusExt.ModbusRead(6918, 0, typeof(Double), 1);
+                calcPreProcessAlgorithm_GyroI32_Range = MainForm.modbusExt.ModbusRead(6922, 0, typeof(Double), 1);
             
                 readedOnce = true;
             }
@@ -7661,49 +7726,86 @@ namespace ACCUNAV_IMU_Setting
             SENSOR_GYRO_I32_Y = 3431,
             SENSOR_GYRO_I32_Z = 3432,
             SENSOR_GYRO_I32_RANGE = 3433,
-            SENSOR_TEMPERATURE = 3434,
-            SENSOR_TEMPERATURE_I16 = 3435,
-            SENSOR_TEMPERATURE_I16_RANGE = 3436,
-            CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL = 3437,
-            CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL = 3438,
-            CALC_FAULT_DETECTION_INIT_IDLE_TIME_S = 3439,
-            CALC_FAULT_DETECTION_ADDED_WARM_UP_TIME_S = 3440,
-            CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S = 3441,
-            CALC_FAULT_DETECTION_COUNTER = 3442,
-            CALC_FAULT_DETECTION_VERSION_MAJOR = 3443,
-            CALC_FAULT_DETECTION_VERSION_MINOR = 3444,
-            CALC_FAULT_DETECTION_VERSION_BUILD1 = 3445,
-            CALC_FAULT_DETECTION_VERSION_BUILD2 = 3446,
-            CALC_FAULT_DETECTION_FAULT_STATUS_0 = 3447,
-            CALC_FAULT_DETECTION_FAULT_STATUS_1 = 3448,
-            CALC_FAULT_DETECTION_FAULT_STATUS_2 = 3449,
-            CALC_FAULT_DETECTION_FAULT_STATUS_3 = 3450,
-            CALC_FAULT_DETECTION_WARNING_STATUS_0 = 3451,
-            CALC_FAULT_DETECTION_WARNING_STATUS_1 = 3452,
-            CALC_FAULT_DETECTION_WARNING_STATUS_2 = 3453,
-            CALC_FAULT_DETECTION_WARNING_STATUS_3 = 3454,
-            ROTATION_COORDINATE_ANGLES_DEGREE_0 = 3455,
-            ROTATION_COORDINATE_ANGLES_DEGREE_1 = 3456,
-            ROTATION_COORDINATE_ANGLES_DEGREE_2 = 3457,
-            CALC_PRE_PROCESS_ALGORITHM_ACC_X = 3458,
-            CALC_PRE_PROCESS_ALGORITHM_ACC_Y = 3459,
-            CALC_PRE_PROCESS_ALGORITHM_ACC_Z = 3460,
-            CALC_PRE_PROCESS_ALGORITHM_GYRO_X = 3461,
-            CALC_PRE_PROCESS_ALGORITHM_GYRO_Y = 3462,
-            CALC_PRE_PROCESS_ALGORITHM_GYRO_Z = 3463,
-            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_X = 3464,
-            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Y = 3465,
-            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Z = 3466,
-            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_X = 3467,
-            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Y = 3468,
-            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Z = 3469,
-            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE = 3470,
-            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE = 3471,
-            CALC_PRE_PROCESS_ALGORITHM_VERSION_MAJOR = 3472,
-            CALC_PRE_PROCESS_ALGORITHM_VERSION_MINOR = 3473,
-            CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD1 = 3474,
-            CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2 = 3475,
-            GENERAL_STATUS_SUMMARY = 3476,
+            SENSOR_ACC_TEMPERATURE_X = 3434,
+            SENSOR_ACC_TEMPERATURE_Y = 3435,
+            SENSOR_ACC_TEMPERATURE_Z = 3436,
+            SENSOR_ACC_TEMPERATURE_I16_X = 3437,
+            SENSOR_ACC_TEMPERATURE_I16_Y = 3438,
+            SENSOR_ACC_TEMPERATURE_I16_Z = 3439,
+            SENSOR_ACC_TEMPERATURE_I16_RANGE = 3440,
+            SENSOR_GYRO_TEMPERATURE_X = 3441,
+            SENSOR_GYRO_TEMPERATURE_Y = 3442,
+            SENSOR_GYRO_TEMPERATURE_Z = 3443,
+            SENSOR_GYRO_TEMPERATURE_I16_X = 3444,
+            SENSOR_GYRO_TEMPERATURE_I16_Y = 3445,
+            SENSOR_GYRO_TEMPERATURE_I16_Z = 3446,
+            SENSOR_GYRO_TEMPERATURE_I16_RANGE = 3447,
+            SENSOR_ACC_TEMPERATURE_RATE_X = 3448,
+            SENSOR_ACC_TEMPERATURE_RATE_Y = 3449,
+            SENSOR_ACC_TEMPERATURE_RATE_Z = 3450,
+            SENSOR_ACC_TEMPERATURE_RATE_I16_X = 3451,
+            SENSOR_ACC_TEMPERATURE_RATE_I16_Y = 3452,
+            SENSOR_ACC_TEMPERATURE_RATE_I16_Z = 3453,
+            SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE = 3454,
+            SENSOR_GYRO_TEMPERATURE_RATE_X = 3455,
+            SENSOR_GYRO_TEMPERATURE_RATE_Y = 3456,
+            SENSOR_GYRO_TEMPERATURE_RATE_Z = 3457,
+            SENSOR_GYRO_TEMPERATURE_RATE_I16_X = 3458,
+            SENSOR_GYRO_TEMPERATURE_RATE_I16_Y = 3459,
+            SENSOR_GYRO_TEMPERATURE_RATE_I16_Z = 3460,
+            SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE = 3461,
+            CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL = 3462,
+            CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL = 3463,
+            CALC_FAULT_DETECTION_INIT_IDLE_TIME_S = 3464,
+            CALC_FAULT_DETECTION_ADDED_WARM_UP_TIME_S = 3465,
+            CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S = 3466,
+            CALC_FAULT_DETECTION_COUNTER = 3467,
+            CALC_FAULT_DETECTION_VERSION_MAJOR = 3468,
+            CALC_FAULT_DETECTION_VERSION_MINOR = 3469,
+            CALC_FAULT_DETECTION_VERSION_BUILD1 = 3470,
+            CALC_FAULT_DETECTION_VERSION_BUILD2 = 3471,
+            CALC_FAULT_DETECTION_FAULT_STATUS_0 = 3472,
+            CALC_FAULT_DETECTION_FAULT_STATUS_1 = 3473,
+            CALC_FAULT_DETECTION_FAULT_STATUS_2 = 3474,
+            CALC_FAULT_DETECTION_FAULT_STATUS_3 = 3475,
+            CALC_FAULT_DETECTION_WARNING_STATUS_0 = 3476,
+            CALC_FAULT_DETECTION_WARNING_STATUS_1 = 3477,
+            CALC_FAULT_DETECTION_WARNING_STATUS_2 = 3478,
+            CALC_FAULT_DETECTION_WARNING_STATUS_3 = 3479,
+            ROTATION_COORDINATE_ANGLES_DEGREE_0 = 3480,
+            ROTATION_COORDINATE_ANGLES_DEGREE_1 = 3481,
+            ROTATION_COORDINATE_ANGLES_DEGREE_2 = 3482,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_0_X = 3483,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y = 3484,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z = 3485,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_1_X = 3486,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y = 3487,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z = 3488,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X = 3489,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y = 3490,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z = 3491,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X = 3492,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y = 3493,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z = 3494,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_X = 3495,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Y = 3496,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Z = 3497,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_X = 3498,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Y = 3499,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Z = 3500,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_X = 3501,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Y = 3502,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Z = 3503,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_X = 3504,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Y = 3505,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Z = 3506,
+            CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE = 3507,
+            CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE = 3508,
+            CALC_PRE_PROCESS_ALGORITHM_VERSION_MAJOR = 3509,
+            CALC_PRE_PROCESS_ALGORITHM_VERSION_MINOR = 3510,
+            CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD1 = 3511,
+            CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2 = 3512,
+            GENERAL_STATUS_SUMMARY = 3513,
             NONE = 65535
         }
 
@@ -14430,115 +14532,218 @@ namespace ACCUNAV_IMU_Setting
             PARAMETER_MB_ADDR_SENSOR_GYRO_I32_RANGE_1 = 6718,
             PARAMETER_MB_ADDR_SENSOR_GYRO_I32_RANGE_2 = 6719,
             PARAMETER_MB_ADDR_SENSOR_GYRO_I32_RANGE_3 = 6720,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_0 = 6721,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_1 = 6722,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_2 = 6723,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_3 = 6724,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_I16 = 6725,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_I16_RANGE_0 = 6726,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_I16_RANGE_1 = 6727,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_I16_RANGE_2 = 6728,
-            PARAMETER_MB_ADDR_SENSOR_TEMPERATURE_I16_RANGE_3 = 6729,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL_0 = 6730,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL_1 = 6731,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL_2 = 6732,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL_3 = 6733,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL_0 = 6734,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL_1 = 6735,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL_2 = 6736,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL_3 = 6737,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_INIT_IDLE_TIME_S = 6738,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_ADDED_WARM_UP_TIME_S = 6739,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S_0 = 6740,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S_1 = 6741,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S_2 = 6742,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S_3 = 6743,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_COUNTER_0 = 6744,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_COUNTER_1 = 6745,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_MAJOR = 6746,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_MINOR = 6747,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_BUILD1 = 6748,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_BUILD2_0 = 6749,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_BUILD2_1 = 6750,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_0_0 = 6751,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_0_1 = 6752,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_1_0 = 6753,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_1_1 = 6754,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_2_0 = 6755,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_2_1 = 6756,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_3_0 = 6757,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_3_1 = 6758,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_0_0 = 6759,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_0_1 = 6760,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_1_0 = 6761,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_1_1 = 6762,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_2_0 = 6763,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_2_1 = 6764,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_3_0 = 6765,
-            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_3_1 = 6766,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_0_0 = 6767,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_0_1 = 6768,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_0_2 = 6769,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_0_3 = 6770,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_1_0 = 6771,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_1_1 = 6772,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_1_2 = 6773,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_1_3 = 6774,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_2_0 = 6775,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_2_1 = 6776,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_2_2 = 6777,
-            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_2_3 = 6778,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_X_0 = 6779,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_X_1 = 6780,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_X_2 = 6781,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_X_3 = 6782,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_Y_0 = 6783,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_Y_1 = 6784,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_Y_2 = 6785,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_Y_3 = 6786,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_Z_0 = 6787,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_Z_1 = 6788,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_Z_2 = 6789,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_Z_3 = 6790,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_X_0 = 6791,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_X_1 = 6792,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_X_2 = 6793,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_X_3 = 6794,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y_0 = 6795,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y_1 = 6796,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y_2 = 6797,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y_3 = 6798,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z_0 = 6799,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z_1 = 6800,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z_2 = 6801,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z_3 = 6802,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_X_0 = 6803,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_X_1 = 6804,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Y_0 = 6805,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Y_1 = 6806,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Z_0 = 6807,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Z_1 = 6808,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_X_0 = 6809,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_X_1 = 6810,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Y_0 = 6811,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Y_1 = 6812,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Z_0 = 6813,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Z_1 = 6814,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE_0 = 6815,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE_1 = 6816,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE_2 = 6817,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE_3 = 6818,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE_0 = 6819,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE_1 = 6820,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE_2 = 6821,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE_3 = 6822,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_MAJOR = 6823,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_MINOR = 6824,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD1 = 6825,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2_0 = 6826,
-            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2_1 = 6827,
-            PARAMETER_MB_ADDR_GENERAL_STATUS_SUMMARY_0 = 6828,
-            PARAMETER_MB_ADDR_GENERAL_STATUS_SUMMARY_1 = 6829
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_X_0 = 6721,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_X_1 = 6722,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_X_2 = 6723,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_X_3 = 6724,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_Y_0 = 6725,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_Y_1 = 6726,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_Y_2 = 6727,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_Y_3 = 6728,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_Z_0 = 6729,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_Z_1 = 6730,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_Z_2 = 6731,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_Z_3 = 6732,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_I16_X = 6733,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_I16_Y = 6734,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_I16_Z = 6735,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_I16_RANGE_0 = 6736,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_I16_RANGE_1 = 6737,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_I16_RANGE_2 = 6738,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_I16_RANGE_3 = 6739,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_X_0 = 6740,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_X_1 = 6741,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_X_2 = 6742,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_X_3 = 6743,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_Y_0 = 6744,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_Y_1 = 6745,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_Y_2 = 6746,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_Y_3 = 6747,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_Z_0 = 6748,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_Z_1 = 6749,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_Z_2 = 6750,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_Z_3 = 6751,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_I16_X = 6752,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_I16_Y = 6753,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_I16_Z = 6754,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_I16_RANGE_0 = 6755,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_I16_RANGE_1 = 6756,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_I16_RANGE_2 = 6757,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_I16_RANGE_3 = 6758,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_X_0 = 6759,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_X_1 = 6760,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_X_2 = 6761,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_X_3 = 6762,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_Y_0 = 6763,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_Y_1 = 6764,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_Y_2 = 6765,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_Y_3 = 6766,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_Z_0 = 6767,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_Z_1 = 6768,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_Z_2 = 6769,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_Z_3 = 6770,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_I16_X = 6771,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_I16_Y = 6772,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_I16_Z = 6773,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE_0 = 6774,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE_1 = 6775,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE_2 = 6776,
+            PARAMETER_MB_ADDR_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE_3 = 6777,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_X_0 = 6778,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_X_1 = 6779,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_X_2 = 6780,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_X_3 = 6781,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_Y_0 = 6782,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_Y_1 = 6783,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_Y_2 = 6784,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_Y_3 = 6785,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_Z_0 = 6786,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_Z_1 = 6787,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_Z_2 = 6788,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_Z_3 = 6789,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_I16_X = 6790,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_I16_Y = 6791,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_I16_Z = 6792,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE_0 = 6793,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE_1 = 6794,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE_2 = 6795,
+            PARAMETER_MB_ADDR_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE_3 = 6796,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL_0 = 6797,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL_1 = 6798,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL_2 = 6799,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL_3 = 6800,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL_0 = 6801,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL_1 = 6802,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL_2 = 6803,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL_3 = 6804,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_INIT_IDLE_TIME_S = 6805,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_ADDED_WARM_UP_TIME_S = 6806,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S_0 = 6807,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S_1 = 6808,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S_2 = 6809,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S_3 = 6810,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_COUNTER_0 = 6811,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_COUNTER_1 = 6812,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_MAJOR = 6813,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_MINOR = 6814,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_BUILD1 = 6815,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_BUILD2_0 = 6816,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_VERSION_BUILD2_1 = 6817,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_0_0 = 6818,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_0_1 = 6819,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_1_0 = 6820,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_1_1 = 6821,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_2_0 = 6822,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_2_1 = 6823,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_3_0 = 6824,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_FAULT_STATUS_3_1 = 6825,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_0_0 = 6826,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_0_1 = 6827,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_1_0 = 6828,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_1_1 = 6829,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_2_0 = 6830,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_2_1 = 6831,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_3_0 = 6832,
+            PARAMETER_MB_ADDR_CALC_FAULT_DETECTION_WARNING_STATUS_3_1 = 6833,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_0_0 = 6834,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_0_1 = 6835,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_0_2 = 6836,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_0_3 = 6837,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_1_0 = 6838,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_1_1 = 6839,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_1_2 = 6840,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_1_3 = 6841,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_2_0 = 6842,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_2_1 = 6843,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_2_2 = 6844,
+            PARAMETER_MB_ADDR_ROTATION_COORDINATE_ANGLES_DEGREE_2_3 = 6845,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X_0 = 6846,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X_1 = 6847,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X_2 = 6848,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X_3 = 6849,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y_0 = 6850,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y_1 = 6851,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y_2 = 6852,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y_3 = 6853,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z_0 = 6854,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z_1 = 6855,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z_2 = 6856,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z_3 = 6857,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X_0 = 6858,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X_1 = 6859,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X_2 = 6860,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X_3 = 6861,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y_0 = 6862,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y_1 = 6863,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y_2 = 6864,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y_3 = 6865,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z_0 = 6866,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z_1 = 6867,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z_2 = 6868,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z_3 = 6869,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X_0 = 6870,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X_1 = 6871,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X_2 = 6872,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X_3 = 6873,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y_0 = 6874,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y_1 = 6875,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y_2 = 6876,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y_3 = 6877,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z_0 = 6878,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z_1 = 6879,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z_2 = 6880,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z_3 = 6881,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X_0 = 6882,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X_1 = 6883,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X_2 = 6884,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X_3 = 6885,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y_0 = 6886,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y_1 = 6887,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y_2 = 6888,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y_3 = 6889,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z_0 = 6890,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z_1 = 6891,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z_2 = 6892,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z_3 = 6893,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_X_0 = 6894,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_X_1 = 6895,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Y_0 = 6896,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Y_1 = 6897,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Z_0 = 6898,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Z_1 = 6899,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_X_0 = 6900,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_X_1 = 6901,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Y_0 = 6902,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Y_1 = 6903,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Z_0 = 6904,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Z_1 = 6905,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_X_0 = 6906,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_X_1 = 6907,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Y_0 = 6908,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Y_1 = 6909,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Z_0 = 6910,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Z_1 = 6911,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_X_0 = 6912,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_X_1 = 6913,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Y_0 = 6914,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Y_1 = 6915,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Z_0 = 6916,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Z_1 = 6917,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE_0 = 6918,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE_1 = 6919,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE_2 = 6920,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE_3 = 6921,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE_0 = 6922,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE_1 = 6923,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE_2 = 6924,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE_3 = 6925,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_MAJOR = 6926,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_MINOR = 6927,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD1 = 6928,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2_0 = 6929,
+            PARAMETER_MB_ADDR_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2_1 = 6930,
+            PARAMETER_MB_ADDR_GENERAL_STATUS_SUMMARY_0 = 6931,
+            PARAMETER_MB_ADDR_GENERAL_STATUS_SUMMARY_1 = 6932
         }
     }
 }

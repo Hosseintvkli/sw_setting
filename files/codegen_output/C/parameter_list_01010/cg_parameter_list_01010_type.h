@@ -18,6 +18,7 @@ extern "C" {
 #define eSnjBoardVersion_MEMBER_QTY          2
 #define eSnjThermometerType_MEMBER_QTY       2
 #define eConnectedDeviceHostMode_MEMBER_QTY  2
+#define eInternalImuSerialPort_MEMBER_QTY    2
 
 #define sDownStreamStatistics_MODBUS_SIZE        12
 #define sDownStreamSetting_MODBUS_SIZE           15
@@ -39,7 +40,7 @@ extern "C" {
 #define s3dI16_MODBUS_SIZE                       3
 #define sFilterSetting_MODBUS_SIZE               141
 #define sInternalImuData_MODBUS_SIZE             33
-#define sInternalImuSetting_MODBUS_SIZE          2
+#define sInternalImuSetting_MODBUS_SIZE          3
 
 /* Exported macro ------------------------------------------------------------*/
 /* Exported types (enum, struct, union,...)-----------------------------------*/
@@ -2654,10 +2655,10 @@ typedef uint16_t eParameterId_t;
 #define PARAMETER_ID_FOG_SETTING_2_PRESCALER                                              ((eParameterId_t)2602)
 #define PARAMETER_ID_FOG_SETTING_2_CORRECTION_GAIN                                        ((eParameterId_t)2603)
 #define PARAMETER_ID_FOG_SETTING_2_ENABLE                                                 ((eParameterId_t)2604)
-#define PARAMETER_ID_ACC_TYPE                                                             ((eParameterId_t)2605)
-#define PARAMETER_ID_XRZA_SETTING_ENABLE                                                  ((eParameterId_t)2606)
-#define PARAMETER_ID_XRZA_SETTING_PRESCALER                                               ((eParameterId_t)2607)
-#define PARAMETER_ID_INTERNAL_IMU_SETTING_PRESCALER                                       ((eParameterId_t)2608)
+#define PARAMETER_ID_XRZA_SETTING_ENABLE                                                  ((eParameterId_t)2605)
+#define PARAMETER_ID_XRZA_SETTING_PRESCALER                                               ((eParameterId_t)2606)
+#define PARAMETER_ID_INTERNAL_IMU_SETTING_PRESCALER                                       ((eParameterId_t)2607)
+#define PARAMETER_ID_INTERNAL_IMU_SETTING_SERIAL_PORT                                     ((eParameterId_t)2608)
 #define PARAMETER_ID_INTERNAL_IMU_SETTING_ENABLE                                          ((eParameterId_t)2609)
 #define PARAMETER_ID_FOG_HEATER_PWM_FREQ_HZ                                               ((eParameterId_t)2610)
 #define PARAMETER_ID_OUT_DATA_UART_TO_MCU_ALG_BAUD_RATE                                   ((eParameterId_t)2611)
@@ -8273,6 +8274,15 @@ typedef uint16_t eConnectedDeviceHostMode_t;
 #define eHOST_MODE_NORMAL   ((eConnectedDeviceHostMode_t)0)
 #define eHOST_MODE_GATEWAY  ((eConnectedDeviceHostMode_t)1)
 
+/**
+* @brief
+* 
+*/
+typedef uint16_t eInternalImuSerialPort_t;
+
+#define eINTERNAL_IMU_SERIAL_PORT_6_IMU_DATA    ((eInternalImuSerialPort_t)0)
+#define eINTERNAL_IMU_SERIAL_PORT_1_FARAABIN_M  ((eInternalImuSerialPort_t)1)
+
 typedef_struct_(sDownStreamStatistics) {
   sm_(uint32_t, ReceivedFrameQty);
   sm_(uint32_t, SendFrameQty);
@@ -8475,6 +8485,7 @@ typedef_struct_(sInternalImuData) {
 
 typedef_struct_(sInternalImuSetting) {
   sm_(uint16_t, Prescaler);
+  sm_(uint16_t, SerialPort);
   sm_(uint16_t, Enable);
 }typedef_struct_end_(sInternalImuSetting);
 
@@ -8642,7 +8653,7 @@ typedef_struct_(sParametersValue_RappPrtlStreamer_Setting) {
   sm_(uint16_t, StreamerExtendedHeaderEnable);
   sm_(uint16_t, StreamerInternalClockIntervalMs);
   sm_(uint16_t, StreamerPrescaler);
-  sma_(uint16_t, StreamerParameterIds, 200);
+  sma_(eParameterId_t, StreamerParameterIds, 200);
 }typedef_struct_end_(sParametersValue_RappPrtlStreamer_Setting);
 
 typedef_struct_(sParametersValue_RappPrtlStreamer_Monitoring) {
@@ -8664,7 +8675,6 @@ typedef_struct_(sParametersValue_RappBaseBoardStartup_Setting) {
   sma_(sSensorAd7177Setting, Ad7177_Setting, 3);
   sma_(sSensorAccSnjSetting, Snj_Setting, 3);
   sma_(sSensorFogSetting, Fog_Setting, 3);
-  sm_(uint16_t, AccType);
   sm_(sSensorAccXrza3071Setting, Xrza_Setting);
   sm_(sInternalImuSetting, InternalImu_Setting);
   sm_(uint16_t, FogHeaterPwmFreqHz);

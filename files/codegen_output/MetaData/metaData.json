@@ -15,13 +15,13 @@
     "appVersion": "3.0.11"
   },
   "parameter_list_atlas_alg.xlsx": {
-    "excelHash": "6759860da2ca4e68de360acaea7c006453f21478fbeb3f447163ebac2691e028",
-    "outputsVersion": "00022",
+    "excelHash": "37bcc9ac4fa5065244493e8ae6ea30a40a13cbdecd718dee5f3215af5c2c52d9",
+    "outputsVersion": "00024",
     "appVersion": "3.0.11"
   },
   "parameter_list_atlas_main.xlsx": {
-    "excelHash": "f5dda9bad96374930b3eedaf44dda8cca4d81f61e63805b78b9c40e21203bdeb",
-    "outputsVersion": "00032",
+    "excelHash": "b003097ce7ccca574a38b78c6c815e37f33262d66f354526f1bf19b1dd3c9ee3",
+    "outputsVersion": "00034",
     "appVersion": "3.0.11"
   },
   "parameter_list_blue_dragon_main.xlsx": {

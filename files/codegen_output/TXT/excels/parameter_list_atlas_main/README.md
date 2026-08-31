@@ -43,10 +43,11 @@ The application generates the following files:
 | parameter_list_atlas_main - sFilterSetting.txt | - |
 | parameter_list_atlas_main - sInternalImuData.txt | - |
 | parameter_list_atlas_main - sInternalImuSetting.txt | - |
+| parameter_list_atlas_main - eInternalImuSerialPort.txt | - |
 ## Notes
 
 - The outputs are generated based on the version **3.0.11** of this software.  
 
 ---
 
-*Generated on: 2026-08-15 - 10:17:23*  
+*Generated on: 2026-08-29 - 16:10:54*  

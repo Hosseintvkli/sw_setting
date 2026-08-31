@@ -17007,32 +17007,32 @@ const sParameterSpec ParametersSpec[] = {
     .pValue = &(ParametersValue.RappBaseBoardStartup.Setting.Fog_Setting[2].Enable),
     .ModbusAddr = 4726
     },
-  { /* AccType */
-    .Type = PARAMETER_TYPE_SETTING,
-    .Tag1 = eSETTING_HW_CONFIGURATION,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseBoardStartup.Setting.AccType),
-    .ModbusAddr = 4727
-    },
   { /* Xrza_Setting.Enable */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_HW_CONFIGURATION,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappBaseBoardStartup.Setting.Xrza_Setting.Enable),
-    .ModbusAddr = 4728
+    .ModbusAddr = 4727
     },
   { /* Xrza_Setting.Prescaler */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_HW_CONFIGURATION,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappBaseBoardStartup.Setting.Xrza_Setting.Prescaler),
-    .ModbusAddr = 4729
+    .ModbusAddr = 4728
     },
   { /* InternalImu_Setting.Prescaler */
     .Type = PARAMETER_TYPE_SETTING,
     .Tag1 = eSETTING_HW_CONFIGURATION,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.Prescaler),
+    .ModbusAddr = 4729
+    },
+  { /* InternalImu_Setting.SerialPort */
+    .Type = PARAMETER_TYPE_SETTING,
+    .Tag1 = eSETTING_HW_CONFIGURATION,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.SerialPort),
     .ModbusAddr = 4730
     },
   { /* InternalImu_Setting.Enable */
@@ -59217,10 +59217,10 @@ const sModbusSlaveMemoryMapItem ParametersModbusSlaveMemoryMap[MODBUS_SLAVE_MEMO
   /* 4724   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.Fog_Setting[2].CorrectionGain))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_FOG_SETTING_2_CORRECTION_GAIN },
   /* 4725   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.Fog_Setting[2].CorrectionGain))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_FOG_SETTING_2_CORRECTION_GAIN },
   /* 4726   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.Fog_Setting[2].Enable))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_FOG_SETTING_2_ENABLE },
-  /* 4727   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.AccType))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_ACC_TYPE },
-  /* 4728   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.Xrza_Setting.Enable))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_XRZA_SETTING_ENABLE },
-  /* 4729   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.Xrza_Setting.Prescaler))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_XRZA_SETTING_PRESCALER },
-  /* 4730   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.Prescaler))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_INTERNAL_IMU_SETTING_PRESCALER },
+  /* 4727   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.Xrza_Setting.Enable))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_XRZA_SETTING_ENABLE },
+  /* 4728   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.Xrza_Setting.Prescaler))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_XRZA_SETTING_PRESCALER },
+  /* 4729   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.Prescaler))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_INTERNAL_IMU_SETTING_PRESCALER },
+  /* 4730   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.SerialPort))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_INTERNAL_IMU_SETTING_SERIAL_PORT },
   /* 4731   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.Enable))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_INTERNAL_IMU_SETTING_ENABLE },
   /* 4732   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.FogHeaterPwmFreqHz))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_FOG_HEATER_PWM_FREQ_HZ },
   /* 4733   */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseBoardStartup.Setting.OutDataUartToMcuAlgBaudRate))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_OUT_DATA_UART_TO_MCU_ALG_BAUD_RATE },
@@ -78762,7 +78762,7 @@ uint8_t fCgParameterList_RestoreDefaultValue(void) {
   ParametersValue.RappPrtlStreamer.Setting.StreamerPrescaler = 19;
 
   for(uint32_t i0 = 0; i0 < 200; i0++) {
-    ParametersValue.RappPrtlStreamer.Setting.StreamerParameterIds[i0] = 65535;
+    ParametersValue.RappPrtlStreamer.Setting.StreamerParameterIds[i0] = (eParameterId_t)65535; // TEST: This is an enum
   }
 
 
@@ -78915,10 +78915,11 @@ uint8_t fCgParameterList_RestoreDefaultValue(void) {
     ParametersValue.RappBaseBoardStartup.Setting.Fog_Setting[i0].Enable = 1;
   }
 
-  ParametersValue.RappBaseBoardStartup.Setting.AccType = 0;
+
   ParametersValue.RappBaseBoardStartup.Setting.Xrza_Setting.Enable = 0;
   ParametersValue.RappBaseBoardStartup.Setting.Xrza_Setting.Prescaler = 0;
   ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.Prescaler = 0;
+  ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.SerialPort = 0;
   ParametersValue.RappBaseBoardStartup.Setting.InternalImu_Setting.Enable = 1;
   ParametersValue.RappBaseBoardStartup.Setting.FogHeaterPwmFreqHz = 1000;
   ParametersValue.RappBaseBoardStartup.Setting.OutDataUartToMcuAlgBaudRate = 2000000;

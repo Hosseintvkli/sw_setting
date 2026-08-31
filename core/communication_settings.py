@@ -39,7 +39,7 @@ class EthernetTcpCommunicationSettings:
     local_network_interface_name: str = ""
     local_network_ipv4_address: str = ""
     # Remote device on that network
-    device_ip_address: str = "192.168.1.100"
+    device_ip_address: str = "192.168.1.110"
     modbus_tcp_port_number: int = 502
     connect_timeout_milliseconds: int = 2000
     read_timeout_milliseconds: int = 1000

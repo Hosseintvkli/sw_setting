@@ -3469,49 +3469,86 @@ typedef uint16_t eParameterId_t;
 #define PARAMETER_ID_SENSOR_GYRO_I32_Y                                                    ((eParameterId_t)3431)
 #define PARAMETER_ID_SENSOR_GYRO_I32_Z                                                    ((eParameterId_t)3432)
 #define PARAMETER_ID_SENSOR_GYRO_I32_RANGE                                                ((eParameterId_t)3433)
-#define PARAMETER_ID_SENSOR_TEMPERATURE                                                   ((eParameterId_t)3434)
-#define PARAMETER_ID_SENSOR_TEMPERATURE_I16                                               ((eParameterId_t)3435)
-#define PARAMETER_ID_SENSOR_TEMPERATURE_I16_RANGE                                         ((eParameterId_t)3436)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL                 ((eParameterId_t)3437)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL           ((eParameterId_t)3438)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_INIT_IDLE_TIME_S                                ((eParameterId_t)3439)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_ADDED_WARM_UP_TIME_S                            ((eParameterId_t)3440)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S                     ((eParameterId_t)3441)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_COUNTER                                         ((eParameterId_t)3442)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_MAJOR                                   ((eParameterId_t)3443)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_MINOR                                   ((eParameterId_t)3444)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD1                                  ((eParameterId_t)3445)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD2                                  ((eParameterId_t)3446)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_0                                  ((eParameterId_t)3447)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_1                                  ((eParameterId_t)3448)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_2                                  ((eParameterId_t)3449)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_3                                  ((eParameterId_t)3450)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_0                                ((eParameterId_t)3451)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_1                                ((eParameterId_t)3452)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_2                                ((eParameterId_t)3453)
-#define PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_3                                ((eParameterId_t)3454)
-#define PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0                                  ((eParameterId_t)3455)
-#define PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1                                  ((eParameterId_t)3456)
-#define PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2                                  ((eParameterId_t)3457)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_X                                     ((eParameterId_t)3458)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Y                                     ((eParameterId_t)3459)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_Z                                     ((eParameterId_t)3460)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_X                                    ((eParameterId_t)3461)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Y                                    ((eParameterId_t)3462)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_Z                                    ((eParameterId_t)3463)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_X                                 ((eParameterId_t)3464)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Y                                 ((eParameterId_t)3465)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_Z                                 ((eParameterId_t)3466)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_X                                ((eParameterId_t)3467)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Y                                ((eParameterId_t)3468)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_Z                                ((eParameterId_t)3469)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE                             ((eParameterId_t)3470)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE                            ((eParameterId_t)3471)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_MAJOR                             ((eParameterId_t)3472)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_MINOR                             ((eParameterId_t)3473)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD1                            ((eParameterId_t)3474)
-#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2                            ((eParameterId_t)3475)
-#define PARAMETER_ID_GENERAL_STATUS_SUMMARY                                               ((eParameterId_t)3476)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_X                                             ((eParameterId_t)3434)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Y                                             ((eParameterId_t)3435)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_Z                                             ((eParameterId_t)3436)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_X                                         ((eParameterId_t)3437)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_Y                                         ((eParameterId_t)3438)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_Z                                         ((eParameterId_t)3439)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_I16_RANGE                                     ((eParameterId_t)3440)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_X                                            ((eParameterId_t)3441)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Y                                            ((eParameterId_t)3442)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_Z                                            ((eParameterId_t)3443)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_X                                        ((eParameterId_t)3444)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_Y                                        ((eParameterId_t)3445)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_Z                                        ((eParameterId_t)3446)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_I16_RANGE                                    ((eParameterId_t)3447)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_X                                        ((eParameterId_t)3448)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Y                                        ((eParameterId_t)3449)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_Z                                        ((eParameterId_t)3450)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_X                                    ((eParameterId_t)3451)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_Y                                    ((eParameterId_t)3452)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_Z                                    ((eParameterId_t)3453)
+#define PARAMETER_ID_SENSOR_ACC_TEMPERATURE_RATE_I16_RANGE                                ((eParameterId_t)3454)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_X                                       ((eParameterId_t)3455)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Y                                       ((eParameterId_t)3456)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_Z                                       ((eParameterId_t)3457)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_X                                   ((eParameterId_t)3458)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_Y                                   ((eParameterId_t)3459)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_Z                                   ((eParameterId_t)3460)
+#define PARAMETER_ID_SENSOR_GYRO_TEMPERATURE_RATE_I16_RANGE                               ((eParameterId_t)3461)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_WARM_UP_TEMP_RATE_WARNING_LEVEL                 ((eParameterId_t)3462)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_WARM_UP_TEMP_RATE_WARNING_LEVEL           ((eParameterId_t)3463)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_INIT_IDLE_TIME_S                                ((eParameterId_t)3464)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_ADDED_WARM_UP_TIME_S                            ((eParameterId_t)3465)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_AFTER_ALG_RESET_IDLE_TIME_S                     ((eParameterId_t)3466)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_COUNTER                                         ((eParameterId_t)3467)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_MAJOR                                   ((eParameterId_t)3468)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_MINOR                                   ((eParameterId_t)3469)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD1                                  ((eParameterId_t)3470)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_VERSION_BUILD2                                  ((eParameterId_t)3471)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_0                                  ((eParameterId_t)3472)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_1                                  ((eParameterId_t)3473)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_2                                  ((eParameterId_t)3474)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_FAULT_STATUS_3                                  ((eParameterId_t)3475)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_0                                ((eParameterId_t)3476)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_1                                ((eParameterId_t)3477)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_2                                ((eParameterId_t)3478)
+#define PARAMETER_ID_CALC_FAULT_DETECTION_WARNING_STATUS_3                                ((eParameterId_t)3479)
+#define PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_0                                  ((eParameterId_t)3480)
+#define PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_1                                  ((eParameterId_t)3481)
+#define PARAMETER_ID_ROTATION_COORDINATE_ANGLES_DEGREE_2                                  ((eParameterId_t)3482)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_X                                   ((eParameterId_t)3483)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Y                                   ((eParameterId_t)3484)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_0_Z                                   ((eParameterId_t)3485)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_X                                   ((eParameterId_t)3486)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Y                                   ((eParameterId_t)3487)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_1_Z                                   ((eParameterId_t)3488)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_X                                  ((eParameterId_t)3489)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Y                                  ((eParameterId_t)3490)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_0_Z                                  ((eParameterId_t)3491)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_X                                  ((eParameterId_t)3492)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Y                                  ((eParameterId_t)3493)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_1_Z                                  ((eParameterId_t)3494)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_X                               ((eParameterId_t)3495)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Y                               ((eParameterId_t)3496)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_0_Z                               ((eParameterId_t)3497)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_X                               ((eParameterId_t)3498)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Y                               ((eParameterId_t)3499)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_1_Z                               ((eParameterId_t)3500)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_X                              ((eParameterId_t)3501)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Y                              ((eParameterId_t)3502)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_0_Z                              ((eParameterId_t)3503)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_X                              ((eParameterId_t)3504)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Y                              ((eParameterId_t)3505)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_1_Z                              ((eParameterId_t)3506)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_ACC_I32_RANGE                             ((eParameterId_t)3507)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_GYRO_I32_RANGE                            ((eParameterId_t)3508)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_MAJOR                             ((eParameterId_t)3509)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_MINOR                             ((eParameterId_t)3510)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD1                            ((eParameterId_t)3511)
+#define PARAMETER_ID_CALC_PRE_PROCESS_ALGORITHM_VERSION_BUILD2                            ((eParameterId_t)3512)
+#define PARAMETER_ID_GENERAL_STATUS_SUMMARY                                               ((eParameterId_t)3513)
 /* \/ eVirtualParameterId \/ */
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_RASTA_NORMAL_FRAME                            ((eParameterId_t)64000)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_DRAGON_NORMAL_FRAME                           ((eParameterId_t)64001)
@@ -3812,7 +3849,7 @@ typedef_struct_(sParametersValue_RappPrtlStreamer_Setting) {
   sm_(uint16_t, StreamerExtendedHeaderEnable);
   sm_(uint16_t, StreamerInternalClockIntervalMs);
   sm_(uint16_t, StreamerPrescaler);
-  sma_(uint16_t, StreamerParameterIds, 200);
+  sma_(eParameterId_t, StreamerParameterIds, 200);
 }typedef_struct_end_(sParametersValue_RappPrtlStreamer_Setting);
 
 typedef_struct_(sParametersValue_RappPrtlStreamer_Monitoring) {
@@ -3871,8 +3908,14 @@ typedef_struct_(sParametersValue_RappMain_Monitoring) {
   sm_(s3dI32, SensorAccI32);
   sm_(s3d, SensorGyro);
   sm_(s3dI32, SensorGyroI32);
-  sm_(float64_t, SensorTemperature);
-  sm_(int16_t, SensorTemperatureI16);
+  sm_(s3d, SensorAccTemperature);
+  sm_(s3dI16, SensorAccTemperatureI16);
+  sm_(s3d, SensorGyroTemperature);
+  sm_(s3dI16, SensorGyroTemperatureI16);
+  sm_(s3d, SensorAccTemperatureRate);
+  sm_(s3dI16, SensorAccTemperatureRateI16);
+  sm_(s3d, SensorGyroTemperatureRate);
+  sm_(s3dI16, SensorGyroTemperatureRateI16);
   sm_(uint32_t, CalcFaultDetection_Counter);
   sm_(uint16_t, CalcFaultDetection_VersionMajor);
   sm_(uint16_t, CalcFaultDetection_VersionMinor);
@@ -3880,10 +3923,10 @@ typedef_struct_(sParametersValue_RappMain_Monitoring) {
   sm_(uint32_t, CalcFaultDetection_VersionBuild2);
   sma_(uint32_t, CalcFaultDetection_FaultStatus, 4);
   sma_(uint32_t, CalcFaultDetection_WarningStatus, 4);
-  sm_(s3d, CalcPreProcessAlgorithm_Acc);
-  sm_(s3d, CalcPreProcessAlgorithm_Gyro);
-  sm_(s3dI32, CalcPreProcessAlgorithm_AccI32);
-  sm_(s3dI32, CalcPreProcessAlgorithm_GyroI32);
+  sma_(s3d, CalcPreProcessAlgorithm_Acc, 2);
+  sma_(s3d, CalcPreProcessAlgorithm_Gyro, 2);
+  sma_(s3dI32, CalcPreProcessAlgorithm_AccI32, 2);
+  sma_(s3dI32, CalcPreProcessAlgorithm_GyroI32, 2);
   sm_(uint16_t, CalcPreProcessAlgorithm_VersionMajor);
   sm_(uint16_t, CalcPreProcessAlgorithm_VersionMinor);
   sm_(uint16_t, CalcPreProcessAlgorithm_VersionBuild1);
@@ -3918,7 +3961,10 @@ typedef_struct_(sParametersValue_RappMain_Setting) {
   sm_(uint16_t, OutputDecimationRate);
   sm_(float64_t, SensorAccI32_Range);
   sm_(float64_t, SensorGyroI32_Range);
-  sm_(float64_t, SensorTemperatureI16_Range);
+  sm_(float64_t, SensorAccTemperatureI16_Range);
+  sm_(float64_t, SensorGyroTemperatureI16_Range);
+  sm_(float64_t, SensorAccTemperatureRateI16_Range);
+  sm_(float64_t, SensorGyroTemperatureRateI16_Range);
   sm_(float64_t, CalcFaultDetection_WarmUpTempRateWarningLevel);
   sm_(float64_t, CalcFaultDetection_AfterWarmUpTempRateWarningLevel);
   sm_(uint16_t, CalcFaultDetection_InitIdleTimeS);

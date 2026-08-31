@@ -20,8 +20,8 @@ extern "C" {
 * @brief 
 * 
 */
-#define PARAMETER_LIST_VERSION      32
-#define PARAMETER_LIST_VERSION_STR  "00032"
+#define PARAMETER_LIST_VERSION      34
+#define PARAMETER_LIST_VERSION_STR  "00034"
 
 /**
 * @brief 
@@ -2844,10 +2844,10 @@ typedef uint16_t parameter_mb_addr_t;
 #define PARAMETER_MB_ADDR_FOG_SETTING_2_CORRECTION_GAIN_2                                        ((parameter_mb_addr_t)4724)
 #define PARAMETER_MB_ADDR_FOG_SETTING_2_CORRECTION_GAIN_3                                        ((parameter_mb_addr_t)4725)
 #define PARAMETER_MB_ADDR_FOG_SETTING_2_ENABLE                                                   ((parameter_mb_addr_t)4726)
-#define PARAMETER_MB_ADDR_ACC_TYPE                                                               ((parameter_mb_addr_t)4727)
-#define PARAMETER_MB_ADDR_XRZA_SETTING_ENABLE                                                    ((parameter_mb_addr_t)4728)
-#define PARAMETER_MB_ADDR_XRZA_SETTING_PRESCALER                                                 ((parameter_mb_addr_t)4729)
-#define PARAMETER_MB_ADDR_INTERNAL_IMU_SETTING_PRESCALER                                         ((parameter_mb_addr_t)4730)
+#define PARAMETER_MB_ADDR_XRZA_SETTING_ENABLE                                                    ((parameter_mb_addr_t)4727)
+#define PARAMETER_MB_ADDR_XRZA_SETTING_PRESCALER                                                 ((parameter_mb_addr_t)4728)
+#define PARAMETER_MB_ADDR_INTERNAL_IMU_SETTING_PRESCALER                                         ((parameter_mb_addr_t)4729)
+#define PARAMETER_MB_ADDR_INTERNAL_IMU_SETTING_SERIAL_PORT                                       ((parameter_mb_addr_t)4730)
 #define PARAMETER_MB_ADDR_INTERNAL_IMU_SETTING_ENABLE                                            ((parameter_mb_addr_t)4731)
 #define PARAMETER_MB_ADDR_FOG_HEATER_PWM_FREQ_HZ                                                 ((parameter_mb_addr_t)4732)
 #define PARAMETER_MB_ADDR_OUT_DATA_UART_TO_MCU_ALG_BAUD_RATE_0                                   ((parameter_mb_addr_t)4733)

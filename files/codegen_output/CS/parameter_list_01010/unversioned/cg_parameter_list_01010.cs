@@ -63,7 +63,6 @@ namespace ACCUNAV_IMU_Setting
         public sSensorAd7177Setting[] ad7177_Setting;
         public sSensorAccSnjSetting[] snj_Setting;
         public sSensorFogSetting[] fog_Setting;
-        public UInt16 accType;
         public sSensorAccXrza3071Setting xrza_Setting;
         public sInternalImuSetting internalImu_Setting;
         public UInt16 fogHeaterPwmFreqHz;
@@ -162,9 +161,8 @@ namespace ACCUNAV_IMU_Setting
                 fog_Setting[i] = new sSensorFogSetting((UInt16)(4706 + (7 * i)));
             }
 
-            accType = 0;
-            xrza_Setting = new sSensorAccXrza3071Setting((UInt16)(4728));
-            internalImu_Setting = new sInternalImuSetting((UInt16)(4730));
+            xrza_Setting = new sSensorAccXrza3071Setting((UInt16)(4727));
+            internalImu_Setting = new sInternalImuSetting((UInt16)(4729));
             fogHeaterPwmFreqHz = 1000;
             outDataUartToMcuAlgBaudRate = 2000000;
             mainLoopProfilerSetting = new sProfilerSetting((UInt16)(4752));
@@ -534,14 +532,28 @@ namespace ACCUNAV_IMU_Setting
         }
 
         [Category("RappPrtlStreamer"), ReadOnly(false), Description("")]
-        public UInt16[] StreamerParameterIds
+        public eParameterId[] StreamerParameterIds
         {
-            get { return streamerParameterIds; }
+            get
+            {
+                eParameterId[] propView = new eParameterId[200];
+                for (UInt16 i = 0; i < 200; i++)
+                {
+                    propView[i] = (eParameterId)streamerParameterIds[i];
+                }
+                return propView;
+            }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(4093, 0, value, typeof(UInt16), 200))
+                UInt16[] propViewOut = new UInt16[200];
+                for (UInt16 i = 0; i < 200; i++)
                 {
-                    streamerParameterIds = value;
+                    propViewOut[i] = (UInt16)value[i];
+                }
+
+                if(MainForm.modbusExt.ModbusWrite(4093, 0, propViewOut, typeof(ushort), 200))
+                {
+                    streamerParameterIds = propViewOut;
                 }
             }
         }
@@ -624,26 +636,13 @@ namespace ACCUNAV_IMU_Setting
             }
         }
 
-        [Category("RappBaseBoardStartup"), ReadOnly(false), DefaultValue(0), Description("eAccType")]
-        public UInt16 AccType
-        {
-            get { return accType; }
-            set
-            {
-                if(MainForm.modbusExt.ModbusWrite(4727, 0, value, typeof(UInt16), 1))
-                {
-                    accType = value;
-                }
-            }
-        }
-
         [Category("RappBaseBoardStartup"), ReadOnly(false), Description("")]
         public sSensorAccXrza3071Setting Xrza_Setting
         {
             get { return xrza_Setting; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(4728, 0, value, typeof(sSensorAccXrza3071Setting), 1))
+                if(MainForm.modbusExt.ModbusWrite(4727, 0, value, typeof(sSensorAccXrza3071Setting), 1))
                 {
                     xrza_Setting = value;
                 }
@@ -656,7 +655,7 @@ namespace ACCUNAV_IMU_Setting
             get { return internalImu_Setting; }
             set
             {
-                if(MainForm.modbusExt.ModbusWrite(4730, 0, value, typeof(sInternalImuSetting), 1))
+                if(MainForm.modbusExt.ModbusWrite(4729, 0, value, typeof(sInternalImuSetting), 1))
                 {
                     internalImu_Setting = value;
                 }
@@ -1069,7 +1068,6 @@ namespace ACCUNAV_IMU_Setting
                 fog_Setting[i].ModbusWriteAll();
             }
 
-            _status &= MainForm.modbusExt.ModbusWrite(4727, 0, accType, typeof(UInt16), 1);
             _status &= xrza_Setting.ModbusWriteAll();
             _status &= internalImu_Setting.ModbusWriteAll();
             _status &= MainForm.modbusExt.ModbusWrite(4732, 0, fogHeaterPwmFreqHz, typeof(UInt16), 1);
@@ -1171,7 +1169,6 @@ namespace ACCUNAV_IMU_Setting
                     fog_Setting[i].ModbusReadAll();
                 }
 
-                accType = MainForm.modbusExt.ModbusRead(4727, 0, typeof(UInt16), 1);
                 xrza_Setting.ModbusReadAll();
                 internalImu_Setting.ModbusReadAll();
                 fogHeaterPwmFreqHz = MainForm.modbusExt.ModbusRead(4732, 0, typeof(UInt16), 1);
@@ -5176,17 +5173,19 @@ namespace ACCUNAV_IMU_Setting
         public class sInternalImuSetting
         {
             public UInt16 prescaler;
+            public UInt16 serialPort;
             public UInt16 enable;
 
             private UInt16 ModbusBaseAddr;
 
-            public static UInt16 ModbusSize = 2; // VarTypeSize in excel
+            public static UInt16 ModbusSize = 3; // VarTypeSize in excel
             
             public sInternalImuSetting(UInt16 ObjectModbusBaseAddr)
             {
                 ModbusBaseAddr = ObjectModbusBaseAddr;
 
                 prescaler = 0;
+                serialPort = 0;
                 enable = 0;
             }
 
@@ -5202,12 +5201,24 @@ namespace ACCUNAV_IMU_Setting
                 }
             }
 
+            public UInt16 SerialPort
+            {
+                get { return serialPort; }
+                set
+                {
+                    if(MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 1, value, typeof(UInt16), 1))
+                    {
+                        serialPort = value;
+                    }
+                }
+            }
+
             public UInt16 Enable
             {
                 get { return enable; }
                 set
                 {
-                    if(MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 1, value, typeof(UInt16), 1))
+                    if(MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 2, value, typeof(UInt16), 1))
                     {
                         enable = value;
                     }
@@ -5219,7 +5230,8 @@ namespace ACCUNAV_IMU_Setting
                 bool _status = true;
             
                 _status &=  MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 0, prescaler, typeof(UInt16), 1);
-                _status &=  MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 1, enable, typeof(UInt16), 1);
+                _status &=  MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 1, serialPort, typeof(UInt16), 1);
+                _status &=  MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 2, enable, typeof(UInt16), 1);
                 
                 if (!_status)
                 {
@@ -5231,7 +5243,8 @@ namespace ACCUNAV_IMU_Setting
             public void ModbusReadAll()
             {
                 prescaler = MainForm.modbusExt.ModbusRead(ModbusBaseAddr, 0, typeof(UInt16), 1);
-                enable = MainForm.modbusExt.ModbusRead(ModbusBaseAddr, 1, typeof(UInt16), 1);
+                serialPort = MainForm.modbusExt.ModbusRead(ModbusBaseAddr, 1, typeof(UInt16), 1);
+                enable = MainForm.modbusExt.ModbusRead(ModbusBaseAddr, 2, typeof(UInt16), 1);
             }
         }
 
@@ -5279,6 +5292,12 @@ namespace ACCUNAV_IMU_Setting
         {
             eHOST_MODE_NORMAL = 0,
             eHOST_MODE_GATEWAY = 1 /* ModbusExt to device protocol (for example spi) gateway */
+        }
+
+        public enum eInternalImuSerialPort : ushort
+        {
+            eINTERNAL_IMU_SERIAL_PORT_6_IMU_DATA = 0,
+            eINTERNAL_IMU_SERIAL_PORT_1_FARAABIN_M = 1
         }
 
         public enum eParameterId : ushort
@@ -7888,10 +7907,10 @@ namespace ACCUNAV_IMU_Setting
             FOG_SETTING_2_PRESCALER = 2602,
             FOG_SETTING_2_CORRECTION_GAIN = 2603,
             FOG_SETTING_2_ENABLE = 2604,
-            ACC_TYPE = 2605,
-            XRZA_SETTING_ENABLE = 2606,
-            XRZA_SETTING_PRESCALER = 2607,
-            INTERNAL_IMU_SETTING_PRESCALER = 2608,
+            XRZA_SETTING_ENABLE = 2605,
+            XRZA_SETTING_PRESCALER = 2606,
+            INTERNAL_IMU_SETTING_PRESCALER = 2607,
+            INTERNAL_IMU_SETTING_SERIAL_PORT = 2608,
             INTERNAL_IMU_SETTING_ENABLE = 2609,
             FOG_HEATER_PWM_FREQ_HZ = 2610,
             OUT_DATA_UART_TO_MCU_ALG_BAUD_RATE = 2611,
@@ -18165,10 +18184,10 @@ namespace ACCUNAV_IMU_Setting
             PARAMETER_MB_ADDR_FOG_SETTING_2_CORRECTION_GAIN_2 = 4724,
             PARAMETER_MB_ADDR_FOG_SETTING_2_CORRECTION_GAIN_3 = 4725,
             PARAMETER_MB_ADDR_FOG_SETTING_2_ENABLE = 4726,
-            PARAMETER_MB_ADDR_ACC_TYPE = 4727,
-            PARAMETER_MB_ADDR_XRZA_SETTING_ENABLE = 4728,
-            PARAMETER_MB_ADDR_XRZA_SETTING_PRESCALER = 4729,
-            PARAMETER_MB_ADDR_INTERNAL_IMU_SETTING_PRESCALER = 4730,
+            PARAMETER_MB_ADDR_XRZA_SETTING_ENABLE = 4727,
+            PARAMETER_MB_ADDR_XRZA_SETTING_PRESCALER = 4728,
+            PARAMETER_MB_ADDR_INTERNAL_IMU_SETTING_PRESCALER = 4729,
+            PARAMETER_MB_ADDR_INTERNAL_IMU_SETTING_SERIAL_PORT = 4730,
             PARAMETER_MB_ADDR_INTERNAL_IMU_SETTING_ENABLE = 4731,
             PARAMETER_MB_ADDR_FOG_HEATER_PWM_FREQ_HZ = 4732,
             PARAMETER_MB_ADDR_OUT_DATA_UART_TO_MCU_ALG_BAUD_RATE_0 = 4733,
