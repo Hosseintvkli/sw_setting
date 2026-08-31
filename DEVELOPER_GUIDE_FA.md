@@ -13,7 +13,7 @@
 - اعمال، بررسی و ذخیره Profile CSV؛
 - اجرای پارامترهای COMMAND با پروتکل `0xFFFF` و poll نتیجه؛
 - اجرای یک‌باره CLI یا نگهداری نشست پایدار روی HTTP؛
-- یک GUI قدیمی که فعلاً مسیر اصلی توسعه نیست.
+- یک GUI مبتنی بر همان commandهای CLI، همراه با history و اجرای script.
 
 لایه‌ها به‌صورت زیرند:
 
@@ -27,7 +27,7 @@ core: Modbus، JSON، codec، validation، Identify، Profile، Command
 pymodbus / serial port / TCP / فایل‌های CodeGen JSON
 ```
 
-CLI و HTTP از لایه `commands` استفاده می‌کنند. GUI بیشتر منطق `core` را مستقیماً فراخوانی می‌کند و نشست آن با CLI مشترک نیست.
+CLI، HTTP و تمام کنترل‌های GUI از لایه `commands` استفاده می‌کنند. GUI برای هر اقدام یک فرمان واقعی و قابل کپی `python cli.py ...` می‌سازد و آن را با `QProcess` روی session نام‌دار اجرا می‌کند؛ پوشه `ui` هیچ import مستقیمی از `core` ندارد.
 
 ## ۲. مسیرهای اجرای برنامه
 
@@ -73,10 +73,12 @@ python cli.py --session gui serve-stop
 python main.py
   → PyQt6
   → ui/main_window.py
-  → فراخوانی مستقیم core
+  → ui/cli_console_panel.py / QProcess
+  → cli.py --session <name> <command>
+  → HTTP → CommandProcessor → handler → core
 ```
 
-GUI از `CommandProcessor` و session HTTP استفاده نمی‌کند و وضعیت مستقل خودش را دارد.
+GUI یک session نام‌دار HTTP می‌سازد یا به session ساخته‌شده در Shell متصل می‌شود. دکمه‌های گرافیکی فقط آرگومان CLI تولید می‌کنند؛ state قابل نمایش آن‌ها از JSON نتیجه command بازسازی می‌شود.
 
 ## ۳. وضعیت مشترک یک نشست CLI/HTTP
 
@@ -166,7 +168,7 @@ endpointهای HTTP:
 
 | فایل | مسئولیت و مصرف‌کنندگان |
 |---|---|
-| `core/communication_settings.py` | dataclassهای تنظیم Serial RTU، Ethernet TCP، timeout، retry و Unit پیش‌فرض. توسط connection handler، GUI و Modbus link مصرف می‌شود. |
+| `core/communication_settings.py` | dataclassهای تنظیم Serial RTU، Ethernet TCP، timeout، retry و Unit پیش‌فرض. توسط connection handler و Modbus link مصرف می‌شود؛ GUI فقط آرگومان CLI تولید می‌کند. |
 | `core/host_communication_discovery.py` | فهرست COMها با pyserial و IPv4های غیر-loopback با psutil. مسیر CLI از این فایل استفاده می‌کند. |
 | `core/device_modbus_link.py` | wrapper واقعی `pymodbus`: connect/disconnect، read/write U16، retry خواندن، timeoutها، broadcast و Unit override. اولین محل بررسی خطاهای فیزیکی، protocol، timeout و نسخه pymodbus است. |
 | `core/modbus_register_value_codec.py` | تعداد رجیستر هر DataType و encode/decode بین `int/float` و رجیسترهای U16 با قرارداد little-endian word order. هیچ I/O ندارد. |
@@ -292,12 +294,13 @@ device_command_commands.py
 → device_modbus_link.py
 ```
 
-## ۹. GUI قدیمی
+## ۹. GUI مبتنی بر command
 
 | فایل | مسئولیت |
 |---|---|
-| `ui/communication_panel.py` | widget تنظیم Serial/TCP، timeoutها و discovery پورت/شبکه. توابع discovery را جدا از `core/host_communication_discovery.py` تکرار کرده و هنوز fallback PowerShell دارد؛ بنابراین اختلاف CLI و GUI را در هر دو فایل بررسی کنید. |
-| `ui/main_window.py` | مالک link و state مستقل GUI؛ ساخت layout و درخت‌ها، اتصال، بارگذاری setting در `QThread`، ویرایش مقدار، Profile، Identify، اجرای COMMAND و نمایش log. این فایل مستقیم core را صدا می‌زند و تغییر handlerهای CLI الزاماً GUI را اصلاح نمی‌کند. |
+| `ui/communication_panel.py` | فرم خالص Serial/TCP و timeoutها؛ آرگومان‌های `connect` را می‌سازد و نتیجه `list-serial-ports`/`list-networks` را نمایش می‌دهد. discovery یا Modbus I/O ندارد. |
+| `ui/cli_console_panel.py` | CLI قابل مشاهده داخل GUI؛ اجرای بدون shell خطوط کامل `python cli.py ...` با `QProcess`، session نام‌دار، history/copy، stdout/stderr/exit code، اجرای ترتیبی script و مدیریت خودکار `serve-http`. |
+| `ui/main_window.py` | layout و تبدیل رخداد widgetها به command؛ مصرف JSON نتیجه برای topology، setting tree، header، Profile و COMMAND. تمام عملیات از `CliConsolePanel` عبور می‌کنند. |
 
 ## ۱۰. نقشه عیب‌یابی
 
@@ -311,7 +314,7 @@ device_command_commands.py
 | cancel عمل نمی‌کند | `http_session_server.py` event | `context.cancel_check` و `_log()` در `device_identify_session.py` |
 | اتصال Serial/TCP باز نمی‌شود | `connection_commands.py` و args | `communication_settings.py`، `device_modbus_link.py`، کابل/IP/COM |
 | فهرست COM یا شبکه در CLI غلط است | `core/host_communication_discovery.py` | pyserial/psutil و OS |
-| فهرست شبکه GUI با CLI فرق دارد | `ui/communication_panel.py` | نسخه duplicate در `core/host_communication_discovery.py` |
+| فهرست شبکه GUI با CLI فرق دارد | خروجی ثبت‌شده `list-networks` در تب CLI | رندر `set_available_network_interfaces` در `communication_panel.py` |
 | local NIC انتخاب می‌شود ولی اثری ندارد | `device_modbus_link.py` | فیلدهای local interface فقط ذخیره می‌شوند و client فعلی bind صریح ندارد |
 | read/write خام خطا دارد | `modbus_raw_commands.py` | `device_modbus_link.py` و Unit/timeout/retry |
 | Slave اشتباه هدف قرار می‌گیرد | `context.effective_slave_id` و handler | override و اولویت Unit در `device_modbus_link.py` |
@@ -329,12 +332,12 @@ device_command_commands.py
 | Profile parse نمی‌شود | `setting_profile_csv.py` و issues | نام دقیق پارامتر، DataType، سلول خالی و آرایه |
 | Profile روی چند دستگاه اشتباه است | targets در `profile_commands.py` | topology و تطابق DeviceId/Version |
 | COMMAND timeout/error دارد | `device_command_executor.py` | handler، آدرس JSON، timeout و رفتار firmware |
-| GUI freeze یا progress اشتباه است | `ui/main_window.py` و worker thread | callback `0..100` در Loader و عملیات synchronous دیگر |
+| GUI فرمانی را اجرا نمی‌کند یا freeze دارد | `ui/cli_console_panel.py` و وضعیت `QProcess` | command/exit code ثبت‌شده و busy همان HTTP session |
 | خروجی JSON یا exit code غلط است | handler مربوط | `commands/result.py` و `processor.py` |
 
 ## ۱۱. نقاط حساس فعلی
 
-- CLI مسیر اصلی توسعه است؛ GUI پیاده‌سازی موازی و تا حدی duplicate دارد.
+- CLI مسیر واحد اجراست؛ GUI فقط تولیدکننده command و نمایش‌دهنده JSON نتیجه است.
 - HTTP روی `0.0.0.0:8000`، با CORS باز و بدون authentication اجرا می‌شود؛ برای شبکه غیرقابل‌اعتماد مناسب نیست.
 - sessionهای HTTP پایدار روی دیسک نیستند؛ فقط اشاره‌گر client ذخیره می‌شود.
 - `CommandProcessor` exceptionهای handler را به failure کوتاه تبدیل می‌کند؛ برای traceback در HTTP logها را ببینید.
@@ -344,7 +347,7 @@ device_command_commands.py
 - Catalog باید پیش از load شدن package اسکن شود و package فقط با ترکیب دقیق DeviceId/Version معتبر است.
 - `parse-profile` issues را در data برمی‌گرداند؛ صرف `ok=True` را معادل «بدون issue» ندانید.
 - Verify Profile فرمان‌های COMMAND را عمداً اجرا نمی‌کند و آن‌ها را skip می‌کند.
-- مستندات قدیمی ممکن است هنوز fallback PowerShell را برای discovery اصلی ذکر کنند؛ CLI core فقط psutil را استفاده می‌کند، ولی GUI duplicate هنوز fallback دارد.
+- discovery شبکه GUI نیز فرمان `list-networks` را اجرا می‌کند؛ تنها پیاده‌سازی discovery در `core/host_communication_discovery.py` است.
 
 ## ۱۲. وابستگی‌های اجرایی
 

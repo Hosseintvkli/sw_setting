@@ -1,17 +1,16 @@
-"""
-Main window:
+"""Command-driven GUI.
 
-  Left (fixed): Communicate | Devices
-  Center: monitoring + tabs Parameters | Profile
-  Right: application log
+Widgets never call ``core``. Every operation is shown as and executed through
+an exact ``python cli.py ...`` command in :class:`CliConsolePanel`.
 """
 
 from __future__ import annotations
 
-import time
+import html
 from pathlib import Path
+from typing import Any
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -35,82 +34,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.device_modbus_link import DeviceModbusLink, DeviceModbusLinkError
-from core.device_setting_tree_loader import (
-    DeviceMonitoringHeaderValues,
-    DeviceSettingTreeLoader,
-    DeviceSettingTreeLoaderError,
-    DeviceSettingTreeLoadResult,
-    SettingParameterTreeLeafValue,
-    get_fixed_codegen_json_root_directory,
-)
-from core.modbus_register_value_codec import (
-    ModbusRegisterValueCodecError,
-    decode_parameter_value_from_holding_registers,
-    encode_parameter_value_to_holding_registers,
-    format_decoded_parameter_value_for_display,
-)
-from core.parameter_value_validation import (
-    ParameterValueValidationError,
-    parse_and_validate_parameter_value_text,
-)
-from core.setting_profile_csv import (
-    load_setting_profile_assignments_from_csv,
-    save_setting_profile_csv,
-)
-from core.device_command_executor import DeviceCommandExecutor
-from core.device_identify_session import (
-    DeviceIdentifySession,
-    DeviceIdentifySessionError,
-)
-from core.device_topology_models import DeviceIdentifyResult, IdentifiedDeviceNode
+from ui.cli_console_panel import CliConsolePanel
 from ui.communication_panel import CommunicationSettingsPanel
 
-_ROLE_IS_SETTING_LEAF = Qt.ItemDataRole.UserRole
-_ROLE_DATA_TYPE = Qt.ItemDataRole.UserRole + 1
-_ROLE_MODBUS_ADDRESS = Qt.ItemDataRole.UserRole + 2
-_ROLE_LAST_GOOD_VALUE_TEXT = Qt.ItemDataRole.UserRole + 3
-_ROLE_PARAMETER_NAME = Qt.ItemDataRole.UserRole + 4
-
-
-class LoadSettingsTreeWorkerThread(QThread):
-    progress_updated = pyqtSignal(int, int, str)
-    load_succeeded = pyqtSignal(object)
-    load_failed = pyqtSignal(str)
-
-    def __init__(
-        self,
-        device_modbus_link: DeviceModbusLink,
-        modbus_slave_unit_identifier: int,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(parent)
-        self._device_modbus_link = device_modbus_link
-        self._modbus_slave_unit_identifier = modbus_slave_unit_identifier
-        self._last_progress_emit_monotonic: float = 0.0
-
-    def run(self) -> None:
-        def progress_callback(current: int, total: int, message: str) -> None:
-            now = time.monotonic()
-            is_finished = total > 0 and current >= total
-            if is_finished or (now - self._last_progress_emit_monotonic) >= 0.5:
-                self._last_progress_emit_monotonic = now
-                self.progress_updated.emit(current, max(total, 1), message)
-
-        try:
-            loader = DeviceSettingTreeLoader(
-                device_modbus_link=self._device_modbus_link,
-                modbus_slave_unit_identifier=self._modbus_slave_unit_identifier,
-                codegen_json_root_directory=get_fixed_codegen_json_root_directory(),
-            )
-            result = loader.load_setting_tree_from_connected_device(
-                progress_callback=progress_callback
-            )
-            self.load_succeeded.emit(result)
-        except DeviceSettingTreeLoaderError as exc:
-            self.load_failed.emit(str(exc))
-        except Exception as exc:
-            self.load_failed.emit(str(exc))
+_ROLE_KIND = Qt.ItemDataRole.UserRole
+_ROLE_NAME = Qt.ItemDataRole.UserRole + 1
+_ROLE_LAST_VALUE = Qt.ItemDataRole.UserRole + 2
+_ROLE_NODE = Qt.ItemDataRole.UserRole + 3
 
 
 class DeviceSettingMainWindow(QMainWindow):
@@ -118,68 +48,61 @@ class DeviceSettingMainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Device Setting Tool")
-        self.resize(1200, 740)
+        self.setWindowTitle("Device Setting Tool — CLI driven")
+        self.resize(1320, 780)
 
-        self.device_modbus_link = DeviceModbusLink()
-        self._load_settings_worker_thread: LoadSettingsTreeWorkerThread | None = None
-        self._suppress_settings_tree_item_changed: bool = False
-        self._settings_tree_column_widths: list[int] | None = None
-        self._settings_tree_has_been_populated_once: bool = False
-        self._last_setting_tree_load_result: DeviceSettingTreeLoadResult | None = None
-        self._last_device_identify_result: DeviceIdentifyResult | None = None
-        self._pending_save_profile_after_reload: Path | None = None
+        self._connected = False
+        self._cli_busy = False
+        self._session_ready_flag = False
+        self._settings_loaded = False
+        self._suppress_setting_change = False
+        self._selected_slave_id: int | None = None
 
-        # ----- left -----
+        self.cli_console_panel = CliConsolePanel(Path(__file__).resolve().parent.parent)
+        self._build_ui()
+        self._connect_signals()
+        self._set_connected_state(False)
+        self._append_log(
+            "GUI is command-driven. Every action is recorded in the CLI tab."
+        )
+
+    def _build_ui(self) -> None:
+        # ----- left: communication -----
         self.communication_settings_panel = CommunicationSettingsPanel()
-
         self.push_button_connect = QPushButton("Connect")
         self.push_button_disconnect = QPushButton("Disconnect")
-        self.push_button_disconnect.setEnabled(False)
         self.label_connection_state = QLabel("State: Disconnected")
-        self.push_button_connect.clicked.connect(self._on_connect_clicked)
-        self.push_button_disconnect.clicked.connect(self._on_disconnect_clicked)
-
-        connect_row = QHBoxLayout()
-        connect_row.addWidget(self.push_button_connect)
-        connect_row.addWidget(self.push_button_disconnect)
-        connect_row.addStretch(1)
+        connection_buttons = QHBoxLayout()
+        connection_buttons.addWidget(self.push_button_connect)
+        connection_buttons.addWidget(self.push_button_disconnect)
+        connection_buttons.addStretch(1)
 
         communicate_tab = QWidget()
         communicate_layout = QVBoxLayout(communicate_tab)
         communicate_layout.setContentsMargins(0, 0, 0, 0)
         communicate_layout.addWidget(self.communication_settings_panel)
-        communicate_layout.addLayout(connect_row)
+        communicate_layout.addLayout(connection_buttons)
         communicate_layout.addWidget(self.label_connection_state)
         communicate_layout.addStretch(1)
 
+        # ----- left: topology -----
         self.push_button_run_identify = QPushButton("Identify")
-        self.push_button_run_identify.setEnabled(False)
-        self.push_button_run_identify.clicked.connect(self._on_run_identify_clicked)
         self.devices_topology_tree_widget = QTreeWidget()
         self.devices_topology_tree_widget.setHeaderLabels(
             ["Device", "SlaveId", "DeviceId", "Version", "Ports"]
         )
         self.devices_topology_tree_widget.setUniformRowHeights(True)
-        self.devices_topology_tree_widget.itemDoubleClicked.connect(
-            self._on_devices_topology_item_double_clicked
-        )
-
         devices_tab = QWidget()
         devices_layout = QVBoxLayout(devices_tab)
         devices_layout.addWidget(self.push_button_run_identify)
-        devices_layout.addWidget(
-            QLabel("Double-click a device to load its settings")
-        )
+        devices_layout.addWidget(QLabel("Double-click a device to select and load it"))
         devices_layout.addWidget(self.devices_topology_tree_widget, stretch=1)
 
         self.left_tab_widget = QTabWidget()
         self.left_tab_widget.addTab(communicate_tab, "Communicate")
         self.left_tab_widget.addTab(devices_tab, "Devices")
-
         left_container = QWidget()
         left_container.setMinimumWidth(280)
-        # No maximum: user can resize Communicate/Devices panel via splitter
         left_container.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
         )
@@ -187,45 +110,36 @@ class DeviceSettingMainWindow(QMainWindow):
         left_layout.setContentsMargins(4, 4, 4, 4)
         left_layout.addWidget(self.left_tab_widget)
 
-        # ----- center top: monitoring + toolbar -----
+        # ----- monitoring -----
         self.label_monitoring_slave_id = QLabel("—")
         self.label_monitoring_device_id = QLabel("—")
         self.label_monitoring_serial_no = QLabel("—")
         self.label_monitoring_hardware_version = QLabel("—")
         self.label_monitoring_firmware_version = QLabel("—")
-
         monitoring_form = QFormLayout()
         monitoring_form.addRow("SlaveID:", self.label_monitoring_slave_id)
         monitoring_form.addRow("DeviceId:", self.label_monitoring_device_id)
         monitoring_form.addRow("SerialNo:", self.label_monitoring_serial_no)
         monitoring_form.addRow("HW. Ver:", self.label_monitoring_hardware_version)
         monitoring_form.addRow("FW. Ver:", self.label_monitoring_firmware_version)
-
-        monitoring_group_box = QGroupBox("Device monitoring")
-        monitoring_group_box.setLayout(monitoring_form)
-        monitoring_group_box.setMaximumHeight(160)
+        monitoring_box = QGroupBox("Device monitoring")
+        monitoring_box.setLayout(monitoring_form)
+        monitoring_box.setMaximumHeight(160)
 
         self.push_button_reload_settings_tree = QPushButton("Reload")
-        self.push_button_reload_settings_tree.setEnabled(False)
-        self.push_button_reload_settings_tree.clicked.connect(
-            self._on_load_or_reload_settings_tree_clicked
-        )
         self.label_selected_device = QLabel("Selected device: (none)")
-
-        toolbar_row = QHBoxLayout()
-        toolbar_row.addWidget(self.push_button_reload_settings_tree)
-        toolbar_row.addStretch(1)
-        toolbar_row.addWidget(self.label_selected_device)
+        toolbar = QHBoxLayout()
+        toolbar.addWidget(self.push_button_reload_settings_tree)
+        toolbar.addStretch(1)
+        toolbar.addWidget(self.label_selected_device)
 
         self.progress_bar_settings_load = QProgressBar()
-        self.progress_bar_settings_load.setMinimum(0)
-        self.progress_bar_settings_load.setMaximum(100)
-        self.progress_bar_settings_load.setValue(0)
+        self.progress_bar_settings_load.setRange(0, 0)
         self.progress_bar_settings_load.hide()
         self.label_settings_load_status = QLabel("")
         self.label_settings_load_status.hide()
 
-        # ----- Parameters tab (tree) -----
+        # ----- parameters -----
         self.settings_tree_widget = QTreeWidget()
         self.settings_tree_widget.setColumnCount(4)
         self.settings_tree_widget.setHeaderLabels(
@@ -236,953 +150,668 @@ class DeviceSettingMainWindow(QMainWindow):
         self.settings_tree_widget.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
-        self.settings_tree_widget.itemDoubleClicked.connect(
-            self._on_settings_tree_item_double_clicked
-        )
-        self.settings_tree_widget.itemChanged.connect(
-            self._on_settings_tree_item_changed
-        )
-
         parameters_tab = QWidget()
         parameters_layout = QVBoxLayout(parameters_tab)
         parameters_layout.addWidget(
-            QLabel("Settings (SETTING R/W) — double-click Value, Enter to write")
+            QLabel("SETTING R/W — double-click Value, then Enter to execute set-parameter")
         )
         parameters_layout.addWidget(self.settings_tree_widget, stretch=1)
 
-        # ----- Profile tab -----
+        # ----- profile -----
         self.line_edit_profile_csv_path = QLineEdit()
         self.line_edit_profile_csv_path.setPlaceholderText("Path to profile CSV file")
         self.push_button_browse_profile_csv = QPushButton("Browse...")
-        self.push_button_browse_profile_csv.clicked.connect(
-            self._on_browse_profile_csv_clicked
-        )
-
-        csv_path_row = QHBoxLayout()
-        csv_path_row.addWidget(self.line_edit_profile_csv_path, stretch=1)
-        csv_path_row.addWidget(self.push_button_browse_profile_csv)
-
+        csv_row = QHBoxLayout()
+        csv_row.addWidget(self.line_edit_profile_csv_path, stretch=1)
+        csv_row.addWidget(self.push_button_browse_profile_csv)
         self.check_box_apply_profile_to_all_similar_device_ids = QCheckBox(
             "Apply to all discovered devices with the same DeviceId"
         )
-        # Placeholder only — no logic
-        self.check_box_apply_profile_to_all_similar_device_ids.setEnabled(True)
-
         self.push_button_profile_apply = QPushButton("Apply")
         self.push_button_profile_verify = QPushButton("Verify")
         self.push_button_profile_save = QPushButton("Save parameters as profile...")
-        self.push_button_profile_apply.clicked.connect(self._on_profile_apply_clicked)
-        self.push_button_profile_verify.clicked.connect(self._on_profile_verify_clicked)
-        self.push_button_profile_save.clicked.connect(self._on_profile_save_clicked)
-
-        profile_actions_row = QHBoxLayout()
-        profile_actions_row.addWidget(self.push_button_profile_apply)
-        profile_actions_row.addWidget(self.push_button_profile_verify)
-        profile_actions_row.addWidget(self.push_button_profile_save)
-        profile_actions_row.addStretch(1)
-
+        profile_buttons = QHBoxLayout()
+        profile_buttons.addWidget(self.push_button_profile_apply)
+        profile_buttons.addWidget(self.push_button_profile_verify)
+        profile_buttons.addWidget(self.push_button_profile_save)
+        profile_buttons.addStretch(1)
         self.profile_log_text_edit = QTextEdit()
         self.profile_log_text_edit.setReadOnly(True)
-
         profile_tab = QWidget()
         profile_layout = QVBoxLayout(profile_tab)
         profile_layout.addWidget(QLabel("Profile CSV"))
-        profile_layout.addLayout(csv_path_row)
+        profile_layout.addLayout(csv_row)
         profile_layout.addWidget(self.check_box_apply_profile_to_all_similar_device_ids)
-        profile_layout.addLayout(profile_actions_row)
-        profile_layout.addWidget(QLabel("Profile log"))
+        profile_layout.addLayout(profile_buttons)
+        profile_layout.addWidget(QLabel("Profile result"))
         profile_layout.addWidget(self.profile_log_text_edit, stretch=1)
 
-
-        # ----- Commands tab -----
+        # ----- device commands -----
         self.commands_tree_widget = QTreeWidget()
         self.commands_tree_widget.setColumnCount(3)
         self.commands_tree_widget.setHeaderLabels(["Name", "ModbusAddr", "DataType"])
         self.commands_tree_widget.setUniformRowHeights(True)
-        self.push_button_execute_selected_command = QPushButton("Execute selected command")
-        self.push_button_execute_selected_command.clicked.connect(
-            self._on_execute_selected_command_clicked
+        self.push_button_execute_selected_command = QPushButton(
+            "Execute selected command"
         )
         self.commands_log_text_edit = QTextEdit()
         self.commands_log_text_edit.setReadOnly(True)
-        self.commands_log_text_edit.setMaximumHeight(140)
-
+        self.commands_log_text_edit.setMaximumHeight(160)
         commands_tab = QWidget()
         commands_layout = QVBoxLayout(commands_tab)
         commands_layout.addWidget(
-            QLabel("COMMAND parameters — select one and Execute (writes 0xFFFF, then polls)")
+            QLabel("COMMAND parameters — execution uses execute-command")
         )
         commands_layout.addWidget(self.commands_tree_widget, stretch=1)
         commands_layout.addWidget(self.push_button_execute_selected_command)
-        commands_layout.addWidget(QLabel("Command log"))
         commands_layout.addWidget(self.commands_log_text_edit)
 
         self.center_tab_widget = QTabWidget()
         self.center_tab_widget.addTab(parameters_tab, "Parameters")
         self.center_tab_widget.addTab(profile_tab, "Profile")
         self.center_tab_widget.addTab(commands_tab, "Commands")
+        self.center_tab_widget.addTab(self.cli_console_panel, "CLI")
 
         center_container = QWidget()
         center_layout = QVBoxLayout(center_container)
         center_layout.setContentsMargins(4, 4, 4, 4)
-        center_layout.addLayout(toolbar_row)
-        center_layout.addWidget(monitoring_group_box, stretch=0)
+        center_layout.addLayout(toolbar)
+        center_layout.addWidget(monitoring_box)
         center_layout.addWidget(self.progress_bar_settings_load)
         center_layout.addWidget(self.label_settings_load_status)
         center_layout.addWidget(self.center_tab_widget, stretch=1)
 
-        # ----- right log -----
         self.status_log_text_edit = QTextEdit()
         self.status_log_text_edit.setReadOnly(True)
         right_container = QWidget()
         right_layout = QVBoxLayout(right_container)
         right_layout.setContentsMargins(4, 4, 4, 4)
-        right_layout.addWidget(QLabel("Log"))
+        right_layout.addWidget(QLabel("GUI command log"))
         right_layout.addWidget(self.status_log_text_edit, stretch=1)
 
-        main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        main_splitter.addWidget(left_container)
-        main_splitter.addWidget(center_container)
-        main_splitter.addWidget(right_container)
-        main_splitter.setStretchFactor(0, 0)
-        main_splitter.setStretchFactor(1, 1)
-        main_splitter.setStretchFactor(2, 0)
-        main_splitter.setSizes([self._LEFT_PANEL_WIDTH_PIXELS, 700, 260])
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(left_container)
+        splitter.addWidget(center_container)
+        splitter.addWidget(right_container)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setStretchFactor(2, 0)
+        splitter.setSizes([self._LEFT_PANEL_WIDTH_PIXELS, 740, 300])
+        self.setCentralWidget(splitter)
 
-        self.setCentralWidget(main_splitter)
-
-        json_root = get_fixed_codegen_json_root_directory()
-        self._append_log(
-            f"JSON path (fixed): {json_root}\n"
-            "Communicate: Connect. Devices: Identify, then double-click a device to load settings."
+    def _connect_signals(self) -> None:
+        self.cli_console_panel.busy_changed.connect(self._on_cli_busy_changed)
+        self.cli_console_panel.session_ready.connect(self._on_session_ready)
+        self.cli_console_panel.command_completed.connect(
+            self._on_any_cli_command_completed
+        )
+        self.communication_settings_panel.refresh_serial_ports_requested.connect(
+            self._refresh_serial_ports
+        )
+        self.communication_settings_panel.refresh_networks_requested.connect(
+            self._refresh_networks
+        )
+        self.push_button_connect.clicked.connect(self._on_connect_clicked)
+        self.push_button_disconnect.clicked.connect(self._on_disconnect_clicked)
+        self.push_button_run_identify.clicked.connect(self._on_identify_clicked)
+        self.push_button_reload_settings_tree.clicked.connect(
+            self._on_reload_settings_clicked
+        )
+        self.devices_topology_tree_widget.itemDoubleClicked.connect(
+            self._on_topology_item_double_clicked
+        )
+        self.settings_tree_widget.itemDoubleClicked.connect(
+            self._on_setting_item_double_clicked
+        )
+        self.settings_tree_widget.itemChanged.connect(self._on_setting_item_changed)
+        self.push_button_browse_profile_csv.clicked.connect(self._browse_profile)
+        self.push_button_profile_apply.clicked.connect(
+            lambda: self._run_profile("apply-profile")
+        )
+        self.push_button_profile_verify.clicked.connect(
+            lambda: self._run_profile("verify-profile")
+        )
+        self.push_button_profile_save.clicked.connect(self._save_profile)
+        self.push_button_execute_selected_command.clicked.connect(
+            self._execute_selected_device_command
         )
 
-    def _append_log(self, message: str, *, success: bool | None = None) -> None:
-        escaped = (
-            message.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
+    # ----- generic command/state handling -----
+
+    def _execute(
+        self,
+        command_name: str,
+        arguments: list[str] | None = None,
+        callback=None,
+    ) -> bool:
+        try:
+            visible = self.cli_console_panel.build_session_command(
+                command_name, *(arguments or [])
+            )
+        except ValueError as exc:
+            QMessageBox.warning(self, "CLI", str(exc))
+            return False
+        self._append_log(f"> {visible}")
+        return self.cli_console_panel.execute_session_command(
+            command_name, arguments, callback
         )
-        if success is True:
-            html = f'<span style="color:#1b7a1b;">{escaped}</span>'
-        elif success is False:
-            html = f'<span style="color:#b00020;">{escaped}</span>'
-        else:
-            lower = message.lower()
-            if "fail" in lower or "abort" in lower or "error" in lower:
-                html = f'<span style="color:#b00020;">{escaped}</span>'
-            elif "finished ok" in lower or "done." in lower or "json:" in lower or "found deviceid" in lower or "assigned slaveid" in lower:
-                html = f'<span style="color:#1b7a1b;">{escaped}</span>'
-            else:
-                html = escaped
-        self.status_log_text_edit.append(html)
-        from PyQt6.QtWidgets import QApplication
-        app = QApplication.instance()
-        if app is not None:
-            app.processEvents()
 
-    def _append_profile_log(self, message: str, *, success: bool | None = None) -> None:
-        """success True=green, False=red, None=default."""
-        escaped = (
-            message.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
+    def _on_cli_busy_changed(self, busy: bool) -> None:
+        self._cli_busy = busy
+        self._update_action_states()
+
+    def _on_session_ready(self, session_name: str) -> None:
+        self._session_ready_flag = True
+        self._append_log(f"CLI session ready: {session_name}", success=True)
+        self._refresh_serial_ports(
+            lambda _payload, _code: self._refresh_networks()
         )
-        if success is True:
-            html = f'<span style="color:#1b7a1b;">{escaped}</span>'
-        elif success is False:
-            html = f'<span style="color:#b00020;">{escaped}</span>'
-        else:
-            html = escaped
-        self.profile_log_text_edit.append(html)
 
-    def _remember_settings_tree_column_widths(self) -> None:
-        widths = [
-            self.settings_tree_widget.columnWidth(column_index)
-            for column_index in range(self.settings_tree_widget.columnCount())
-        ]
-        if any(width > 0 for width in widths):
-            self._settings_tree_column_widths = widths
-
-    def _restore_settings_tree_column_widths(self) -> None:
-        if not self._settings_tree_column_widths:
-            return
-        for column_index, width in enumerate(self._settings_tree_column_widths):
-            if width > 0:
-                self.settings_tree_widget.setColumnWidth(column_index, width)
-
-    def _apply_default_settings_tree_column_widths(self) -> None:
-        self.settings_tree_widget.setColumnWidth(0, 420)
-        self.settings_tree_widget.setColumnWidth(1, 160)
-        self.settings_tree_widget.setColumnWidth(2, 70)
-        self.settings_tree_widget.setColumnWidth(3, 55)
-
-    def _clear_monitoring_header_labels(self) -> None:
-        self.label_monitoring_slave_id.setText("—")
-        self.label_monitoring_device_id.setText("—")
-        self.label_monitoring_serial_no.setText("—")
-        self.label_monitoring_hardware_version.setText("—")
-        self.label_monitoring_firmware_version.setText("—")
-
-    def _apply_monitoring_header_values(
-        self, header: DeviceMonitoringHeaderValues
+    def _on_any_cli_command_completed(
+        self, command_text: str, exit_code: int, payload: object
     ) -> None:
-        self.label_monitoring_slave_id.setText(str(header.modbus_slave_unit_identifier))
-        self.label_monitoring_device_id.setText(str(header.device_id))
-        if header.serial_number is None:
-            self.label_monitoring_serial_no.setText("—")
-        else:
-            self.label_monitoring_serial_no.setText(str(header.serial_number))
-        self.label_monitoring_hardware_version.setText(header.hardware_version_text)
-        self.label_monitoring_firmware_version.setText(header.firmware_version_text)
-
-    def _set_connected_ui_state(self, is_connected: bool) -> None:
-        self.push_button_connect.setEnabled(not is_connected)
-        self.push_button_disconnect.setEnabled(is_connected)
-        self.push_button_reload_settings_tree.setEnabled(is_connected)
-        self.push_button_run_identify.setEnabled(is_connected)
-        self.communication_settings_panel.setEnabled(not is_connected)
-        self.label_connection_state.setText(
-            "State: Connected" if is_connected else "State: Disconnected"
+        ok = exit_code == 0
+        self._append_log(
+            f"{'OK' if ok else 'FAILED'} exit={exit_code}: {command_text}",
+            success=ok,
         )
+        if not isinstance(payload, dict):
+            return
+        command = str(payload.get("command") or "")
+        data = payload.get("data")
+        data = data if isinstance(data, dict) else {}
+        error = payload.get("error")
+        if error:
+            self._append_log(str(error), success=False)
 
-    def _set_loading_ui_state(self, is_loading: bool) -> None:
-        busy = is_loading
-        connected = self.device_modbus_link.is_connected
-        self.push_button_connect.setEnabled((not connected) and (not busy))
-        self.push_button_disconnect.setEnabled(connected and (not busy))
-        self.push_button_reload_settings_tree.setEnabled(connected and (not busy))
-        self.push_button_run_identify.setEnabled(connected and (not busy))
-        self.communication_settings_panel.setEnabled((not connected) and (not busy))
+        if command == "connect" and ok:
+            self._clear_loaded_device_state()
+            self._set_connected_state(True)
+        elif command == "disconnect" and ok:
+            self._set_connected_state(False)
+        elif command == "serve-stop" and ok:
+            self._session_ready_flag = False
+            self._set_connected_state(False)
+        elif command == "status" and ok:
+            self._set_connected_state(bool(data.get("connected")))
+        elif command == "list-serial-ports" and ok:
+            ports = data.get("ports")
+            self.communication_settings_panel.set_available_serial_ports(
+                [str(port) for port in ports] if isinstance(ports, list) else []
+            )
+        elif command == "list-networks" and ok:
+            interfaces = data.get("interfaces")
+            self.communication_settings_panel.set_available_network_interfaces(
+                [item for item in interfaces if isinstance(item, dict)]
+                if isinstance(interfaces, list)
+                else []
+            )
+        elif command in ("identify", "show-topology"):
+            root = data.get("root")
+            if isinstance(root, dict):
+                self._populate_topology(root)
+                self.left_tab_widget.setCurrentIndex(1)
+        elif command == "select-device" and ok:
+            self._selected_slave_id = _optional_int(data.get("slave_id"))
+            self.label_selected_device.setText(
+                "Selected device: "
+                f"{data.get('device_name') or '(unknown)'}  "
+                f"SlaveId={data.get('slave_id')}  DeviceId={data.get('device_id', '—')}"
+            )
+        elif command in ("load-settings", "reload-settings") and ok:
+            self._settings_loaded = True
+            self._selected_slave_id = _optional_int(data.get("slave_id"))
+            values = data.get("values")
+            if isinstance(values, list):
+                self._populate_settings(
+                    [item for item in values if isinstance(item, dict)]
+                )
+            self.label_selected_device.setText(
+                f"Selected device: {data.get('device_name', '(unknown)')}  "
+                f"SlaveId={data.get('slave_id')}  DeviceId={data.get('device_id')}"
+            )
+        elif command == "get-monitoring-header" and ok:
+            self._apply_monitoring_data(data)
+        elif command == "list-commands" and ok:
+            commands = data.get("commands")
+            self._populate_device_commands(
+                [item for item in commands if isinstance(item, dict)]
+                if isinstance(commands, list)
+                else []
+            )
+        elif command in ("apply-profile", "verify-profile", "parse-profile"):
+            self._render_profile_result(command, data, ok, error)
+        elif command == "save-profile":
+            self._append_profile_log(
+                f"{'SAVE OK' if ok else 'SAVE FAILED'}: "
+                f"{data.get('file') or error}",
+                success=ok,
+            )
+        elif command == "execute-command":
+            self._append_command_log(
+                str(data.get("message") or error or "No result"), success=ok
+            )
+        self._update_action_states()
+
+    # ----- discovery and connection -----
+
+    def _refresh_serial_ports(self, callback=None) -> None:
+        self._execute("list-serial-ports", callback=callback)
+
+    def _refresh_networks(self, callback=None) -> None:
+        self._execute("list-networks", callback=callback)
 
     def _on_connect_clicked(self) -> None:
-        settings = (
-            self.communication_settings_panel.read_device_communication_settings()
-        )
-        self._append_log("Connecting...")
         try:
-            self.device_modbus_link.connect_using_settings(settings)
-        except (DeviceModbusLinkError, Exception) as exc:
-            self._append_log(f"CONNECT FAILED: {exc}")
-            QMessageBox.critical(self, "Connect failed", str(exc))
-            self._set_connected_ui_state(False)
+            arguments = self.communication_settings_panel.connect_cli_arguments()
+        except ValueError as exc:
+            QMessageBox.warning(self, "Communication", str(exc))
             return
-        self._append_log("Connected.")
-        self._set_connected_ui_state(True)
+        self._execute("connect", arguments)
 
     def _on_disconnect_clicked(self) -> None:
-        if self._load_settings_worker_thread is not None and (
-            self._load_settings_worker_thread.isRunning()
-        ):
-            QMessageBox.warning(self, "Busy", "Wait for the current load to finish.")
-            return
-        self.device_modbus_link.disconnect()
-        self._remember_settings_tree_column_widths()
+        self._execute("disconnect")
+
+    def _set_connected_state(self, connected: bool) -> None:
+        self._connected = connected
+        self.label_connection_state.setText(
+            "State: Connected" if connected else "State: Disconnected"
+        )
+        if not connected:
+            self._settings_loaded = False
+            self._selected_slave_id = None
+            self.settings_tree_widget.clear()
+            self.commands_tree_widget.clear()
+            self.label_selected_device.setText("Selected device: (none)")
+            self._clear_monitoring()
+        self._update_action_states()
+
+    def _update_action_states(self) -> None:
+        ready = self._session_ready_flag and not self._cli_busy
+        self.push_button_connect.setEnabled(ready and not self._connected)
+        self.push_button_disconnect.setEnabled(ready and self._connected)
+        self.push_button_run_identify.setEnabled(ready and self._connected)
+        self.push_button_reload_settings_tree.setEnabled(ready and self._connected)
+        self.communication_settings_panel.setEnabled(ready and not self._connected)
+        profile_ready = ready and self._connected and self._settings_loaded
+        self.push_button_profile_apply.setEnabled(profile_ready)
+        self.push_button_profile_verify.setEnabled(profile_ready)
+        self.push_button_profile_save.setEnabled(ready and self._connected)
+        self.push_button_execute_selected_command.setEnabled(
+            profile_ready and self.commands_tree_widget.topLevelItemCount() > 0
+        )
+
+    def _clear_loaded_device_state(self) -> None:
+        self._settings_loaded = False
+        self._selected_slave_id = None
         self.settings_tree_widget.clear()
         self.commands_tree_widget.clear()
-        self._last_setting_tree_load_result = None
         self.label_selected_device.setText("Selected device: (none)")
-        self._clear_monitoring_header_labels()
-        self.progress_bar_settings_load.setValue(0)
-        self.progress_bar_settings_load.hide()
-        self.label_settings_load_status.setText("")
-        self.label_settings_load_status.hide()
-        self._append_log("Disconnected.")
-        self._set_connected_ui_state(False)
+        self._clear_monitoring()
 
-    def _on_load_or_reload_settings_tree_clicked(self) -> None:
-        if self._load_settings_worker_thread is not None and (
-            self._load_settings_worker_thread.isRunning()
-        ):
+    # ----- topology -----
+
+    def _on_identify_clicked(self) -> None:
+        self.devices_topology_tree_widget.clear()
+        self._execute("identify")
+
+    def _populate_topology(self, root: dict[str, Any]) -> None:
+        self.devices_topology_tree_widget.clear()
+
+        def make_device_item(node: dict[str, Any], label: str | None = None):
+            name = str(node.get("device_name") or f"DeviceId={node.get('device_id')}")
+            item = QTreeWidgetItem(
+                [
+                    label or name,
+                    str(node.get("slave_id", "")),
+                    str(node.get("device_id", "")),
+                    str(node.get("parameter_list_version", "")),
+                    str(node.get("downstream_qty", 0)),
+                ]
+            )
+            item.setData(0, _ROLE_NODE, node)
+            for port in node.get("ports", []):
+                if not isinstance(port, dict):
+                    continue
+                port_index = port.get("port_index")
+                child = port.get("device")
+                if port.get("connected") and isinstance(child, dict):
+                    child_name = str(
+                        child.get("device_name")
+                        or f"DeviceId={child.get('device_id')}"
+                    )
+                    item.addChild(
+                        make_device_item(child, f"port[{port_index}]: {child_name}")
+                    )
+                else:
+                    item.addChild(
+                        QTreeWidgetItem([f"port[{port_index}]: (no connection)"])
+                    )
+            return item
+
+        self.devices_topology_tree_widget.addTopLevelItem(make_device_item(root))
+        self.devices_topology_tree_widget.expandAll()
+        for column in range(5):
+            self.devices_topology_tree_widget.resizeColumnToContents(column)
+
+    def _on_topology_item_double_clicked(
+        self, item: QTreeWidgetItem, _column: int
+    ) -> None:
+        node = item.data(0, _ROLE_NODE)
+        if not isinstance(node, dict):
+            return
+        slave_id = _optional_int(node.get("slave_id"))
+        if slave_id is None:
             return
 
-        json_root = get_fixed_codegen_json_root_directory()
-        if not json_root.is_dir():
-            QMessageBox.critical(
-                self,
-                "JSON catalog missing",
-                f"Fixed path not found:\n{json_root}",
-            )
-            return
+        def after_select(_payload, exit_code: int) -> None:
+            if exit_code == 0:
+                self.center_tab_widget.setCurrentIndex(0)
+                self._load_settings(slave_id=slave_id)
 
-        try:
-            unit_id = self.device_modbus_link.get_effective_modbus_unit_identifier()
-        except DeviceModbusLinkError:
-            settings = (
-                self.communication_settings_panel.read_device_communication_settings()
-            )
-            unit_id = settings.modbus_unit_identifier
+        self._execute(
+            "select-device", ["--slave-id", str(slave_id)], after_select
+        )
 
-        self._remember_settings_tree_column_widths()
-        self.settings_tree_widget.clear()
-        self.progress_bar_settings_load.setValue(0)
+    # ----- settings -----
+
+    def _on_reload_settings_clicked(self) -> None:
+        self._load_settings(reload=True)
+
+    def _load_settings(self, *, slave_id: int | None = None, reload: bool = False) -> None:
+        command = "reload-settings" if reload else "load-settings"
+        arguments = ["--dump-values"]
+        if slave_id is not None:
+            arguments.extend(["--slave-id", str(slave_id)])
         self.progress_bar_settings_load.show()
-        self.label_settings_load_status.setText("Starting...")
+        self.label_settings_load_status.setText("Running load-settings through CLI...")
         self.label_settings_load_status.show()
-        self._append_log("Loading settings tree (batched Modbus reads)...")
-        self._set_loading_ui_state(True)
 
-        worker = LoadSettingsTreeWorkerThread(
-            self.device_modbus_link, unit_id, self
-        )
-        worker.progress_updated.connect(self._on_load_progress_updated)
-        worker.load_succeeded.connect(self._on_load_succeeded)
-        worker.load_failed.connect(self._on_load_failed)
-        worker.finished.connect(self._on_load_worker_thread_finished)
-        self._load_settings_worker_thread = worker
-        worker.start()
+        def after_load(_payload, exit_code: int) -> None:
+            self.progress_bar_settings_load.hide()
+            self.label_settings_load_status.hide()
+            if exit_code != 0:
+                return
 
-    def _on_load_progress_updated(
-        self, current: int, total: int, message: str
-    ) -> None:
-        total = max(total, 1)
-        percent = int(min(100, max(0, (100 * current) // total)))
-        self.progress_bar_settings_load.setValue(percent)
-        self.label_settings_load_status.setText(f"{message}  ({percent}%)")
+            def after_header(_payload2, _exit_code2: int) -> None:
+                self._execute("list-commands")
 
-    def _on_load_succeeded(self, result: object) -> None:
-        assert isinstance(result, DeviceSettingTreeLoadResult)
-        self._last_setting_tree_load_result = result
-        self._apply_monitoring_header_values(result.monitoring_header_values)
-        self._populate_settings_tree_widget(result)
-        self._populate_commands_tree_widget(result)
-        error_count = sum(
-            1 for leaf in result.setting_leaf_values if leaf.read_error_message
-        )
-        self.progress_bar_settings_load.setValue(100)
-        self.progress_bar_settings_load.hide()
-        self.label_settings_load_status.setText("")
-        self.label_settings_load_status.hide()
-        self._append_log(
-            f"DeviceId={result.device_id_from_device}  "
-            f"Version={result.parameter_list_version_from_device}  "
-            f"Name={result.parameter_list_package.info.device_name}  "
-            f"SETTING={len(result.setting_leaf_values)}  "
-            f"errors={error_count}"
-        )
-        self._finish_pending_profile_save_after_reload()
-
-    def _on_load_failed(self, error_message: str) -> None:
-        self.progress_bar_settings_load.hide()
-        self.label_settings_load_status.hide()
-        if self._pending_save_profile_after_reload is not None:
-            self._append_profile_log(
-                f"SAVE aborted: reload failed: {error_message}",
-                success=False,
+            header_args = (
+                ["--slave-id", str(self._selected_slave_id)]
+                if self._selected_slave_id is not None
+                else []
             )
-            self._pending_save_profile_after_reload = None
-        self._append_log(f"LOAD FAILED: {error_message}")
-        QMessageBox.critical(self, "Load failed", error_message)
+            self._execute("get-monitoring-header", header_args, after_header)
 
-    def _on_load_worker_thread_finished(self) -> None:
-        self._set_loading_ui_state(False)
-        self._load_settings_worker_thread = None
+        self._execute(command, arguments, after_load)
 
-    def _populate_settings_tree_widget(
-        self, result: DeviceSettingTreeLoadResult
-    ) -> None:
-        self._suppress_settings_tree_item_changed = True
+    def _populate_settings(self, values: list[dict[str, Any]]) -> None:
+        self._suppress_setting_change = True
         try:
             self.settings_tree_widget.clear()
-            category_items: dict[str, QTreeWidgetItem] = {}
-            branch_items: dict[tuple[str, tuple[str, ...]], QTreeWidgetItem] = {}
+            categories: dict[str, QTreeWidgetItem] = {}
+            branches: dict[tuple[str, tuple[str, ...]], QTreeWidgetItem] = {}
+            for value in values:
+                category = str(value.get("tag2") or "").strip() or "(No Tag2)"
+                category_item = categories.get(category)
+                if category_item is None:
+                    category_item = QTreeWidgetItem([category])
+                    categories[category] = category_item
+                    self.settings_tree_widget.addTopLevelItem(category_item)
 
-            for leaf in result.setting_leaf_values:
-                self._add_setting_leaf_to_tree(leaf, category_items, branch_items)
-
-            self.settings_tree_widget.expandToDepth(0)
-
-            if (
-                not self._settings_tree_has_been_populated_once
-                and not self._settings_tree_column_widths
-            ):
-                self._apply_default_settings_tree_column_widths()
-                self._settings_tree_has_been_populated_once = True
-                self._remember_settings_tree_column_widths()
-            else:
-                self._restore_settings_tree_column_widths()
-        finally:
-            self._suppress_settings_tree_item_changed = False
-
-    def _add_setting_leaf_to_tree(
-        self,
-        leaf: SettingParameterTreeLeafValue,
-        category_items: dict[str, QTreeWidgetItem],
-        branch_items: dict[tuple[str, tuple[str, ...]], QTreeWidgetItem],
-    ) -> None:
-        parameter = leaf.parameter
-        category_name = parameter.tag_2.strip() or "(No Tag2)"
-
-        if category_name not in category_items:
-            category_item = QTreeWidgetItem([category_name, "", "", ""])
-            category_item.setFlags(
-                category_item.flags() & ~Qt.ItemFlag.ItemIsEditable
-            )
-            self.settings_tree_widget.addTopLevelItem(category_item)
-            category_items[category_name] = category_item
-        category_item = category_items[category_name]
-
-        segments = parameter.name_path_segments
-        if not segments:
-            segments = [parameter.parameter_name or "(unnamed)"]
-
-        parent_item = category_item
-        parent_path: tuple[str, ...] = ()
-
-        for segment in segments[:-1]:
-            parent_path = parent_path + (segment,)
-            key = (category_name, parent_path)
-            if key not in branch_items:
-                branch_item = QTreeWidgetItem([segment, "", "", ""])
-                branch_item.setFlags(
-                    branch_item.flags() & ~Qt.ItemFlag.ItemIsEditable
+                raw_segments = value.get("name_path_segments")
+                segments = (
+                    [str(part) for part in raw_segments if str(part)]
+                    if isinstance(raw_segments, list)
+                    else []
                 )
-                parent_item.addChild(branch_item)
-                branch_items[key] = branch_item
-            parent_item = branch_items[key]
+                name = str(value.get("name") or "(unnamed)")
+                if not segments:
+                    segments = [name]
+                parent = category_item
+                path: tuple[str, ...] = ()
+                for segment in segments[:-1]:
+                    path += (segment,)
+                    key = (category, path)
+                    branch = branches.get(key)
+                    if branch is None:
+                        branch = QTreeWidgetItem([segment])
+                        branches[key] = branch
+                        parent.addChild(branch)
+                    parent = branch
 
-        value_text = leaf.display_value_text
-        if leaf.read_error_message:
-            value_text = f"ERROR: {leaf.read_error_message}"
-
-        leaf_item = QTreeWidgetItem(
-            [
-                segments[-1],
-                value_text,
-                parameter.data_type_name,
-                str(parameter.modbus_address),
-            ]
-        )
-        leaf_item.setFlags(
-            leaf_item.flags()
-            | Qt.ItemFlag.ItemIsEditable
-            | Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsSelectable
-        )
-        leaf_item.setData(0, _ROLE_IS_SETTING_LEAF, True)
-        leaf_item.setData(0, _ROLE_DATA_TYPE, parameter.data_type_name)
-        leaf_item.setData(0, _ROLE_MODBUS_ADDRESS, int(parameter.modbus_address))
-        leaf_item.setData(0, _ROLE_LAST_GOOD_VALUE_TEXT, value_text)
-        leaf_item.setData(0, _ROLE_PARAMETER_NAME, parameter.parameter_name)
-        parent_item.addChild(leaf_item)
-
-    def _on_settings_tree_item_double_clicked(
-        self, item: QTreeWidgetItem, column: int
-    ) -> None:
-        if column != 1:
-            return
-        if not item.data(0, _ROLE_IS_SETTING_LEAF):
-            return
-        if not self.device_modbus_link.is_connected:
-            return
-        self.settings_tree_widget.editItem(item, 1)
-
-    def _on_settings_tree_item_changed(
-        self, item: QTreeWidgetItem, column: int
-    ) -> None:
-        if self._suppress_settings_tree_item_changed:
-            return
-        if column != 1:
-            return
-        if not item.data(0, _ROLE_IS_SETTING_LEAF):
-            return
-
-        data_type_name = item.data(0, _ROLE_DATA_TYPE)
-        modbus_address = item.data(0, _ROLE_MODBUS_ADDRESS)
-        previous_text = item.data(0, _ROLE_LAST_GOOD_VALUE_TEXT) or ""
-        new_text = item.text(1).strip()
-
-        if new_text == previous_text:
-            return
-        if data_type_name is None or modbus_address is None:
-            return
-
-        try:
-            parsed_value = parse_and_validate_parameter_value_text(
-                data_type_name, new_text
-            )
-            register_values = encode_parameter_value_to_holding_registers(
-                data_type_name, parsed_value
-            )
-            self.device_modbus_link.write_holding_registers_u16(
-                int(modbus_address), register_values
-            )
-            display_text = format_decoded_parameter_value_for_display(
-                data_type_name, parsed_value
-            )
-        except (
-            ParameterValueValidationError,
-            ModbusRegisterValueCodecError,
-            DeviceModbusLinkError,
-        ) as exc:
-            self._append_log(f"WRITE FAILED @ {modbus_address}: {exc}")
-            self._suppress_settings_tree_item_changed = True
-            try:
-                item.setText(1, str(previous_text))
-            finally:
-                self._suppress_settings_tree_item_changed = False
-            QMessageBox.warning(self, "Write failed", str(exc))
-            return
-
-        self._suppress_settings_tree_item_changed = True
-        try:
-            item.setText(1, display_text)
-            item.setData(0, _ROLE_LAST_GOOD_VALUE_TEXT, display_text)
+                raw_value = value.get("value")
+                display = "" if raw_value is None else str(raw_value)
+                if value.get("error"):
+                    display = f"ERROR: {value['error']}"
+                leaf = QTreeWidgetItem(
+                    [
+                        segments[-1],
+                        display,
+                        str(value.get("data_type") or ""),
+                        _display_or_empty(value.get("modbus_addr")),
+                    ]
+                )
+                leaf.setFlags(
+                    leaf.flags()
+                    | Qt.ItemFlag.ItemIsEditable
+                    | Qt.ItemFlag.ItemIsEnabled
+                    | Qt.ItemFlag.ItemIsSelectable
+                )
+                leaf.setData(0, _ROLE_KIND, "setting")
+                leaf.setData(0, _ROLE_NAME, name)
+                leaf.setData(0, _ROLE_LAST_VALUE, display)
+                parent.addChild(leaf)
+            self.settings_tree_widget.expandToDepth(0)
+            self.settings_tree_widget.setColumnWidth(0, 420)
+            self.settings_tree_widget.setColumnWidth(1, 160)
+            self.settings_tree_widget.setColumnWidth(2, 75)
         finally:
-            self._suppress_settings_tree_item_changed = False
+            self._suppress_setting_change = False
 
-        self._append_log(
-            f"WRITE OK addr={modbus_address} type={data_type_name} value={display_text}"
+    def _on_setting_item_double_clicked(
+        self, item: QTreeWidgetItem, column: int
+    ) -> None:
+        if (
+            column == 1
+            and item.data(0, _ROLE_KIND) == "setting"
+            and self._connected
+            and not self._cli_busy
+        ):
+            self.settings_tree_widget.editItem(item, 1)
+
+    def _on_setting_item_changed(
+        self, item: QTreeWidgetItem, column: int
+    ) -> None:
+        if self._suppress_setting_change or column != 1:
+            return
+        if item.data(0, _ROLE_KIND) != "setting":
+            return
+        name = str(item.data(0, _ROLE_NAME) or "")
+        previous = str(item.data(0, _ROLE_LAST_VALUE) or "")
+        new_value = item.text(1).strip()
+        if not name or new_value == previous:
+            return
+
+        def restore(text: str) -> None:
+            self._suppress_setting_change = True
+            try:
+                item.setText(1, text)
+                item.setData(0, _ROLE_LAST_VALUE, text)
+            finally:
+                self._suppress_setting_change = False
+
+        def after_set(payload, exit_code: int) -> None:
+            if exit_code != 0 or not isinstance(payload, dict):
+                restore(previous)
+                QMessageBox.warning(
+                    self,
+                    "set-parameter failed",
+                    str(payload.get("error") if isinstance(payload, dict) else "No result"),
+                )
+                return
+            data = payload.get("data")
+            display = (
+                str(data.get("display"))
+                if isinstance(data, dict) and data.get("display") is not None
+                else new_value
+            )
+            restore(display)
+
+        if not self._execute(
+            "set-parameter", ["--name", name, "--value", new_value], after_set
+        ):
+            restore(previous)
+
+    def _apply_monitoring_data(self, data: dict[str, Any]) -> None:
+        self.label_monitoring_slave_id.setText(str(data.get("slave_id", "—")))
+        self.label_monitoring_device_id.setText(str(data.get("device_id", "—")))
+        self.label_monitoring_serial_no.setText(str(data.get("serial_number") or "—"))
+        self.label_monitoring_hardware_version.setText(
+            str(data.get("hardware_version") or "—")
+        )
+        self.label_monitoring_firmware_version.setText(
+            str(data.get("firmware_version") or "—")
         )
 
-    # ----- Profile -----
+    def _clear_monitoring(self) -> None:
+        for label in (
+            self.label_monitoring_slave_id,
+            self.label_monitoring_device_id,
+            self.label_monitoring_serial_no,
+            self.label_monitoring_hardware_version,
+            self.label_monitoring_firmware_version,
+        ):
+            label.setText("—")
 
-    def _on_browse_profile_csv_clicked(self) -> None:
-        start = self.line_edit_profile_csv_path.text().strip() or str(Path.home())
-        path, _filter = QFileDialog.getOpenFileName(
+    # ----- profile -----
+
+    def _browse_profile(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
             self,
             "Select profile CSV",
-            start,
+            self.line_edit_profile_csv_path.text().strip() or str(Path.home()),
             "CSV files (*.csv);;All files (*.*)",
         )
         if path:
             self.line_edit_profile_csv_path.setText(path)
 
-    def _require_connected_and_loaded_package(self) -> DeviceSettingTreeLoadResult | None:
-        if not self.device_modbus_link.is_connected:
-            QMessageBox.warning(self, "Not connected", "Connect to a device first.")
-            return None
-        if self._last_setting_tree_load_result is None:
-            QMessageBox.warning(
-                self,
-                "No parameter list",
-                "Open a device first (Identify → double-click device, or Reload after selection).",
-            )
-            return None
-        return self._last_setting_tree_load_result
-
-    def _on_profile_apply_clicked(self) -> None:
-        self._run_profile_from_csv(verify_only=False)
-
-    def _on_profile_verify_clicked(self) -> None:
-        self._run_profile_from_csv(verify_only=True)
-
-    def _run_profile_from_csv(self, verify_only: bool) -> None:
-        load_result = self._require_connected_and_loaded_package()
-        if load_result is None:
+    def _run_profile(self, command_name: str) -> None:
+        path = self.line_edit_profile_csv_path.text().strip()
+        if not path:
+            QMessageBox.warning(self, "Profile", "Choose a profile CSV file.")
             return
-
-        csv_path_text = self.line_edit_profile_csv_path.text().strip()
-        if not csv_path_text:
-            QMessageBox.warning(self, "No CSV", "Choose a profile CSV file.")
-            return
-        csv_path = Path(csv_path_text)
-        if not csv_path.is_file():
-            QMessageBox.warning(self, "CSV missing", f"File not found:\n{csv_path}")
-            return
-
-        mode_label = "VERIFY" if verify_only else "APPLY"
-        self._append_profile_log(f"===== {mode_label} {csv_path.name} =====")
-
-        parse_result = load_setting_profile_assignments_from_csv(
-            csv_path, load_result.parameter_list_package
-        )
-        for issue in parse_result.issues:
-            self._append_profile_log(
-                f"PARSE FAIL line {issue.source_csv_line_number}: {issue.message}",
-                success=False,
-            )
-
-        target_slave_ids: list[tuple[int, str]] = []
-        current_unit = self.device_modbus_link.get_effective_modbus_unit_identifier()
-        current_device_id = load_result.device_id_from_device
+        arguments = ["--file", path, "--verbose"]
         if self.check_box_apply_profile_to_all_similar_device_ids.isChecked():
-            identify = self._last_device_identify_result
-            if identify is None or identify.root_node is None:
-                self._append_profile_log(
-                    "No Identify tree — applying only to current device.",
-                    success=False,
-                )
-                target_slave_ids.append((current_unit, "current"))
-            else:
-                for node in identify.root_node.iter_depth_first():
-                    if node.device_id == current_device_id:
-                        target_slave_ids.append(
-                            (
-                                node.permanent_modbus_slave_id,
-                                node.device_name,
-                            )
-                        )
-                if not target_slave_ids:
-                    self._append_profile_log(
-                        f"No topology nodes with DeviceId={current_device_id}.",
-                        success=False,
-                    )
-                    target_slave_ids.append((current_unit, "current"))
-                else:
-                    self._append_profile_log(
-                        f"Targets with DeviceId={current_device_id}: "
-                        + ", ".join(
-                            f"{name}(SlaveId={sid})" for sid, name in target_slave_ids
-                        )
-                    )
-        else:
-            target_slave_ids.append((current_unit, "current"))
+            arguments.append("--all-same-device-id")
+        self._execute(command_name, arguments)
 
-        ok_count = 0
-        fail_count = len(parse_result.issues)
-
-        previous_override = getattr(
-            self.device_modbus_link, "_modbus_unit_identifier_override", None
-        )
-
-        for slave_id, target_name in target_slave_ids:
-            self.device_modbus_link.set_modbus_unit_identifier_override(slave_id)
-            self._append_profile_log(
-                f"--- {mode_label} on {target_name} SlaveId={slave_id} ---"
-            )
-            for assignment in parse_result.assignments:
-                definition = assignment.parameter_definition
-                try:
-                    if verify_only:
-                        registers = self.device_modbus_link.read_holding_registers_u16(
-                            definition.modbus_address,
-                            definition.modbus_register_size
-                            if definition.modbus_register_size > 0
-                            else 1,
-                        )
-                        # use modbus size from definition; codec expects matching type size
-                        from core.modbus_register_value_codec import (
-                            register_count_for_data_type_name,
-                        )
-
-                        expected_count = definition.modbus_register_size
-                        if expected_count <= 0:
-                            expected_count = register_count_for_data_type_name(
-                                definition.data_type_name
-                            )
-                        if len(registers) < expected_count:
-                            registers = self.device_modbus_link.read_holding_registers_u16(
-                                definition.modbus_address, expected_count
-                            )
-                        device_value = decode_parameter_value_from_holding_registers(
-                            definition.data_type_name, registers[:expected_count]
-                        )
-                        if not _profile_values_equal(
-                            definition.data_type_name,
-                            device_value,
-                            assignment.parsed_value,
-                        ):
-                            raise DeviceModbusLinkError(
-                                f"Mismatch device={device_value!r} csv={assignment.parsed_value!r}"
-                            )
-                        self._append_profile_log(
-                            f"VERIFY OK {assignment.parameter_name} = {assignment.parsed_value!r}",
-                            success=True,
-                        )
-                    else:
-                        register_values = encode_parameter_value_to_holding_registers(
-                            definition.data_type_name, assignment.parsed_value
-                        )
-                        self.device_modbus_link.write_holding_registers_u16(
-                            definition.modbus_address, register_values
-                        )
-                        self._append_profile_log(
-                            f"APPLY OK {assignment.parameter_name} = {assignment.parsed_value!r}",
-                            success=True,
-                        )
-                    ok_count += 1
-                except (
-                    DeviceModbusLinkError,
-                    ModbusRegisterValueCodecError,
-                    ParameterValueValidationError,
-                ) as exc:
-                    fail_count += 1
-                    self._append_profile_log(
-                        f"{mode_label} FAIL {assignment.parameter_name}: {exc}",
-                        success=False,
-                    )
-
-        self.device_modbus_link.set_modbus_unit_identifier_override(previous_override)
-
-        self._append_profile_log(
-            f"===== {mode_label} done: ok={ok_count} fail={fail_count} ====="
-        )
-        self._append_log(f"Profile {mode_label}: ok={ok_count} fail={fail_count}")
-
-        if (
-            not verify_only
-            and ok_count > 0
-            and self._last_setting_tree_load_result is not None
-        ):
-            # Tree may be stale; user can Reload. Optional soft note:
-            self._append_log("Profile applied — Reload settings tree to refresh values.")
-
-    def _on_profile_save_clicked(self) -> None:
-        if not self.device_modbus_link.is_connected:
-            QMessageBox.warning(self, "Not connected", "Connect to a device first.")
-            return
-
-        path, _filter = QFileDialog.getSaveFileName(
+    def _save_profile(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
             self,
             "Save parameters as profile CSV",
             str(Path.home() / "settings_profile.csv"),
             "CSV files (*.csv);;All files (*.*)",
         )
-        if not path:
-            return
-        csv_path = Path(path)
-        self._pending_save_profile_after_reload = csv_path
-        self._append_profile_log(f"Reloading settings before save to {csv_path}...")
-        self._append_log("Profile save: Reload first, then write CSV.")
-        self._on_load_or_reload_settings_tree_clicked()
+        if path:
+            self._execute("save-profile", ["--file", path])
 
-    def _finish_pending_profile_save_after_reload(self) -> None:
-        csv_path = self._pending_save_profile_after_reload
-        self._pending_save_profile_after_reload = None
-        if csv_path is None:
-            return
-        load_result = self._last_setting_tree_load_result
-        if load_result is None:
-            self._append_profile_log("SAVE FAIL: no settings after reload.", success=False)
-            return
-
-        rows: list[tuple[str, str]] = []
-        for leaf in load_result.setting_leaf_values:
-            if leaf.read_error_message:
-                continue
-            rows.append((leaf.parameter.parameter_name, leaf.display_value_text))
-
-        try:
-            save_setting_profile_csv(csv_path, rows)
-        except OSError as exc:
-            self._append_profile_log(f"SAVE FAIL: {exc}", success=False)
-            QMessageBox.critical(self, "Save failed", str(exc))
-            return
-
-        self._append_profile_log(
-            f"SAVE OK {csv_path} ({len(rows)} SETTING rows)",
-            success=True,
-        )
-        self._append_log(f"Profile saved: {csv_path}")
-        self.line_edit_profile_csv_path.setText(str(csv_path))
-
-    def _on_run_identify_clicked(self) -> None:
-        if not self.device_modbus_link.is_connected:
-            QMessageBox.warning(self, "Not connected", "Connect first.")
-            return
-        self.devices_topology_tree_widget.clear()
-        self._append_log("Identify started...")
-        self._set_loading_ui_state(True)
-        try:
-            session = DeviceIdentifySession(
-                device_modbus_link=self.device_modbus_link,
-                codegen_json_root_directory=get_fixed_codegen_json_root_directory(),
-                log_callback=self._append_log,
-            )
-            result = session.run_identify()
-        except DeviceIdentifySessionError as exc:
-            self._append_log(f"IDENTIFY FAILED: {exc}", success=False)
-            partial = getattr(exc, "partial_result", None)
-            if partial is not None and partial.root_node is not None:
-                self._last_device_identify_result = partial
-                self._populate_devices_topology_tree(partial)
-                self._append_log(
-                    "Showing partial topology "
-                    f"({partial.assigned_slave_id_count} SlaveId(s) before failure).",
-                    success=True,
-                )
-                self.left_tab_widget.setCurrentIndex(1)
-            QMessageBox.warning(
-                self,
-                "Identify incomplete",
-                str(exc)
-                + (
-                    "\n\nDevices found before the error are shown in Devices."
-                    if partial is not None and partial.root_node is not None
-                    else ""
-                ),
-            )
-            return
-        except Exception as exc:
-            self._append_log(f"IDENTIFY FAILED (unexpected): {exc}", success=False)
-            QMessageBox.critical(self, "Identify failed", str(exc))
-            return
-        finally:
-            self._set_loading_ui_state(False)
-
-        self._last_device_identify_result = result
-        self._populate_devices_topology_tree(result)
-        self._append_log(
-            f"Identify done. Assigned slave ids: {result.assigned_slave_id_count}",
-            success=True,
-        )
-        self.left_tab_widget.setCurrentIndex(1)
-
-    def _populate_devices_topology_tree(self, result: DeviceIdentifyResult) -> None:
-        """
-        Under each hub, list EVERY port as sibling rows:
-          port[i]: deviceName   or   port[i]: (no connection)
-        Nested hubs list their ports under the device row (not under a separate port-only node).
-        """
-        self.devices_topology_tree_widget.clear()
-        if result.root_node is None:
-            return
-
-        def add_ports_under_device(
-            device_node: IdentifiedDeviceNode, device_item: QTreeWidgetItem
-        ) -> None:
-            for port_index in range(device_node.downstream_port_quantity):
-                child = device_node.children_by_port_index.get(port_index)
-                if child is None:
-                    device_item.addChild(
-                        QTreeWidgetItem(
-                            [
-                                f"port[{port_index}]: (no connection)",
-                                "",
-                                "",
-                                "",
-                                "",
-                            ]
-                        )
-                    )
-                    continue
-                child_label = child.device_name or f"DeviceId={child.device_id}"
-                row = QTreeWidgetItem(
-                    [
-                        f"port[{port_index}]: {child_label}",
-                        str(child.permanent_modbus_slave_id),
-                        str(child.device_id),
-                        str(child.parameter_list_version),
-                        str(child.downstream_port_quantity),
-                    ]
-                )
-                row.setData(0, Qt.ItemDataRole.UserRole, child)
-                device_item.addChild(row)
-                if child.downstream_port_quantity > 0:
-                    add_ports_under_device(child, row)
-
-        root = result.root_node
-        root_label = root.device_name or f"DeviceId={root.device_id}"
-        root_item = QTreeWidgetItem(
-            [
-                root_label,
-                str(root.permanent_modbus_slave_id),
-                str(root.device_id),
-                str(root.parameter_list_version),
-                str(root.downstream_port_quantity),
-            ]
-        )
-        root_item.setData(0, Qt.ItemDataRole.UserRole, root)
-        self.devices_topology_tree_widget.addTopLevelItem(root_item)
-        if root.downstream_port_quantity > 0:
-            add_ports_under_device(root, root_item)
-
-        self.devices_topology_tree_widget.expandAll()
-        for column_index in range(5):
-            self.devices_topology_tree_widget.resizeColumnToContents(column_index)
-
-
-    def _populate_commands_tree_widget(
-        self, result: DeviceSettingTreeLoadResult
+    def _render_profile_result(
+        self,
+        command: str,
+        data: dict[str, Any],
+        ok: bool,
+        error: object,
     ) -> None:
-        from core.codegen_parameter_list_models import ParameterAccessKind
+        self._append_profile_log(
+            f"{command}: {'OK' if ok else 'FAILED'} "
+            f"ok={data.get('ok_count', 0)} fail={data.get('fail_count', 0)} "
+            f"skipped={data.get('skipped_count', 0)}",
+            success=ok,
+        )
+        for issue in data.get("parse_issues", data.get("issues", [])):
+            if isinstance(issue, dict):
+                self._append_profile_log(
+                    f"line {issue.get('line')}: {issue.get('message')}", success=False
+                )
+        for detail in data.get("details", []):
+            if isinstance(detail, dict):
+                message = detail.get("message") or detail.get("error") or ""
+                self._append_profile_log(
+                    f"SlaveId={detail.get('slave_id')} {detail.get('name')}: {message}",
+                    success=bool(detail.get("ok")),
+                )
+        if error:
+            self._append_profile_log(str(error), success=False)
 
+    # ----- device commands -----
+
+    def _populate_device_commands(self, commands: list[dict[str, Any]]) -> None:
         self.commands_tree_widget.clear()
-        for parameter in result.parameter_list_package.parameters:
-            if parameter.parameter_access_kind != ParameterAccessKind.COMMAND_WRITE:
-                continue
+        for command in commands:
             item = QTreeWidgetItem(
                 [
-                    parameter.parameter_name,
-                    str(parameter.modbus_address),
-                    parameter.data_type_name,
+                    str(command.get("name") or ""),
+                    _display_or_empty(command.get("modbus_addr")),
+                    str(command.get("data_type") or ""),
                 ]
             )
-            item.setData(0, Qt.ItemDataRole.UserRole, parameter.modbus_address)
-            item.setData(0, Qt.ItemDataRole.UserRole + 1, parameter.parameter_name)
+            item.setData(0, _ROLE_NAME, command.get("name"))
             self.commands_tree_widget.addTopLevelItem(item)
         self.commands_tree_widget.resizeColumnToContents(0)
+        self._update_action_states()
 
-    def _append_command_log(self, message: str, *, success: bool | None = None) -> None:
-        escaped = (
-            message.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-        )
-        if success is True:
-            html = f'<span style="color:#1b7a1b;">{escaped}</span>'
-        elif success is False:
-            html = f'<span style="color:#b00020;">{escaped}</span>'
-        else:
-            html = escaped
-        self.commands_log_text_edit.append(html)
-
-    def _on_execute_selected_command_clicked(self) -> None:
-        if not self.device_modbus_link.is_connected:
-            QMessageBox.warning(self, "Not connected", "Connect and open a device first.")
-            return
+    def _execute_selected_device_command(self) -> None:
         item = self.commands_tree_widget.currentItem()
         if item is None:
-            QMessageBox.warning(self, "No selection", "Select a command in the list.")
+            QMessageBox.warning(self, "Device command", "Select a command first.")
             return
-        modbus_address = item.data(0, Qt.ItemDataRole.UserRole)
-        command_name = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if modbus_address is None:
-            return
-        self._append_command_log(
-            f"Execute {command_name} @ addr={modbus_address} ..."
-        )
-        from PyQt6.QtWidgets import QApplication
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            executor = DeviceCommandExecutor(self.device_modbus_link)
-            result = executor.execute_command_at_modbus_address(int(modbus_address))
-        finally:
-            QApplication.restoreOverrideCursor()
-        self._append_command_log(result.message, success=result.success)
-        self._append_log(
-            f"Command {command_name}: {result.message}",
-            success=result.success,
+        name = str(item.data(0, _ROLE_NAME) or "")
+        if name:
+            self._execute("execute-command", ["--name", name])
+
+    # ----- log helpers and shutdown -----
+
+    def _append_log(self, message: str, *, success: bool | None = None) -> None:
+        color = ""
+        if success is True:
+            color = "#1b7a1b"
+        elif success is False:
+            color = "#b00020"
+        text = html.escape(message).replace("\n", "<br>")
+        self.status_log_text_edit.append(
+            f'<span style="color:{color}">{text}</span>' if color else text
         )
 
-    def _on_devices_topology_item_double_clicked(
-        self, item: QTreeWidgetItem, column: int
+    def _append_profile_log(
+        self, message: str, *, success: bool | None = None
     ) -> None:
-        node = item.data(0, Qt.ItemDataRole.UserRole)
-        if not isinstance(node, IdentifiedDeviceNode):
-            return
-        if not self.device_modbus_link.is_connected:
-            QMessageBox.warning(self, "Not connected", "Connect first.")
-            return
-        slave_id = node.permanent_modbus_slave_id
-        self.device_modbus_link.set_modbus_unit_identifier_override(slave_id)
-        self.label_selected_device.setText(
-            f"Selected device: {node.device_name}  SlaveId={slave_id}  "
-            f"DeviceId={node.device_id}"
+        color = "#1b7a1b" if success is True else "#b00020" if success is False else ""
+        text = html.escape(message)
+        self.profile_log_text_edit.append(
+            f'<span style="color:{color}">{text}</span>' if color else text
         )
-        self._append_log(
-            f"Selected topology device SlaveId={slave_id} "
-            f"DeviceId={node.device_id} — loading settings..."
+
+    def _append_command_log(
+        self, message: str, *, success: bool | None = None
+    ) -> None:
+        color = "#1b7a1b" if success is True else "#b00020" if success is False else ""
+        text = html.escape(message)
+        self.commands_log_text_edit.append(
+            f'<span style="color:{color}">{text}</span>' if color else text
         )
-        self.center_tab_widget.setCurrentIndex(0)
-        self._on_load_or_reload_settings_tree_clicked()
 
     def closeEvent(self, event) -> None:  # noqa: N802
-        if self._load_settings_worker_thread is not None and (
-            self._load_settings_worker_thread.isRunning()
-        ):
-            self._load_settings_worker_thread.wait(3000)
-        self.device_modbus_link.disconnect()
+        self.cli_console_panel.shutdown()
         super().closeEvent(event)
 
 
-def _profile_values_equal(
-    data_type_name: str, device_value: int | float, csv_value: int | float
-) -> bool:
-    normalized = data_type_name.strip().upper()
-    if normalized in ("F32", "F64"):
-        return abs(float(device_value) - float(csv_value)) <= 1e-6 * max(
-            1.0, abs(float(csv_value))
-        )
-    return int(device_value) == int(csv_value)
+def _optional_int(value: object) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _display_or_empty(value: object) -> str:
+    return "" if value is None else str(value)

@@ -98,6 +98,8 @@ def _load_settings_impl(
                 "value": leaf.display_value_text,
                 "modbus_addr": leaf.parameter.modbus_address,
                 "data_type": leaf.parameter.data_type_name,
+                "tag2": leaf.parameter.tag_2,
+                "name_path_segments": leaf.parameter.name_path_segments,
                 "error": leaf.read_error_message,
             }
             for leaf in result.setting_leaf_values
@@ -192,6 +194,9 @@ def handle_set_parameter(context: CommandSessionContext, args) -> CommandResult:
         {
             "name": name,
             "value": parsed_value,
+            "display": format_decoded_parameter_value_for_display(
+                parameter.data_type_name, parsed_value
+            ),
             "modbus_addr": parameter.modbus_address,
             "slave_id": slave_id,
         },
