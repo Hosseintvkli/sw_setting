@@ -114,18 +114,24 @@ def handle_status(context: CommandSessionContext, args) -> CommandResult:
 
 
 def handle_list_serial_ports(context: CommandSessionContext, args) -> CommandResult:
-    from core.host_communication_discovery import list_available_serial_port_device_names
+    from core.host_communication_discovery import list_available_serial_ports
 
-    names = list_available_serial_port_device_names()
-    return success("list-serial-ports", {"ports": names})
+    ports = [
+        {"device": device_name, "description": description}
+        for device_name, description in list_available_serial_ports()
+    ]
+    return success("list-serial-ports", {"ports": ports})
 
 
 def handle_list_networks(context: CommandSessionContext, args) -> CommandResult:
-    from core.host_communication_discovery import list_available_ipv4_network_interfaces
+    from core.host_communication_discovery import (
+        list_available_ipv4_network_interface_details,
+    )
 
     interfaces = [
-        {"name": name, "ipv4": ipv4}
-        for name, ipv4 in list_available_ipv4_network_interfaces()
+        {"name": name, "description": description, "ipv4": ipv4}
+        for name, description, ipv4
+        in list_available_ipv4_network_interface_details()
     ]
     return success("list-networks", {"interfaces": interfaces})
 

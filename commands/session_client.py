@@ -151,6 +151,30 @@ def call_http_session_tokens(
     )
 
 
+def cancel_http_session_command(
+    project_root: Path, session_name: str | None = None
+) -> dict[str, Any]:
+    """Request cooperative cancellation of the command running in a session.
+
+    This deliberately calls the dedicated ``/cancel`` endpoint instead of the
+    normal ``/command`` endpoint, because the latter rejects requests while the
+    session is busy with a long-running command such as Identify.
+    """
+    state = read_http_session_state(project_root, session_name)
+    if state is None:
+        selector = f" --session {session_name}" if session_name else ""
+        raise HttpSessionClientError(
+            f"No active HTTP session. Run: python cli.py{selector} serve"
+        )
+    base_url = str(state["base_url"]).rstrip("/")
+    session_id = str(state["session_id"])
+    return _http_json_request(
+        "POST",
+        f"{base_url}/sessions/{session_id}/cancel",
+        timeout_seconds=30.0,
+    )
+
+
 def close_http_session(
     project_root: Path, session_name: str | None = None
 ) -> dict[str, Any]:

@@ -53,6 +53,7 @@ class DeviceSettingMainWindow(QMainWindow):
 
         self._connected = False
         self._cli_busy = False
+        self._identify_running = False
         self._session_ready_flag = False
         self._settings_loaded = False
         self._suppress_setting_change = False
@@ -87,6 +88,11 @@ class DeviceSettingMainWindow(QMainWindow):
 
         # ----- left: topology -----
         self.push_button_run_identify = QPushButton("Identify")
+        self.push_button_cancel_identify = QPushButton("Cancel Identify")
+        identify_buttons = QHBoxLayout()
+        identify_buttons.addWidget(self.push_button_run_identify)
+        identify_buttons.addWidget(self.push_button_cancel_identify)
+        identify_buttons.addStretch(1)
         self.devices_topology_tree_widget = QTreeWidget()
         self.devices_topology_tree_widget.setHeaderLabels(
             ["Device", "SlaveId", "DeviceId", "Version", "Ports"]
@@ -94,7 +100,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self.devices_topology_tree_widget.setUniformRowHeights(True)
         devices_tab = QWidget()
         devices_layout = QVBoxLayout(devices_tab)
-        devices_layout.addWidget(self.push_button_run_identify)
+        devices_layout.addLayout(identify_buttons)
         devices_layout.addWidget(QLabel("Double-click a device to select and load it"))
         devices_layout.addWidget(self.devices_topology_tree_widget, stretch=1)
 
@@ -254,6 +260,9 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_connect.clicked.connect(self._on_connect_clicked)
         self.push_button_disconnect.clicked.connect(self._on_disconnect_clicked)
         self.push_button_run_identify.clicked.connect(self._on_identify_clicked)
+        self.push_button_cancel_identify.clicked.connect(
+            self._on_cancel_identify_clicked
+        )
         self.push_button_reload_settings_tree.clicked.connect(
             self._on_reload_settings_clicked
         )
@@ -318,6 +327,9 @@ class DeviceSettingMainWindow(QMainWindow):
         if not isinstance(payload, dict):
             return
         command = str(payload.get("command") or "")
+        if command == "identify":
+            self._identify_running = False
+            self._update_action_states()
         data = payload.get("data")
         data = data if isinstance(data, dict) else {}
         error = payload.get("error")
@@ -336,8 +348,17 @@ class DeviceSettingMainWindow(QMainWindow):
             self._set_connected_state(bool(data.get("connected")))
         elif command == "list-serial-ports" and ok:
             ports = data.get("ports")
+            normalized_ports = []
+            if isinstance(ports, list):
+                for port in ports:
+                    if isinstance(port, dict):
+                        normalized_ports.append(port)
+                    elif isinstance(port, str):
+                        normalized_ports.append(
+                            {"device": port, "description": ""}
+                        )
             self.communication_settings_panel.set_available_serial_ports(
-                [str(port) for port in ports] if isinstance(ports, list) else []
+                normalized_ports
             )
         elif command == "list-networks" and ok:
             interfaces = data.get("interfaces")
@@ -431,6 +452,9 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_connect.setEnabled(ready and not self._connected)
         self.push_button_disconnect.setEnabled(ready and self._connected)
         self.push_button_run_identify.setEnabled(ready and self._connected)
+        self.push_button_cancel_identify.setEnabled(
+            self._session_ready_flag and self._identify_running
+        )
         self.push_button_reload_settings_tree.setEnabled(ready and self._connected)
         self.communication_settings_panel.setEnabled(ready and not self._connected)
         profile_ready = ready and self._connected and self._settings_loaded
@@ -453,7 +477,18 @@ class DeviceSettingMainWindow(QMainWindow):
 
     def _on_identify_clicked(self) -> None:
         self.devices_topology_tree_widget.clear()
-        self._execute("identify")
+        if self._execute("identify"):
+            self._identify_running = True
+            self._update_action_states()
+
+    def _on_cancel_identify_clicked(self) -> None:
+        try:
+            visible = self.cli_console_panel.build_session_command("cancel")
+        except ValueError as exc:
+            QMessageBox.warning(self, "Cancel Identify", str(exc))
+            return
+        self._append_log(f"> {visible}")
+        self.cli_console_panel.request_session_cancel()
 
     def _populate_topology(self, root: dict[str, Any]) -> None:
         self.devices_topology_tree_widget.clear()

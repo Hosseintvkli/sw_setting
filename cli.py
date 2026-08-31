@@ -165,12 +165,46 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
 
+    # Cancellation must bypass the ordinary command endpoint: that endpoint
+    # correctly rejects new commands while Identify is still running.
+    if argv and argv[0] == "cancel":
+        if len(argv) != 1:
+            print("cancel does not accept arguments.", file=sys.stderr)
+            return 2
+        from commands.session_client import (
+            HttpSessionClientError,
+            cancel_http_session_command,
+            print_result_dict,
+        )
+
+        try:
+            response = cancel_http_session_command(
+                _ROOT, session_name=session_name
+            )
+            return print_result_dict(
+                {
+                    "ok": bool(response.get("ok", True)),
+                    "command": "cancel",
+                    "data": response,
+                }
+            )
+        except HttpSessionClientError as exc:
+            print(
+                json.dumps(
+                    {"ok": False, "command": "cancel", "error": str(exc)},
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 1
+
     if not argv:
         print(
             "Usage:\n"
             "  python cli.py serve-http [--host 0.0.0.0] [--port 8000]\n"
             "  python cli.py [--session NAME] serve [--host 127.0.0.1] [--port 8000]\n"
             "  python cli.py [--session NAME] <command> [args...]\n"
+            "  python cli.py [--session NAME] cancel\n"
             "  python cli.py [--session NAME] serve-stop\n",
             file=sys.stderr,
         )

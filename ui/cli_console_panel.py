@@ -207,6 +207,7 @@ class CliConsolePanel(QWidget):
         super().__init__(parent)
         self._project_root = Path(project_root).resolve()
         self._active_process: QProcess | None = None
+        self._cancel_process: QProcess | None = None
         self._server_process: QProcess | None = None
         self._server_history_item: QTreeWidgetItem | None = None
         self._active_history_item: QTreeWidgetItem | None = None
@@ -337,6 +338,77 @@ class CliConsolePanel(QWidget):
             QMessageBox.warning(self, "Session", str(exc))
             return False
         return self.execute_command(command, completion_callback)
+
+    def request_session_cancel(self) -> bool:
+        """Run the copyable CLI cancel command alongside the active command."""
+        if self._cancel_process is not None:
+            QMessageBox.information(
+                self, "Cancel", "A cancellation request is already running."
+            )
+            return False
+        try:
+            command = self._session_command("cancel")
+            parsed = parse_cli_invocation(command)
+        except CliCommandTextError as exc:
+            QMessageBox.warning(self, "Cancel", str(exc))
+            return False
+
+        history_item = QTreeWidgetItem(["Running", command, ""])
+        self.command_history_tree.addTopLevelItem(history_item)
+        self.command_history_tree.scrollToItem(history_item)
+        self._append_output(f"> {command}\n")
+
+        process = QProcess(self)
+        process.setWorkingDirectory(str(self._project_root))
+        output = {"stdout": "", "stderr": "", "finalized": False}
+
+        def read_stdout() -> None:
+            text = bytes(process.readAllStandardOutput()).decode(
+                "utf-8", errors="replace"
+            )
+            output["stdout"] += text
+            self._append_output(text)
+
+        def read_stderr() -> None:
+            text = bytes(process.readAllStandardError()).decode(
+                "utf-8", errors="replace"
+            )
+            output["stderr"] += text
+            self._append_output(text)
+
+        def finalize(exit_code: int) -> None:
+            if output["finalized"]:
+                return
+            output["finalized"] = True
+            read_stdout()
+            read_stderr()
+            history_item.setText(0, "OK" if exit_code == 0 else "Failed")
+            history_item.setText(2, str(exit_code))
+            payload: dict[str, Any] | None = None
+            try:
+                decoded = json.loads(output["stdout"]) if output["stdout"].strip() else None
+                if isinstance(decoded, dict):
+                    payload = decoded
+            except json.JSONDecodeError:
+                pass
+            self._cancel_process = None
+            self._append_output(f"[exit code {exit_code}]\n\n")
+            self.command_completed.emit(command, exit_code, payload)
+
+        def process_error(error) -> None:
+            message = f"Cancel process error: {process.errorString()}\n"
+            output["stderr"] += message
+            self._append_output(message)
+            if error == QProcess.ProcessError.FailedToStart:
+                finalize(127)
+
+        process.readyReadStandardOutput.connect(read_stdout)
+        process.readyReadStandardError.connect(read_stderr)
+        process.finished.connect(lambda exit_code, _status: finalize(exit_code))
+        process.errorOccurred.connect(process_error)
+        self._cancel_process = process
+        process.start(parsed.program, parsed.arguments)
+        return True
 
     def _session_command(self, command_name: str, *arguments: str) -> str:
         name = self._session_name()
@@ -738,6 +810,11 @@ class CliConsolePanel(QWidget):
 
     def shutdown(self) -> None:
         self._script_queue.clear()
+        if self._cancel_process is not None:
+            self._cancel_process.terminate()
+            self._cancel_process.waitForFinished(1000)
+            if self._cancel_process is not None:
+                self._cancel_process.kill()
         if self._active_process is not None:
             self._active_process.terminate()
             self._active_process.waitForFinished(1500)

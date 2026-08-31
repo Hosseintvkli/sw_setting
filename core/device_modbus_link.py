@@ -65,6 +65,10 @@ class DeviceModbusLink:
         Closes any previous connection first.
         """
         self.disconnect()
+        pymodbus_retries = max(
+            int(communication_settings.modbus_transaction_retry_count) - 1,
+            0,
+        )
 
         if communication_settings.link_kind == CommunicationLinkKind.SERIAL_RTU:
             serial = communication_settings.serial_port_settings
@@ -76,6 +80,7 @@ class DeviceModbusLink:
                 parity=self._parity_label_to_pymodbus_char(serial.parity_label),
                 stopbits=serial.stop_bits,
                 timeout=timeout_seconds,
+                retries=pymodbus_retries,
             )
         elif communication_settings.link_kind == CommunicationLinkKind.ETHERNET_TCP:
             ethernet = communication_settings.ethernet_tcp_settings
@@ -86,6 +91,7 @@ class DeviceModbusLink:
                 host=ethernet.device_ip_address,
                 port=ethernet.modbus_tcp_port_number,
                 timeout=timeout_seconds,
+                retries=pymodbus_retries,
             )
         else:
             raise DeviceModbusLinkError(
@@ -108,7 +114,9 @@ class DeviceModbusLink:
         self._set_client_timeout_seconds(
             client, self.get_active_read_timeout_seconds()
         )
-        client.retries = self.get_active_transaction_retry_count()
+        self._set_client_retry_count(
+            client, self.get_active_transaction_retry_count()
+        )
 
     def disconnect(self) -> None:
         """Close the underlying client if any; safe to call repeatedly."""
@@ -143,14 +151,10 @@ class DeviceModbusLink:
         """
         Read consecutive holding registers.
 
-        Tries immediately; on failure waits Read timeout and retries
-        (modbus_transaction_retry_count total attempts).
+        Pymodbus performs the configured total number of transaction attempts.
         """
-        return self._execute_with_timeout_retries(
-            operation_label=f"READ addr={modbus_start_address} count={register_count}",
-            operation=lambda: self._read_holding_registers_u16_once(
-                modbus_start_address, register_count, modbus_unit_identifier
-            ),
+        return self._read_holding_registers_u16_once(
+            modbus_start_address, register_count, modbus_unit_identifier
         )
 
     def _read_holding_registers_u16_once(
@@ -191,25 +195,6 @@ class DeviceModbusLink:
                 f"Expected {register_count} registers, got {len(values)}."
             )
         return values
-
-    def _execute_with_timeout_retries(self, operation_label: str, operation):
-        import time
-
-        attempts = self.get_active_transaction_retry_count()
-        wait_s = self.get_active_read_timeout_seconds()
-        last_error: Exception | None = None
-        for attempt_index in range(1, attempts + 1):
-            try:
-                return operation()
-            except DeviceModbusLinkError as exc:
-                last_error = exc
-                if attempt_index >= attempts:
-                    break
-                time.sleep(wait_s)
-        assert last_error is not None
-        raise DeviceModbusLinkError(
-            f"{operation_label} failed after {attempts} attempt(s): {last_error}"
-        ) from last_error
 
     def write_holding_register_u16(
         self,
@@ -384,7 +369,7 @@ class DeviceModbusLink:
                 ethernet.connect_timeout_milliseconds = connect_ms
 
         settings.modbus_transaction_retry_count = retry_count
-        client.retries = retry_count
+        self._set_client_retry_count(client, retry_count)
         self._set_client_timeout_seconds(client, read_ms / 1000.0)
 
         result: dict[str, int | str] = {
@@ -441,6 +426,18 @@ class DeviceModbusLink:
             comm_params.timeout_connect = seconds
         elif hasattr(client, "timeout"):
             client.timeout = seconds
+
+    @staticmethod
+    def _set_client_retry_count(
+        client: ModbusSerialClient | ModbusTcpClient,
+        total_attempt_count: int,
+    ) -> None:
+        """Apply our total-attempt setting to pymodbus' retry-after-first model."""
+        pymodbus_retries = max(int(total_attempt_count) - 1, 0)
+        client.retries = pymodbus_retries
+        transaction = getattr(client, "transaction", None)
+        if transaction is not None and hasattr(transaction, "retries"):
+            transaction.retries = pymodbus_retries
 
     @staticmethod
     def _parity_label_to_pymodbus_char(parity_label: str) -> str:

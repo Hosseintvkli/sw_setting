@@ -172,14 +172,21 @@ class CommunicationSettingsPanel(QWidget):
             self.combo_box_baud_rate_bits_per_second.currentData() is None
         )
 
-    def set_available_serial_ports(self, port_names: list[str]) -> None:
+    def set_available_serial_ports(self, ports: list[dict[str, object]]) -> None:
         previous = self.combo_box_serial_port_name.currentData()
         self.combo_box_serial_port_name.clear()
-        if not port_names:
+        if not ports:
             self.combo_box_serial_port_name.addItem("(no serial ports found)", "")
             return
-        for name in port_names:
-            self.combo_box_serial_port_name.addItem(name, name)
+        for port in ports:
+            device_name = str(port.get("device") or "")
+            description = str(port.get("description") or "")
+            label = (
+                f"{device_name} | {description}"
+                if description and description != device_name
+                else device_name
+            )
+            self.combo_box_serial_port_name.addItem(label, device_name)
         index = self.combo_box_serial_port_name.findData(previous)
         if index >= 0:
             self.combo_box_serial_port_name.setCurrentIndex(index)
@@ -196,9 +203,11 @@ class CommunicationSettingsPanel(QWidget):
             return
         for interface in interfaces:
             name = str(interface.get("name") or "")
+            description = str(interface.get("description") or "")
             ipv4 = str(interface.get("ipv4") or "")
+            identity = f"{name} | {description}" if description else name
             self.combo_box_local_network_interface.addItem(
-                f"{name}  —  {ipv4}", (name, ipv4)
+                f"{identity} | {ipv4}", (name, ipv4)
             )
         index = self.combo_box_local_network_interface.findData(previous)
         if index >= 0:
