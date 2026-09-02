@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from core.codegen_parameter_list_models import CodeGenParameterListPackage
 from core.device_modbus_link import DeviceModbusLink
@@ -20,6 +20,7 @@ from core.device_topology_models import DeviceIdentifyResult, IdentifiedDeviceNo
 
 
 LogCallback = Callable[[str], None]
+ProgressCallback = Callable[[str, str, dict[str, Any]], None]
 
 
 @dataclass
@@ -32,12 +33,22 @@ class CommandSessionContext:
     selected_slave_id: int | None = None
     last_settings_load_result: DeviceSettingTreeLoadResult | None = None
     log_callback: LogCallback | None = None
+    progress_callback: ProgressCallback | None = None
     # Optional cooperative cancel for long commands (e.g. identify)
     cancel_check: Callable[[], bool] | None = None
 
     def log(self, message: str) -> None:
         if self.log_callback is not None:
             self.log_callback(message)
+
+    def progress(
+        self,
+        event_type: str,
+        message: str,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        if self.progress_callback is not None:
+            self.progress_callback(event_type, message, dict(data or {}))
 
     def require_connected(self) -> None:
         if not self.device_modbus_link.is_connected:

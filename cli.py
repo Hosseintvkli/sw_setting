@@ -17,6 +17,19 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 
+def _configure_utf8_standard_streams() -> None:
+    """Keep CLI and JSON-lines output independent of the Windows code page."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not callable(reconfigure):
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (OSError, ValueError):
+            # Redirected/test streams may not support reconfiguration.
+            pass
+
+
 def _extract_session_name(argv: list[str]) -> tuple[list[str], str | None]:
     """Remove the CLI-only --session option before command parsing."""
     cleaned: list[str] = []
@@ -46,6 +59,7 @@ def _extract_session_name(argv: list[str]) -> tuple[list[str], str | None]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _configure_utf8_standard_streams()
     argv = list(sys.argv[1:] if argv is None else argv)
     try:
         argv, session_name = _extract_session_name(argv)
@@ -165,6 +179,46 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
 
+    if argv and argv[0] == "watch-events":
+        command_name: str | None = None
+        json_lines = False
+        i = 1
+        while i < len(argv):
+            if argv[i] == "--command" and i + 1 < len(argv):
+                command_name = argv[i + 1]
+                i += 2
+            elif argv[i] == "--json-lines":
+                json_lines = True
+                i += 1
+            else:
+                print(f"Unknown watch-events argument: {argv[i]}", file=sys.stderr)
+                return 2
+        if not command_name:
+            print("watch-events requires --command NAME.", file=sys.stderr)
+            return 2
+
+        from commands.session_client import (
+            HttpSessionClientError,
+            iter_http_session_events,
+        )
+
+        try:
+            for event in iter_http_session_events(
+                _ROOT,
+                command_name,
+                session_name=session_name,
+            ):
+                if json_lines:
+                    print(json.dumps(event, ensure_ascii=False), flush=True)
+                else:
+                    print(str(event.get("message") or event.get("type") or ""), flush=True)
+            return 0
+        except KeyboardInterrupt:
+            return 130
+        except HttpSessionClientError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+
     # Cancellation must bypass the ordinary command endpoint: that endpoint
     # correctly rejects new commands while Identify is still running.
     if argv and argv[0] == "cancel":
@@ -204,6 +258,7 @@ def main(argv: list[str] | None = None) -> int:
             "  python cli.py serve-http [--host 0.0.0.0] [--port 8000]\n"
             "  python cli.py [--session NAME] serve [--host 127.0.0.1] [--port 8000]\n"
             "  python cli.py [--session NAME] <command> [args...]\n"
+            "  python cli.py [--session NAME] watch-events --command NAME\n"
             "  python cli.py [--session NAME] cancel\n"
             "  python cli.py [--session NAME] serve-stop\n",
             file=sys.stderr,

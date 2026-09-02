@@ -7,10 +7,13 @@ an exact ``python cli.py ...`` command in :class:`CliConsolePanel`.
 from __future__ import annotations
 
 import html
+import re
+import time
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -41,6 +44,10 @@ _ROLE_KIND = Qt.ItemDataRole.UserRole
 _ROLE_NAME = Qt.ItemDataRole.UserRole + 1
 _ROLE_LAST_VALUE = Qt.ItemDataRole.UserRole + 2
 _ROLE_NODE = Qt.ItemDataRole.UserRole + 3
+_ROLE_PARAMETER_ID = Qt.ItemDataRole.UserRole + 4
+_ROLE_LAST_READ_MONOTONIC = Qt.ItemDataRole.UserRole + 5
+_ROLE_CHANGE_HIGHLIGHT_UNTIL = Qt.ItemDataRole.UserRole + 6
+_ROLE_MONITORING_VISUAL_STATE = Qt.ItemDataRole.UserRole + 7
 
 
 class DeviceSettingMainWindow(QMainWindow):
@@ -55,14 +62,27 @@ class DeviceSettingMainWindow(QMainWindow):
         self._cli_busy = False
         self._identify_running = False
         self._identify_cancel_requested = False
+        self._live_identify_items: dict[int, QTreeWidgetItem] = {}
         self._session_ready_flag = False
         self._settings_loaded = False
         self._suppress_setting_change = False
         self._selected_slave_id: int | None = None
+        self._monitoring_selected_parameter_ids: set[int] = set()
+        self._monitoring_items_by_parameter_id: dict[int, QTreeWidgetItem] = {}
+        self._monitoring_device_ready = False
+        self._monitoring_read_in_flight = False
+        self._monitoring_read_scheduled = False
+        self._suppress_monitoring_item_change = False
 
         self.cli_console_panel = CliConsolePanel(Path(__file__).resolve().parent.parent)
         self._build_ui()
         self._connect_signals()
+        self._monitoring_visual_timer = QTimer(self)
+        self._monitoring_visual_timer.setInterval(100)
+        self._monitoring_visual_timer.timeout.connect(
+            self._on_monitoring_visual_timer
+        )
+        self._monitoring_visual_timer.start()
         self._set_connected_state(False)
         self._append_log(
             "GUI is command-driven. Every action is recorded in the CLI tab."
@@ -90,6 +110,14 @@ class DeviceSettingMainWindow(QMainWindow):
         # ----- left: topology -----
         self.push_button_run_identify = QPushButton("Identify")
         self.push_button_cancel_identify = QPushButton("Cancel Identify")
+        self.label_identify_progress = QLabel("Idle")
+        self.label_identify_progress.setStyleSheet(
+            "QLabel { color: #202020; background: #dce8f5; "
+            "border: 1px solid #8aa9c7; padding: 4px; }"
+        )
+        self.progress_bar_identify = QProgressBar()
+        self.progress_bar_identify.setRange(0, 0)
+        self.progress_bar_identify.hide()
         identify_buttons = QHBoxLayout()
         identify_buttons.addWidget(self.push_button_run_identify)
         identify_buttons.addWidget(self.push_button_cancel_identify)
@@ -102,6 +130,8 @@ class DeviceSettingMainWindow(QMainWindow):
         devices_tab = QWidget()
         devices_layout = QVBoxLayout(devices_tab)
         devices_layout.addLayout(identify_buttons)
+        devices_layout.addWidget(self.label_identify_progress)
+        devices_layout.addWidget(self.progress_bar_identify)
         devices_layout.addWidget(QLabel("Double-click a device to select and load it"))
         devices_layout.addWidget(self.devices_topology_tree_widget, stretch=1)
 
@@ -164,6 +194,38 @@ class DeviceSettingMainWindow(QMainWindow):
         )
         parameters_layout.addWidget(self.settings_tree_widget, stretch=1)
 
+        # ----- periodic monitoring -----
+        self.push_button_periodic_monitoring_read = QPushButton("Start Monitoring")
+        self.push_button_periodic_monitoring_read.setCheckable(True)
+        self.push_button_periodic_monitoring_read.setChecked(False)
+        self.label_periodic_monitoring_status = QLabel(
+            "Load a device to list Monitoring parameters."
+        )
+        monitoring_controls = QHBoxLayout()
+        monitoring_controls.addWidget(self.push_button_periodic_monitoring_read)
+        monitoring_controls.addStretch(1)
+        monitoring_controls.addWidget(self.label_periodic_monitoring_status)
+
+        self.monitoring_parameters_tree_widget = QTreeWidget()
+        self.monitoring_parameters_tree_widget.setColumnCount(6)
+        self.monitoring_parameters_tree_widget.setHeaderLabels(
+            ["Name", "Read", "Value", "DataType", "ModbusAddr", "Last read (ms)"]
+        )
+        self.monitoring_parameters_tree_widget.setAlternatingRowColors(True)
+        self.monitoring_parameters_tree_widget.setUniformRowHeights(True)
+        self.monitoring_parameters_tree_widget.setRootIsDecorated(True)
+        monitoring_tab = QWidget()
+        monitoring_layout = QVBoxLayout(monitoring_tab)
+        monitoring_layout.addLayout(monitoring_controls)
+        monitoring_layout.addWidget(
+            QLabel("Only checked parameters are read periodically."),
+        )
+        monitoring_layout.addWidget(
+            self.monitoring_parameters_tree_widget,
+            stretch=1,
+        )
+        self.monitoring_tab = monitoring_tab
+
         # ----- profile -----
         self.line_edit_profile_csv_path = QLineEdit()
         self.line_edit_profile_csv_path.setPlaceholderText("Path to profile CSV file")
@@ -215,6 +277,7 @@ class DeviceSettingMainWindow(QMainWindow):
 
         self.center_tab_widget = QTabWidget()
         self.center_tab_widget.addTab(parameters_tab, "Parameters")
+        self.center_tab_widget.addTab(monitoring_tab, "Monitoring")
         self.center_tab_widget.addTab(profile_tab, "Profile")
         self.center_tab_widget.addTab(commands_tab, "Commands")
         self.center_tab_widget.addTab(self.cli_console_panel, "CLI")
@@ -233,7 +296,7 @@ class DeviceSettingMainWindow(QMainWindow):
         right_container = QWidget()
         right_layout = QVBoxLayout(right_container)
         right_layout.setContentsMargins(4, 4, 4, 4)
-        right_layout.addWidget(QLabel("GUI command log"))
+        right_layout.addWidget(QLabel("Report Log"))
         right_layout.addWidget(self.status_log_text_edit, stretch=1)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -251,6 +314,18 @@ class DeviceSettingMainWindow(QMainWindow):
         self.cli_console_panel.session_ready.connect(self._on_session_ready)
         self.cli_console_panel.command_completed.connect(
             self._on_any_cli_command_completed
+        )
+        self.cli_console_panel.session_event_received.connect(
+            self._on_live_session_event
+        )
+        self.cli_console_panel.event_watcher_ready.connect(
+            self._on_event_watcher_ready
+        )
+        self.cli_console_panel.event_watcher_error.connect(
+            self._on_event_watcher_error
+        )
+        self.cli_console_panel.event_watcher_finished.connect(
+            self._on_event_watcher_finished
         )
         self.communication_settings_panel.refresh_serial_ports_requested.connect(
             self._refresh_serial_ports
@@ -274,6 +349,15 @@ class DeviceSettingMainWindow(QMainWindow):
             self._on_setting_item_double_clicked
         )
         self.settings_tree_widget.itemChanged.connect(self._on_setting_item_changed)
+        self.push_button_periodic_monitoring_read.toggled.connect(
+            self._on_periodic_monitoring_toggled
+        )
+        self.monitoring_parameters_tree_widget.itemChanged.connect(
+            self._on_monitoring_item_changed
+        )
+        self.center_tab_widget.currentChanged.connect(
+            self._on_center_tab_changed
+        )
         self.push_button_browse_profile_csv.clicked.connect(self._browse_profile)
         self.push_button_profile_apply.clicked.connect(
             lambda: self._run_profile("apply-profile")
@@ -293,6 +377,8 @@ class DeviceSettingMainWindow(QMainWindow):
         command_name: str,
         arguments: list[str] | None = None,
         callback=None,
+        *,
+        report_log: bool = True,
     ) -> bool:
         try:
             visible = self.cli_console_panel.build_session_command(
@@ -301,7 +387,8 @@ class DeviceSettingMainWindow(QMainWindow):
         except ValueError as exc:
             QMessageBox.warning(self, "CLI", str(exc))
             return False
-        self._append_log(f"> {visible}")
+        if report_log:
+            self._append_log(f"> {visible}")
         return self.cli_console_panel.execute_session_command(
             command_name, arguments, callback
         )
@@ -309,6 +396,8 @@ class DeviceSettingMainWindow(QMainWindow):
     def _on_cli_busy_changed(self, busy: bool) -> None:
         self._cli_busy = busy
         self._update_action_states()
+        if not busy:
+            self._schedule_next_monitoring_read()
 
     def _on_session_ready(self, session_name: str) -> None:
         self._session_ready_flag = True
@@ -327,13 +416,19 @@ class DeviceSettingMainWindow(QMainWindow):
         if completed_command == "identify":
             self._identify_running = False
             self._identify_cancel_requested = False
+            if exit_code == 0:
+                self.label_identify_progress.setText("Identify finished")
+            else:
+                self.label_identify_progress.setText("Identify stopped")
+            self.progress_bar_identify.hide()
             self._update_action_states()
 
         ok = exit_code == 0
-        self._append_log(
-            f"{'OK' if ok else 'FAILED'} exit={exit_code}: {command_text}",
-            success=ok,
-        )
+        if completed_command != "read-monitoring":
+            self._append_log(
+                f"{'OK' if ok else 'FAILED'} exit={exit_code}: {command_text}",
+                success=ok,
+            )
         if not isinstance(payload, dict):
             return
         command = str(payload.get("command") or "")
@@ -412,6 +507,21 @@ class DeviceSettingMainWindow(QMainWindow):
                 if isinstance(commands, list)
                 else []
             )
+        elif command == "list-parameters" and ok:
+            if data.get("parameter_type_filter") == "monitoring":
+                parameters = data.get("parameters")
+                self._populate_monitoring_parameters(
+                    [item for item in parameters if isinstance(item, dict)]
+                    if isinstance(parameters, list)
+                    else []
+                )
+        elif command == "read-monitoring" and ok:
+            values = data.get("values")
+            self._apply_monitoring_read_values(
+                [item for item in values if isinstance(item, dict)]
+                if isinstance(values, list)
+                else []
+            )
         elif command in ("apply-profile", "verify-profile", "parse-profile"):
             self._render_profile_result(command, data, ok, error)
         elif command == "save-profile":
@@ -455,6 +565,7 @@ class DeviceSettingMainWindow(QMainWindow):
             self._selected_slave_id = None
             self.settings_tree_widget.clear()
             self.commands_tree_widget.clear()
+            self._clear_monitoring_parameter_table()
             self.label_selected_device.setText("Selected device: (none)")
             self._clear_monitoring()
         self._update_action_states()
@@ -463,10 +574,13 @@ class DeviceSettingMainWindow(QMainWindow):
         ready = self._session_ready_flag and not self._cli_busy
         self.push_button_connect.setEnabled(ready and not self._connected)
         self.push_button_disconnect.setEnabled(ready and self._connected)
-        self.push_button_run_identify.setEnabled(ready and self._connected)
+        self.push_button_run_identify.setEnabled(
+            ready and self._connected and not self._identify_running
+        )
         self.push_button_cancel_identify.setEnabled(
             self._session_ready_flag
             and self._identify_running
+            and self._cli_busy
             and not self._identify_cancel_requested
         )
         self.push_button_cancel_identify.setText(
@@ -483,12 +597,19 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_execute_selected_command.setEnabled(
             profile_ready and self.commands_tree_widget.topLevelItemCount() > 0
         )
+        self.push_button_periodic_monitoring_read.setEnabled(
+            self._session_ready_flag
+            and self._connected
+            and self._settings_loaded
+            and self._monitoring_device_ready
+        )
 
     def _clear_loaded_device_state(self) -> None:
         self._settings_loaded = False
         self._selected_slave_id = None
         self.settings_tree_widget.clear()
         self.commands_tree_widget.clear()
+        self._clear_monitoring_parameter_table()
         self.label_selected_device.setText("Selected device: (none)")
         self._clear_monitoring()
 
@@ -496,10 +617,127 @@ class DeviceSettingMainWindow(QMainWindow):
 
     def _on_identify_clicked(self) -> None:
         self.devices_topology_tree_widget.clear()
-        if self._execute("identify"):
-            self._identify_running = True
-            self._identify_cancel_requested = False
+        self._live_identify_items.clear()
+        self._identify_running = True
+        self._identify_cancel_requested = False
+        self.label_identify_progress.setText("Preparing live Identify events...")
+        self.progress_bar_identify.show()
+        self._update_action_states()
+        try:
+            visible = self.cli_console_panel.build_session_command(
+                "watch-events",
+                "--command",
+                "identify",
+                "--json-lines",
+            )
+        except ValueError as exc:
+            self._identify_running = False
+            self.progress_bar_identify.hide()
             self._update_action_states()
+            QMessageBox.warning(self, "Identify", str(exc))
+            return
+        self._append_log(f"> {visible}")
+        if not self.cli_console_panel.start_session_event_watcher("identify"):
+            self._identify_running = False
+            self.label_identify_progress.setText("Could not start live events")
+            self.progress_bar_identify.hide()
+            self._update_action_states()
+
+    def _on_event_watcher_ready(self, command_name: str) -> None:
+        if command_name != "identify" or not self._identify_running:
+            return
+        self.label_identify_progress.setText("Starting Identify...")
+        if not self._execute("identify"):
+            self.cli_console_panel.stop_session_event_watcher()
+            self._identify_running = False
+            self.label_identify_progress.setText("Identify could not start")
+            self.progress_bar_identify.hide()
+            self._update_action_states()
+
+    def _on_event_watcher_finished(
+        self, command_name: str, exit_code: int
+    ) -> None:
+        if command_name != "identify":
+            return
+        if exit_code != 0:
+            self._append_log(
+                f"Live Identify events stopped with exit code {exit_code}.",
+                success=False,
+            )
+        if self._identify_running and not self._cli_busy:
+            self._identify_running = False
+            self._identify_cancel_requested = False
+            self.label_identify_progress.setText("Live event watcher stopped")
+            self.progress_bar_identify.hide()
+            self._update_action_states()
+
+    def _on_event_watcher_error(self, message: str) -> None:
+        self._append_log(f"Live event watcher error: {message}", success=False)
+
+    def _on_live_session_event(self, event: object) -> None:
+        if not isinstance(event, dict):
+            return
+        event_type = str(event.get("type") or "")
+        message = str(event.get("message") or "")
+        data = event.get("data")
+        data = data if isinstance(data, dict) else {}
+
+        if message and event_type not in ("command_started", "command_finished"):
+            success = None
+            if event_type in ("identify_failed", "identify_cancelled"):
+                success = False
+            elif event_type in ("device_discovered", "identify_finished"):
+                success = True
+            self._append_log(message, success=success)
+
+        if event_type == "identify_started":
+            self.label_identify_progress.setText("Identify is running...")
+        elif event_type == "port_scanning":
+            self.label_identify_progress.setText(message)
+        elif event_type == "device_discovered":
+            self.label_identify_progress.setText(message)
+            self._add_live_identified_device(data)
+        elif event_type == "cancel_requested":
+            self.label_identify_progress.setText(
+                "Cancelling Identify and restoring routing..."
+            )
+        elif event_type == "identify_cancelled":
+            self.label_identify_progress.setText("Identify cancelled")
+        elif event_type == "identify_failed":
+            self.label_identify_progress.setText("Identify failed")
+        elif event_type == "identify_finished":
+            self.label_identify_progress.setText(message)
+
+    def _add_live_identified_device(self, data: dict[str, Any]) -> None:
+        slave_id = _optional_int(data.get("slave_id"))
+        if slave_id is None or slave_id in self._live_identify_items:
+            return
+        device_name = str(data.get("device_name") or "(unknown)")
+        port_index = _optional_int(data.get("port_index"))
+        parent_slave_id = _optional_int(data.get("parent_slave_id"))
+        label = (
+            f"port[{port_index}]: {device_name}"
+            if port_index is not None
+            else device_name
+        )
+        item = QTreeWidgetItem(
+            [
+                label,
+                str(slave_id),
+                _display_or_empty(data.get("device_id")),
+                _display_or_empty(data.get("parameter_list_version")),
+                _display_or_empty(data.get("downstream_qty")),
+            ]
+        )
+        parent_item = self._live_identify_items.get(parent_slave_id)
+        if parent_item is None:
+            self.devices_topology_tree_widget.addTopLevelItem(item)
+        else:
+            parent_item.addChild(item)
+        self._live_identify_items[slave_id] = item
+        self.devices_topology_tree_widget.expandAll()
+        for column in range(self.devices_topology_tree_widget.columnCount()):
+            self.devices_topology_tree_widget.resizeColumnToContents(column)
 
     def _on_cancel_identify_clicked(self) -> None:
         try:
@@ -510,6 +748,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._append_log(f"> {visible}")
         if self.cli_console_panel.request_session_cancel():
             self._identify_cancel_requested = True
+            self.label_identify_progress.setText("Requesting cancellation...")
             self._update_action_states()
 
     def _populate_topology(self, root: dict[str, Any]) -> None:
@@ -583,6 +822,8 @@ class DeviceSettingMainWindow(QMainWindow):
         self.progress_bar_settings_load.show()
         self.label_settings_load_status.setText("Running load-settings through CLI...")
         self.label_settings_load_status.show()
+        self._stop_periodic_monitoring("Monitoring stopped for device load.")
+        self._clear_monitoring_parameter_table()
 
         def after_load(_payload, exit_code: int) -> None:
             self.progress_bar_settings_load.hide()
@@ -591,7 +832,13 @@ class DeviceSettingMainWindow(QMainWindow):
                 return
 
             def after_header(_payload2, _exit_code2: int) -> None:
-                self._execute("list-commands")
+                def after_commands(_payload3, _exit_code3: int) -> None:
+                    self._execute(
+                        "list-parameters",
+                        ["--type", "monitoring"],
+                    )
+
+                self._execute("list-commands", callback=after_commands)
 
             header_args = (
                 ["--slave-id", str(self._selected_slave_id)]
@@ -741,6 +988,328 @@ class DeviceSettingMainWindow(QMainWindow):
         ):
             label.setText("—")
 
+    # ----- periodic monitoring -----
+
+    def _clear_monitoring_parameter_table(self) -> None:
+        if self.push_button_periodic_monitoring_read.isChecked():
+            self.push_button_periodic_monitoring_read.setChecked(False)
+        self._monitoring_device_ready = False
+        self._monitoring_read_scheduled = False
+        self._monitoring_read_in_flight = False
+        self._suppress_monitoring_item_change = True
+        try:
+            self.monitoring_parameters_tree_widget.clear()
+            self._monitoring_items_by_parameter_id.clear()
+        finally:
+            self._suppress_monitoring_item_change = False
+        self.label_periodic_monitoring_status.setText(
+            "Load a device to list Monitoring parameters."
+        )
+
+    def _populate_monitoring_parameters(
+        self, parameters: list[dict[str, Any]]
+    ) -> None:
+        self._suppress_monitoring_item_change = True
+        try:
+            self.monitoring_parameters_tree_widget.clear()
+            self._monitoring_items_by_parameter_id.clear()
+            categories: dict[str, QTreeWidgetItem] = {}
+            branches: dict[tuple[str, tuple[str, ...]], QTreeWidgetItem] = {}
+            for parameter in parameters:
+                parameter_id = _optional_int(parameter.get("parameter_id"))
+                if parameter_id is None:
+                    continue
+
+                category = str(parameter.get("tag2") or "").strip() or "(No Tag2)"
+                category_item = categories.get(category)
+                if category_item is None:
+                    category_item = QTreeWidgetItem([category])
+                    categories[category] = category_item
+                    self.monitoring_parameters_tree_widget.addTopLevelItem(
+                        category_item
+                    )
+
+                raw_segments = parameter.get("name_path_segments")
+                name = str(parameter.get("name") or "(unnamed)")
+                segments = (
+                    [str(part) for part in raw_segments if str(part)]
+                    if isinstance(raw_segments, list)
+                    else []
+                )
+                if not segments:
+                    segments = _parameter_name_path_segments(name)
+
+                parent = category_item
+                path: tuple[str, ...] = ()
+                for segment in segments[:-1]:
+                    path += (segment,)
+                    key = (category, path)
+                    branch = branches.get(key)
+                    if branch is None:
+                        branch = QTreeWidgetItem([segment])
+                        branches[key] = branch
+                        parent.addChild(branch)
+                    parent = branch
+
+                item = QTreeWidgetItem(
+                    [
+                        segments[-1],
+                        "",
+                        "",
+                        str(parameter.get("data_type") or ""),
+                        _display_or_empty(parameter.get("modbus_addr")),
+                        "",
+                    ]
+                )
+                item.setFlags(
+                    item.flags()
+                    | Qt.ItemFlag.ItemIsUserCheckable
+                    | Qt.ItemFlag.ItemIsEnabled
+                    | Qt.ItemFlag.ItemIsSelectable
+                )
+                item.setData(0, _ROLE_PARAMETER_ID, parameter_id)
+                item.setCheckState(
+                    1,
+                    Qt.CheckState.Checked
+                    if parameter_id in self._monitoring_selected_parameter_ids
+                    else Qt.CheckState.Unchecked,
+                )
+                description = str(parameter.get("description") or "").strip()
+                if description:
+                    item.setToolTip(0, description)
+                parent.addChild(item)
+                self._monitoring_items_by_parameter_id[parameter_id] = item
+        finally:
+            self._suppress_monitoring_item_change = False
+
+        self._monitoring_device_ready = True
+        count = len(self._monitoring_items_by_parameter_id)
+        self.label_periodic_monitoring_status.setText(
+            f"{count} Monitoring parameter(s) available."
+        )
+        self.monitoring_parameters_tree_widget.expandToDepth(0)
+        self.monitoring_parameters_tree_widget.setColumnWidth(0, 360)
+        self.monitoring_parameters_tree_widget.setColumnWidth(1, 55)
+        self.monitoring_parameters_tree_widget.setColumnWidth(2, 150)
+        self.monitoring_parameters_tree_widget.setColumnWidth(3, 80)
+        self.monitoring_parameters_tree_widget.setColumnWidth(4, 90)
+        self._refresh_monitoring_row_visuals()
+        self._update_action_states()
+        self._schedule_next_monitoring_read()
+
+    def _on_monitoring_item_changed(
+        self, item: QTreeWidgetItem, column: int
+    ) -> None:
+        if self._suppress_monitoring_item_change or column != 1:
+            return
+        parameter_id = _optional_int(item.data(0, _ROLE_PARAMETER_ID))
+        if parameter_id is None:
+            return
+        if item.checkState(1) == Qt.CheckState.Checked:
+            self._monitoring_selected_parameter_ids.add(parameter_id)
+        else:
+            self._monitoring_selected_parameter_ids.discard(parameter_id)
+            tree = self.monitoring_parameters_tree_widget
+            signals_were_blocked = tree.blockSignals(True)
+            try:
+                item.setData(0, _ROLE_LAST_READ_MONOTONIC, None)
+                item.setData(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL, None)
+                item.setText(5, "")
+            finally:
+                tree.blockSignals(signals_were_blocked)
+        self._refresh_monitoring_row_visuals()
+        self._schedule_next_monitoring_read()
+
+    def _on_periodic_monitoring_toggled(self, enabled: bool) -> None:
+        if enabled:
+            self.push_button_periodic_monitoring_read.setText("Stop Monitoring")
+            self.label_periodic_monitoring_status.setText(
+                "Monitoring started; select parameters to read."
+            )
+            self._schedule_next_monitoring_read()
+        else:
+            self.push_button_periodic_monitoring_read.setText("Start Monitoring")
+            self.label_periodic_monitoring_status.setText(
+                "Monitoring is stopped."
+            )
+
+    def _stop_periodic_monitoring(self, status_message: str) -> None:
+        if self.push_button_periodic_monitoring_read.isChecked():
+            self.push_button_periodic_monitoring_read.setChecked(False)
+        self._monitoring_read_scheduled = False
+        self.label_periodic_monitoring_status.setText(status_message)
+
+    def _on_center_tab_changed(self, _index: int) -> None:
+        if self.center_tab_widget.currentWidget() is self.monitoring_tab:
+            self._refresh_monitoring_row_visuals()
+            self._schedule_next_monitoring_read()
+        elif self.push_button_periodic_monitoring_read.isChecked():
+            self._stop_periodic_monitoring(
+                "Monitoring stopped because its tab is inactive."
+            )
+
+    def _monitoring_should_run(self) -> bool:
+        return (
+            self._session_ready_flag
+            and self._connected
+            and self._settings_loaded
+            and self._monitoring_device_ready
+            and self.push_button_periodic_monitoring_read.isChecked()
+            and self.center_tab_widget.currentWidget() is self.monitoring_tab
+            and any(
+                item.checkState(1) == Qt.CheckState.Checked
+                for item in self._monitoring_items_by_parameter_id.values()
+            )
+        )
+
+    def _schedule_next_monitoring_read(self) -> None:
+        if (
+            self._monitoring_read_scheduled
+            or self._monitoring_read_in_flight
+            or self._cli_busy
+            or not self._monitoring_should_run()
+        ):
+            return
+        self._monitoring_read_scheduled = True
+        QTimer.singleShot(0, self._start_next_monitoring_read)
+
+    def _start_next_monitoring_read(self) -> None:
+        self._monitoring_read_scheduled = False
+        if (
+            self._monitoring_read_in_flight
+            or self._cli_busy
+            or not self._monitoring_should_run()
+        ):
+            return
+
+        parameter_ids = [
+            parameter_id
+            for parameter_id, item in self._monitoring_items_by_parameter_id.items()
+            if item.checkState(1) == Qt.CheckState.Checked
+        ]
+        if not parameter_ids:
+            self.label_periodic_monitoring_status.setText(
+                "Select at least one Monitoring parameter."
+            )
+            return
+
+        arguments: list[str] = []
+        for parameter_id in parameter_ids:
+            arguments.extend(["--parameter-id", str(parameter_id)])
+        if self._selected_slave_id is not None:
+            arguments.extend(["--slave-id", str(self._selected_slave_id)])
+
+        self._monitoring_read_in_flight = True
+        self.label_periodic_monitoring_status.setText(
+            f"Reading {len(parameter_ids)} selected parameter(s)..."
+        )
+
+        def after_read(payload, exit_code: int) -> None:
+            self._monitoring_read_in_flight = False
+            if exit_code != 0:
+                error = (
+                    payload.get("error")
+                    if isinstance(payload, dict)
+                    else "No response from read-monitoring."
+                )
+                self.label_periodic_monitoring_status.setText(
+                    f"Monitoring read failed: {error}"
+                )
+            self._schedule_next_monitoring_read()
+
+        if not self._execute(
+            "read-monitoring",
+            arguments,
+            after_read,
+            report_log=False,
+        ):
+            self._monitoring_read_in_flight = False
+
+    def _apply_monitoring_read_values(self, values: list[dict[str, Any]]) -> None:
+        now = time.monotonic()
+        success_count = 0
+        error_count = 0
+        tree = self.monitoring_parameters_tree_widget
+        signals_were_blocked = tree.blockSignals(True)
+        try:
+            for value in values:
+                parameter_id = _optional_int(value.get("parameter_id"))
+                item = self._monitoring_items_by_parameter_id.get(
+                    parameter_id if parameter_id is not None else -1
+                )
+                if item is None or item.checkState(1) != Qt.CheckState.Checked:
+                    continue
+                error = str(value.get("error") or "").strip()
+                if error:
+                    error_count += 1
+                    item.setToolTip(2, error)
+                    continue
+
+                raw_display = value.get("display")
+                display = "" if raw_display is None else str(raw_display)
+                previous = item.data(0, _ROLE_LAST_VALUE)
+                if previous is not None and str(previous) != display:
+                    item.setData(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL, now + 3.0)
+                item.setData(0, _ROLE_LAST_VALUE, display)
+                item.setData(0, _ROLE_LAST_READ_MONOTONIC, now)
+                item.setText(2, display)
+                item.setToolTip(2, "")
+                success_count += 1
+        finally:
+            tree.blockSignals(signals_were_blocked)
+
+        self.label_periodic_monitoring_status.setText(
+            f"Last batch: {success_count} read, {error_count} failed."
+        )
+        self._refresh_monitoring_row_visuals()
+
+    def _on_monitoring_visual_timer(self) -> None:
+        # A large package can contain more than a thousand Monitoring rows. Do
+        # not walk and repaint all of them while another tab is visible.
+        if self.center_tab_widget.currentWidget() is self.monitoring_tab:
+            self._refresh_monitoring_row_visuals()
+
+    def _refresh_monitoring_row_visuals(self) -> None:
+        now = time.monotonic()
+        tree = self.monitoring_parameters_tree_widget
+        signals_were_blocked = tree.blockSignals(True)
+        try:
+            for item in self._monitoring_items_by_parameter_id.values():
+                selected = item.checkState(1) == Qt.CheckState.Checked
+                last_read = item.data(0, _ROLE_LAST_READ_MONOTONIC)
+                age_seconds = (
+                    now - float(last_read)
+                    if selected and last_read is not None
+                    else None
+                )
+                stale = age_seconds is None or age_seconds > 5.0
+                age_text = (
+                    str(max(0, int(age_seconds * 1000)))
+                    if age_seconds is not None and not stale
+                    else ""
+                )
+                if item.text(5) != age_text:
+                    item.setText(5, age_text)
+                highlight_until = item.data(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL)
+                highlighted = (
+                    highlight_until is not None and now < float(highlight_until)
+                )
+                if highlight_until is not None and not highlighted:
+                    item.setData(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL, None)
+
+                visual_state = (stale, highlighted)
+                if item.data(0, _ROLE_MONITORING_VISUAL_STATE) != visual_state:
+                    item.setData(0, _ROLE_MONITORING_VISUAL_STATE, visual_state)
+                    foreground = QBrush(QColor("#8a8a8a")) if stale else QBrush()
+                    background = (
+                        QBrush(QColor("#b9efb5")) if highlighted else QBrush()
+                    )
+                    for column in range(tree.columnCount()):
+                        item.setForeground(column, foreground)
+                        item.setBackground(column, background)
+        finally:
+            tree.blockSignals(signals_were_blocked)
+
     # ----- profile -----
 
     def _browse_profile(self) -> None:
@@ -868,6 +1437,20 @@ def _optional_int(value: object) -> int | None:
         return int(value) if value is not None else None
     except (TypeError, ValueError):
         return None
+
+
+def _parameter_name_path_segments(parameter_name: str) -> list[str]:
+    """Split dotted and indexed parameter names for a GUI tree."""
+    segments: list[str] = []
+    for dotted_part in parameter_name.split("."):
+        if not dotted_part:
+            continue
+        array_match = re.fullmatch(r"(.+)\[(\d+)\]", dotted_part)
+        if array_match:
+            segments.extend((array_match.group(1), f"[{array_match.group(2)}]"))
+        else:
+            segments.append(dotted_part)
+    return segments or [parameter_name]
 
 
 def _display_or_empty(value: object) -> str:

@@ -5,7 +5,10 @@ from __future__ import annotations
 from commands.context import CommandSessionContext
 from commands.registry import CommandRegistry
 from commands.result import CommandResult, failure, success
-from core.codegen_parameter_list_models import ParameterAccessKind
+from core.codegen_parameter_list_models import (
+    CodeGenParameterDefinition,
+    ParameterAccessKind,
+)
 from core.device_modbus_link import DeviceModbusLinkError
 from core.device_setting_tree_loader import (
     DeviceSettingTreeLoader,
@@ -30,6 +33,7 @@ def register(registry: CommandRegistry) -> None:
     registry.register("get-parameter", handle_get_parameter)
     registry.register("set-parameter", handle_set_parameter)
     registry.register("list-parameters", handle_list_parameters)
+    registry.register("read-monitoring", handle_read_monitoring)
     registry.register("get-monitoring-header", handle_get_monitoring_header)
 
 
@@ -216,20 +220,157 @@ def handle_list_parameters(context: CommandSessionContext, args) -> CommandResul
         kind = parameter.parameter_access_kind
         if filter_kind == "setting" and kind != ParameterAccessKind.SETTING_READ_WRITE:
             continue
+        elif (
+            filter_kind == "monitoring"
+            and kind != ParameterAccessKind.MONITORING_READ_ONLY
+        ):
+            continue
         elif filter_kind == "command" and kind != ParameterAccessKind.COMMAND_WRITE:
             continue
         if tag2 is not None and parameter.tag_2 != tag2:
             continue
         items.append(
             {
+                "parameter_id": parameter.parameter_id,
                 "name": parameter.parameter_name,
+                "name_path_segments": parameter.name_path_segments,
                 "modbus_addr": parameter.modbus_address,
                 "data_type": parameter.data_type_name,
                 "kind": kind.value,
                 "tag2": parameter.tag_2,
+                "description": parameter.description,
             }
         )
-    return success("list-parameters", {"count": len(items), "parameters": items})
+    return success(
+        "list-parameters",
+        {
+            "count": len(items),
+            "parameter_type_filter": filter_kind,
+            "parameters": items,
+        },
+    )
+
+
+def handle_read_monitoring(context: CommandSessionContext, args) -> CommandResult:
+    """Read selected monitoring parameters, merging adjacent register ranges."""
+    try:
+        context.require_connected()
+        slave_id = context.effective_slave_id(getattr(args, "slave_id", None))
+        package = _loaded_package_for_slave(context, slave_id)
+    except RuntimeError as exc:
+        return failure("read-monitoring", str(exc))
+
+    requested_ids = list(dict.fromkeys(int(value) for value in args.parameter_ids))
+    monitoring_by_id = {
+        parameter.parameter_id: parameter
+        for parameter in package.parameters
+        if parameter.parameter_access_kind == ParameterAccessKind.MONITORING_READ_ONLY
+    }
+    result_by_id: dict[int, dict] = {}
+    targets: list[tuple[int, int, CodeGenParameterDefinition]] = []
+
+    for parameter_id in requested_ids:
+        parameter = monitoring_by_id.get(parameter_id)
+        if parameter is None:
+            result_by_id[parameter_id] = {
+                "parameter_id": parameter_id,
+                "error": "Monitoring parameter is not available on the loaded device.",
+            }
+            continue
+        register_count = parameter.modbus_register_size
+        if register_count <= 0:
+            try:
+                register_count = register_count_for_data_type_name(
+                    parameter.data_type_name
+                )
+            except ModbusRegisterValueCodecError as exc:
+                result_by_id[parameter_id] = {
+                    "parameter_id": parameter_id,
+                    "name": parameter.parameter_name,
+                    "error": str(exc),
+                }
+                continue
+        if register_count > 125:
+            result_by_id[parameter_id] = {
+                "parameter_id": parameter_id,
+                "name": parameter.parameter_name,
+                "error": f"Parameter needs {register_count} registers; maximum is 125.",
+            }
+            continue
+        targets.append((parameter.modbus_address, register_count, parameter))
+
+    batches: list[
+        tuple[int, int, list[tuple[int, int, CodeGenParameterDefinition]]]
+    ] = []
+    for address, register_count, parameter in sorted(targets, key=lambda item: item[0]):
+        end_address = address + register_count
+        if batches:
+            batch_start, batch_end, batch_targets = batches[-1]
+            merged_end = max(batch_end, end_address)
+            if address <= batch_end and merged_end - batch_start <= 125:
+                batch_targets.append((address, register_count, parameter))
+                batches[-1] = (batch_start, merged_end, batch_targets)
+                continue
+        batches.append((address, end_address, [(address, register_count, parameter)]))
+
+    for batch_start, batch_end, batch_targets in batches:
+        try:
+            registers = context.device_modbus_link.read_holding_registers_u16(
+                batch_start,
+                batch_end - batch_start,
+                modbus_unit_identifier=slave_id,
+            )
+        except DeviceModbusLinkError as exc:
+            for _address, _count, parameter in batch_targets:
+                result_by_id[parameter.parameter_id] = {
+                    "parameter_id": parameter.parameter_id,
+                    "name": parameter.parameter_name,
+                    "data_type": parameter.data_type_name,
+                    "modbus_addr": parameter.modbus_address,
+                    "error": str(exc),
+                }
+            continue
+
+        for address, register_count, parameter in batch_targets:
+            offset = address - batch_start
+            parameter_registers = registers[offset : offset + register_count]
+            try:
+                value = decode_parameter_value_from_holding_registers(
+                    parameter.data_type_name, parameter_registers
+                )
+                display = format_decoded_parameter_value_for_display(
+                    parameter.data_type_name, value
+                )
+                result_by_id[parameter.parameter_id] = {
+                    "parameter_id": parameter.parameter_id,
+                    "name": parameter.parameter_name,
+                    "value": value,
+                    "display": display,
+                    "data_type": parameter.data_type_name,
+                    "modbus_addr": parameter.modbus_address,
+                    "error": None,
+                }
+            except ModbusRegisterValueCodecError as exc:
+                result_by_id[parameter.parameter_id] = {
+                    "parameter_id": parameter.parameter_id,
+                    "name": parameter.parameter_name,
+                    "data_type": parameter.data_type_name,
+                    "modbus_addr": parameter.modbus_address,
+                    "error": str(exc),
+                }
+
+    values = [result_by_id[parameter_id] for parameter_id in requested_ids]
+    error_count = sum(1 for item in values if item.get("error"))
+    return success(
+        "read-monitoring",
+        {
+            "slave_id": slave_id,
+            "requested_count": len(requested_ids),
+            "success_count": len(values) - error_count,
+            "error_count": error_count,
+            "values": values,
+        },
+    )
 
 
 def handle_get_monitoring_header(context: CommandSessionContext, args) -> CommandResult:

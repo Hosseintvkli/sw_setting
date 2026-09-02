@@ -1,5 +1,5 @@
 """
-CSV profiles: load/save settings and optionally execute commands.
+CSV profiles: load/save values for settings and command registers.
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ def load_setting_profile_assignments_from_csv(
     Row forms:
       Name,value
       ArrayName[start],v0,v1,v2,...  -> ArrayName[start], ArrayName[start+1], ...
-      CommandName,0xFFFF
+      CommandName,value
     """
     profile_parameter_by_name = build_setting_parameter_definition_by_name(
         parameter_list_package
@@ -232,19 +232,6 @@ def _append_single_assignment(
             SettingProfileParseIssue(
                 source_csv_line_number,
                 f"{parameter_name}: {exc}",
-            )
-        )
-        return
-
-    if (
-        definition.parameter_access_kind == ParameterAccessKind.COMMAND_WRITE
-        and parsed_value != 0xFFFF
-    ):
-        issues.append(
-            SettingProfileParseIssue(
-                source_csv_line_number,
-                f"COMMAND {parameter_name!r} must use trigger value "
-                "0xFFFF (65535).",
             )
         )
         return

@@ -9,7 +9,7 @@
 - اتصال و عملیات خام Holding Register؛
 - کشف topology هاب‌ها و دستگاه‌ها و اختصاص Slave ID دائمی؛
 - انتخاب JSON متناسب با `DeviceId + ParameterListVersion`؛
-- خواندن و نوشتن پارامترهای SETTING؛
+- خواندن و نوشتن پارامترهای SETTING و خواندن دوره‌ای MONITORING؛
 - اعمال، بررسی و ذخیره Profile CSV؛
 - اجرای پارامترهای COMMAND با پروتکل `0xFFFF` و poll نتیجه؛
 - اجرای یک‌باره CLI یا نگهداری نشست پایدار روی HTTP؛
@@ -155,8 +155,8 @@ endpointهای HTTP:
 |---|---|
 | `commands/handlers/connection_commands.py` | `connect`، `disconnect`، `status`، `list-serial-ports`، `list-networks`، `set-timeouts`. آرگومان parser را به مدل ارتباط تبدیل می‌کند و `DeviceModbusLink` را کنترل می‌کند. |
 | `commands/handlers/topology_commands.py` | `identify`، `show-topology`، `select-device`، `clear-device-selection`. `DeviceIdentifySession` را اجرا، partial result را حفظ و topology را به JSON یا متن تبدیل می‌کند. |
-| `commands/handlers/settings_commands.py` | `load/reload-settings`، `get/set/list-parameter` و `get-monitoring-header`. Loader، codec و validation را به command متصل می‌کند؛ تطابق package با Slave و writable بودن setting را کنترل می‌کند. |
-| `commands/handlers/profile_commands.py` | `apply/verify/save/parse-profile`. CSV را parse می‌کند، settingها را روی یک یا چند Slave می‌خواند/می‌نویسد و COMMANDها را در Apply با `DeviceCommandExecutor` اجرا می‌کند. Verify برای جلوگیری از تکرار عمل، COMMANDها را skip و در `skipped_count` گزارش می‌کند. |
+| `commands/handlers/settings_commands.py` | `load/reload-settings`، `get/set/list-parameter`، `read-monitoring` و `get-monitoring-header`. Loader، codec و validation را به command متصل می‌کند؛ تطابق package با Slave و writable بودن setting را کنترل می‌کند. `read-monitoring` پارامترها را با ParameterId انتخاب و بازه‌های رجیستر مجاور را تا سقف ۱۲۵ رجیستر batch می‌کند. |
+| `commands/handlers/profile_commands.py` | `apply/verify/save/parse-profile`. CSV را parse می‌کند و مقدار SETTING و COMMAND را روی یک یا چند Slave می‌نویسد یا بررسی می‌کند. Apply مقدار COMMAND را عیناً از CSV encode و فقط write می‌کند؛ polling ندارد. Verify رجیستر SETTING و COMMAND را می‌خواند، decode می‌کند و با مقدار CSV مقایسه می‌کند. |
 | `commands/handlers/device_command_commands.py` | `list-commands` و `execute-command`؛ پیدا کردن COMMAND از package یا اجرای آدرس مستقیم. |
 | `commands/handlers/modbus_raw_commands.py` | `read-holding`، `write-holding` و broadcast write؛ مناسب تست پایین‌ترین لایه بدون JSON. |
 | `commands/handlers/utility_commands.py` | `help`، `version`، `set-json-root` و `ping`. مسیر help فعلی `help [topic]` است. |
@@ -188,7 +188,7 @@ endpointهای HTTP:
 |---|---|
 | `core/device_setting_tree_loader.py` | خواندن DeviceId/Version/header، انتخاب package، فیلتر SETTINGها، ادغام بازه‌ها، batch read حداکثر ۱۲۵ رجیستر، حفظ خطای اصلی هر batch و decode مقادیر. progress عمومی آن `0..100` است. |
 | `core/device_identify_session.py` | الگوریتم کامل Identify: broadcast شناسه موقت، کشف node روی Unit 1، تخصیص ID از 247 تا 2، تنظیم Min/Max portهای Hub، recursion، log، cancel و partial topology. |
-| `core/setting_profile_csv.py` | خواندن/نوشتن Profile UTF-8، اعتبارسنجی ردیف‌ها، گسترش آرایه، گزارش issue و پذیرش اختیاری COMMAND با trigger `0xFFFF`. خروجی save header ندارد؛ سلول خالی کل ردیف را رد می‌کند. |
+| `core/setting_profile_csv.py` | خواندن/نوشتن Profile UTF-8، اعتبارسنجی ردیف‌ها، گسترش آرایه، گزارش issue و پذیرش اختیاری COMMAND با هر مقدار معتبر برای DataType آن. خروجی save header ندارد؛ سلول خالی کل ردیف را رد می‌کند. |
 | `core/device_command_executor.py` | نوشتن `0xFFFF` در رجیستر COMMAND و poll همان رجیستر: صفر موفق، `0xFFFF` pending، مقدار دیگر error code، no-response احتمالاً busy. |
 
 ## ۷. قراردادهای داده مهم
@@ -231,15 +231,15 @@ files/codegen_output/JSON/
 WatchdogTimeMs,1000
 WatchdogTimeMs,"1000"
 Offsets[0],10,20,30
-ResetCommand,0xFFFF
+ResetCommand,42
 ```
 
 - کوتیشن برای مقدار ساده اختیاری است؛
 - header نوشته نمی‌شود؛
 - نام باید دقیقاً در package باشد؛
 - `Offsets[0],10,,30` کل ردیف را نامعتبر می‌کند؛
-- command فقط در مسیرهایی که `include_commands=True` است پذیرفته می‌شود و مقدارش باید 65535 باشد؛
-- Apply command را اجرا و poll می‌کند؛ Verify آن را اجرا نمی‌کند.
+- command فقط در مسیرهایی که `include_commands=True` است پذیرفته می‌شود و مقدار آن باید در محدودهٔ DataType تعریف‌شده در JSON باشد؛
+- Apply مقدار command را عیناً encode و فقط write می‌کند؛ polling و بررسی نتیجه ندارد. Verify رجیستر command را بدون write کردن می‌خواند و مقدار آن را با CSV مقایسه می‌کند.
 
 ## ۸. جریان‌های مهم و زنجیره فایل‌ها
 
@@ -299,8 +299,8 @@ device_command_commands.py
 | فایل | مسئولیت |
 |---|---|
 | `ui/communication_panel.py` | فرم خالص Serial/TCP و timeoutها؛ آرگومان‌های `connect` را می‌سازد و نتیجه `list-serial-ports`/`list-networks` را نمایش می‌دهد. discovery یا Modbus I/O ندارد. |
-| `ui/cli_console_panel.py` | CLI قابل مشاهده داخل GUI؛ اجرای بدون shell خطوط کامل `python cli.py ...` با `QProcess`، session نام‌دار، history/copy، stdout/stderr/exit code، اجرای ترتیبی script و مدیریت خودکار `serve-http`. |
-| `ui/main_window.py` | layout و تبدیل رخداد widgetها به command؛ مصرف JSON نتیجه برای topology، setting tree، header، Profile و COMMAND. تمام عملیات از `CliConsolePanel` عبور می‌کنند. |
+| `ui/cli_console_panel.py` | CLI قابل مشاهده داخل GUI؛ اجرای بدون shell خطوط کامل `python cli.py ...` با `QProcess`، session نام‌دار، history/copy، stdout/stderr/exit code، اجرای ترتیبی script و مدیریت خودکار `serve-http`. پردازش‌های پایان‌یافته با `deleteLater()` آزاد می‌شوند و history/output سقف دارند تا Monitoring حافظه را بی‌حد مصرف نکند. |
+| `ui/main_window.py` | layout و تبدیل رخداد widgetها به command؛ مصرف JSON نتیجه برای topology، setting tree، header، Monitoring، Profile و COMMAND. درخت Monitoring مانند Setting از `Tag2` و سپس اجزای نقطه‌ای/آرایه‌ای Name ساخته می‌شود و Checkbox فقط روی برگ است. ورود به تب read را آغاز نمی‌کند: کاربر باید Start را بزند و فقط برگ‌های تیک‌خورده خوانده می‌شوند؛ خروج از تب چرخه را متوقف می‌کند. انتخاب‌ها با ParameterId حفظ می‌شوند و هر دور فرمان قابل‌کپی `read-monitoring` اجرا می‌شود. highlight سه‌ثانیه‌ای و stale پنج‌ثانیه‌ای نیز در همین فایل‌اند. تمام عملیات از `CliConsolePanel` عبور می‌کنند. |
 
 ## ۱۰. نقشه عیب‌یابی
 
@@ -329,6 +329,7 @@ device_command_commands.py
 | مقدار ورودی رد/پذیرفته اشتباه است | `parameter_value_validation.py` | DataType JSON؛ validation محدودیت اختصاصی پارامتر ندارد |
 | get/set روی دستگاه دیگری اجرا می‌شود | `_loaded_package_for_slave` در settings handler | `selected_slave_id` و load مجدد package |
 | monitoring header قدیمی است | cache check در `settings_commands.py` | `device_setting_tree_loader.py` و Unit صریح header |
+| Monitoring مقدار تازه نشان نمی‌دهد | فرمان‌های `read-monitoring` در تب CLI و `error_count` | فشرده‌شدن Start Monitoring، تیک پارامتر، فعال بودن تب، `settings_commands.py` و آدرس/DataType JSON |
 | Profile parse نمی‌شود | `setting_profile_csv.py` و issues | نام دقیق پارامتر، DataType، سلول خالی و آرایه |
 | Profile روی چند دستگاه اشتباه است | targets در `profile_commands.py` | topology و تطابق DeviceId/Version |
 | COMMAND timeout/error دارد | `device_command_executor.py` | handler، آدرس JSON، timeout و رفتار firmware |
@@ -346,7 +347,7 @@ device_command_commands.py
 - دو helper مربوط به settle time در Identify وجود دارند ولی استفاده نمی‌شوند؛ بعد از broadcast/assign تأخیر صریحی اعمال نمی‌شود.
 - Catalog باید پیش از load شدن package اسکن شود و package فقط با ترکیب دقیق DeviceId/Version معتبر است.
 - `parse-profile` issues را در data برمی‌گرداند؛ صرف `ok=True` را معادل «بدون issue» ندانید.
-- Verify Profile فرمان‌های COMMAND را عمداً اجرا نمی‌کند و آن‌ها را skip می‌کند.
+- Verify Profile رجیسترهای SETTING و COMMAND را فقط می‌خواند و با CSV مقایسه می‌کند؛ هیچ مقداری نمی‌نویسد.
 - discovery شبکه GUI نیز فرمان `list-networks` را اجرا می‌کند؛ تنها پیاده‌سازی discovery در `core/host_communication_discovery.py` است.
 
 ## ۱۲. وابستگی‌های اجرایی

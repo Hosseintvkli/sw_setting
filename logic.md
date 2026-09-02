@@ -20,6 +20,7 @@ Markdown# مشخصات کامل نرم‌افزار تنظیم دستگاه (Dev
 | ارتباط | سریال Modbus RTU یا شبکه Modbus TCP |
 | Identify | کشف توپولوژی چندلایه هاب/دستگاه و اختصاص SlaveId |
 | SETTING | خواندن و نوشتن پارامترها از JSON تولیدی CodeGen |
+| Monitoring | انتخاب پارامترها و خواندن دوره‌ای batch از طریق CLI |
 | Profile | اعمال / تأیید / ذخیره تنظیمات از/به CSV |
 | Command | اجرای دستور با پروتکل 0xFFFF و poll نتیجه |
 
@@ -203,6 +204,7 @@ textHub
 ۹. UI کلی
 سه ستون splitter؛ چپ قابل resize (min ~280، بدون max قفل).
 وسط Parameters: هدر monitoring (SlaveID, DeviceId, SerialNo, HW, FW)؛ فقط Reload؛ درخت Tag2 + Name؛ Value قابل ویرایش+Enter؛ progress مخفی بعد از اتمام؛ حفظ عرض ستون.
+تب Monitoring: درختی مشابه Setting با سطح اول Tag2 و ادامهٔ مسیر از Name؛ Checkbox فقط روی برگ پارامتر است. دکمهٔ صریح Start/Stop وجود دارد و ورود به تب به‌تنهایی هیچ readای ایجاد نمی‌کند. خواندن فقط پس از Start، برای برگ‌های تیک‌خورده و تا وقتی تب فعال است انجام می‌شود؛ خروج از تب چرخه را متوقف می‌کند. انتخاب‌ها با ParameterId بین Deviceها حفظ می‌شوند؛ تغییر مقدار ۳ ثانیه سبز و قرائت قدیمی پس از ۵ ثانیه dim می‌شود.
 لود SETTING: unit صریح روی همه read؛ batch؛ errors per leaf.
 Profile: CSV؛ تیک همه DeviceId مشابه از درخت Identify؛ Apply/Verify/Save؛ Save بعد از Reload؛ لاگ رنگی.
 CSV: ستون1=Name؛ ستونهای بعد=مقادیر؛ گسترش آرایه از ایندکس Name.

@@ -4,8 +4,8 @@ Execute COMMAND parameters over Modbus.
 Protocol:
   1) Write 0xFFFF (65535) to the command holding register
   2) Poll-read the same address:
-       - no response  → still executing (keep polling until attempts exhausted)
-       - 65535        → device has not accepted yet (keep polling)
+       - no response  → still executing (keep polling until command timeout)
+       - 65535        → still pending (keep polling until command timeout)
        - 0            → success
        - any other    → failure; value is the error code
 """
@@ -51,15 +51,15 @@ class DeviceCommandExecutor:
                 message=f"Write trigger 0xFFFF failed: {exc}",
             )
 
-        attempts = self._device_modbus_link.get_active_transaction_retry_count()
         wait_s = self._device_modbus_link.get_active_read_timeout_seconds()
-        # Poll longer than a single register read: use retries as poll budget
-        poll_attempts = attempts * 3
+        command_timeout_s = (
+            self._device_modbus_link.get_active_command_execution_timeout_seconds()
+        )
+        deadline = time.monotonic() + command_timeout_s
 
         last_value: int | None = None
-        for poll_index in range(1, poll_attempts + 1):
+        while True:
             try:
-                # Single attempt each poll; outer loop handles timing
                 value = self._device_modbus_link._read_holding_registers_u16_once(
                     modbus_address, 1, None
                 )[0]
@@ -70,22 +70,20 @@ class DeviceCommandExecutor:
                         message="Command completed successfully (value=0).",
                         last_read_value=last_value,
                     )
-                if last_value == COMMAND_PENDING_VALUE_U16:
-                    # Not taken yet — wait and poll again
-                    if poll_index < poll_attempts:
-                        time.sleep(wait_s)
-                    continue
-                # Error code from device
-                return DeviceCommandExecutionResult(
-                    success=False,
-                    message=f"Command failed, error code={last_value}.",
-                    last_read_value=last_value,
-                )
+                if last_value != COMMAND_PENDING_VALUE_U16:
+                    return DeviceCommandExecutionResult(
+                        success=False,
+                        message=f"Command failed, error code={last_value}.",
+                        last_read_value=last_value,
+                    )
             except DeviceModbusLinkError:
                 # No response → device still busy executing
-                if poll_index < poll_attempts:
-                    time.sleep(wait_s)
-                continue
+                pass
+
+            remaining_s = deadline - time.monotonic()
+            if remaining_s <= 0:
+                break
+            time.sleep(min(wait_s, remaining_s))
 
         if last_value == COMMAND_PENDING_VALUE_U16:
             return DeviceCommandExecutionResult(

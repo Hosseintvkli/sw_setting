@@ -42,6 +42,7 @@ def handle_identify(context: CommandSessionContext, args) -> CommandResult:
         codegen_json_root_directory=json_root,
         log_callback=context.log,
         cancel_check=cancel_check,
+        progress_callback=context.progress,
     )
     started_at = time.perf_counter()
     try:

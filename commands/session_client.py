@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
@@ -173,6 +175,72 @@ def cancel_http_session_command(
         f"{base_url}/sessions/{session_id}/cancel",
         timeout_seconds=30.0,
     )
+
+
+def iter_http_session_events(
+    project_root: Path,
+    command_name: str,
+    session_name: str | None = None,
+) -> Iterator[dict[str, Any]]:
+    """Yield new events from the next run of ``command_name`` in a session."""
+    state = read_http_session_state(project_root, session_name)
+    if state is None:
+        selector = f" --session {session_name}" if session_name else ""
+        raise HttpSessionClientError(
+            f"No active HTTP session. Run: python cli.py{selector} serve"
+        )
+    base_url = str(state["base_url"]).rstrip("/")
+    session_id = str(state["session_id"])
+    endpoint = f"{base_url}/sessions/{session_id}/events"
+
+    tail = _http_json_request("GET", endpoint, timeout_seconds=30.0)
+    cursor = int(tail.get("next_cursor") or 0)
+    yield {
+        "sequence": cursor,
+        "type": "watch_ready",
+        "message": f"Watching events for command: {command_name}",
+        "data": {"command": command_name},
+    }
+
+    command_started = False
+    while True:
+        query = urlencode(
+            {
+                "after": cursor,
+                "limit": 500,
+                "wait_ms": 10_000,
+            }
+        )
+        response = _http_json_request(
+            "GET",
+            f"{endpoint}?{query}",
+            timeout_seconds=15.0,
+        )
+        cursor = int(response.get("next_cursor") or cursor)
+        events = response.get("events")
+        if not isinstance(events, list):
+            continue
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            event_type = str(event.get("type") or "")
+            data = event.get("data")
+            data = data if isinstance(data, dict) else {}
+            event_command = str(data.get("command") or "")
+            if not command_started:
+                if (
+                    event_type == "command_started"
+                    and event_command == command_name
+                ):
+                    command_started = True
+                else:
+                    continue
+            yield event
+            if (
+                event_type == "command_finished"
+                and event_command == command_name
+            ):
+                return
 
 
 def close_http_session(

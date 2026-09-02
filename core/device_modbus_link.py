@@ -317,6 +317,14 @@ class DeviceModbusLink:
             return 3
         return max(1, int(settings.modbus_transaction_retry_count))
 
+    def get_active_command_execution_timeout_seconds(self) -> float:
+        """Maximum time to wait for a COMMAND parameter to finish."""
+        settings = self._active_communication_settings
+        if settings is None:
+            return 10.0
+        milliseconds = settings.command_execution_timeout_milliseconds
+        return max(int(milliseconds), 1) / 1000.0
+
     def get_active_read_timeout_seconds(self) -> float:
         """Read timeout from the active communication settings (seconds)."""
         settings = self._active_communication_settings
@@ -334,6 +342,7 @@ class DeviceModbusLink:
         read_timeout_milliseconds: int,
         write_timeout_milliseconds: int,
         connect_timeout_milliseconds: int | None = None,
+        command_execution_timeout_milliseconds: int | None = None,
         transaction_retry_count: int | None = None,
     ) -> dict[str, int | str]:
         """Update the active session settings without reconnecting."""
@@ -351,6 +360,14 @@ class DeviceModbusLink:
                 raise DeviceModbusLinkError("Connect timeout must be positive.")
         else:
             connect_ms = None
+        if command_execution_timeout_milliseconds is not None:
+            command_timeout_ms = int(command_execution_timeout_milliseconds)
+            if command_timeout_ms <= 0:
+                raise DeviceModbusLinkError("Command timeout must be positive.")
+        else:
+            command_timeout_ms = int(
+                settings.command_execution_timeout_milliseconds
+            )
         if transaction_retry_count is not None:
             retry_count = int(transaction_retry_count)
             if retry_count < 1:
@@ -369,6 +386,7 @@ class DeviceModbusLink:
                 ethernet.connect_timeout_milliseconds = connect_ms
 
         settings.modbus_transaction_retry_count = retry_count
+        settings.command_execution_timeout_milliseconds = command_timeout_ms
         self._set_client_retry_count(client, retry_count)
         self._set_client_timeout_seconds(client, read_ms / 1000.0)
 
@@ -376,6 +394,7 @@ class DeviceModbusLink:
             "link_kind": settings.link_kind.value,
             "read_timeout_ms": read_ms,
             "write_timeout_ms": write_ms,
+            "command_timeout_ms": command_timeout_ms,
             "retries": retry_count,
         }
         if settings.link_kind == CommunicationLinkKind.ETHERNET_TCP:

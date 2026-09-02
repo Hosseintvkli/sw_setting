@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 # import time
 
 from core.codegen_parameter_list_catalog import (
@@ -33,6 +34,7 @@ FIRST_PERMANENT_MODBUS_SLAVE_ID = 247
 LAST_PERMANENT_MODBUS_SLAVE_ID = 2
 
 LogCallback = Callable[[str], None]
+ProgressCallback = Callable[[str, str, dict[str, Any]], None]
 
 
 class DeviceIdentifySessionError(Exception):
@@ -49,6 +51,7 @@ class DeviceIdentifySession:
         codegen_json_root_directory: Path | None = None,
         log_callback: LogCallback | None = None,
         cancel_check: Callable[[], bool] | None = None,
+        progress_callback: ProgressCallback | None = None,
     ) -> None:
         self._device_modbus_link = device_modbus_link
         self._codegen_json_root_directory = (
@@ -58,6 +61,7 @@ class DeviceIdentifySession:
         )
         self._log_callback = log_callback
         self._cancel_check = cancel_check
+        self._progress_callback = progress_callback
         self._next_permanent_slave_id = FIRST_PERMANENT_MODBUS_SLAVE_ID
         self._log_lines: list[str] = []
         self._catalog = CodeGenParameterListCatalog(self._codegen_json_root_directory)
@@ -68,6 +72,11 @@ class DeviceIdentifySession:
 
         self._next_permanent_slave_id = FIRST_PERMANENT_MODBUS_SLAVE_ID
         self._log_lines = []
+        self._progress(
+            "identify_started",
+            "Identify started.",
+            {},
+        )
         self._log("========== IDENTIFY START ==========")
         self._log(
             "Note: real hubs change SlaveId at holding 4000; "
@@ -82,6 +91,11 @@ class DeviceIdentifySession:
             self._log("JSON catalog scan OK.")
         except CodeGenParameterListCatalogError as exc:
             self._log(f"FAIL catalog: {exc}")
+            self._progress(
+                "identify_failed",
+                f"Identify failed while loading the JSON catalog: {exc}",
+                {},
+            )
             raise DeviceIdentifySessionError(str(exc)) from exc
 
         root: IdentifiedDeviceNode | None = None
@@ -153,6 +167,15 @@ class DeviceIdentifySession:
                 assigned_slave_id_count=assigned,
                 log_lines=list(self._log_lines),
             )
+            cancelled = "cancelled" in str(exc).lower()
+            self._progress(
+                "identify_cancelled" if cancelled else "identify_failed",
+                "Identify cancelled by user." if cancelled else f"Identify failed: {exc}",
+                {
+                    "assigned_slave_id_count": assigned,
+                    "has_partial_topology": root is not None,
+                },
+            )
             if isinstance(exc, DeviceIdentifySessionError):
                 if getattr(exc, "partial_result", None) is None:
                     exc.partial_result = partial
@@ -161,6 +184,11 @@ class DeviceIdentifySession:
 
         assigned = FIRST_PERMANENT_MODBUS_SLAVE_ID - self._next_permanent_slave_id
         self._log(f"Total permanent SlaveIds assigned: {assigned}")
+        self._progress(
+            "identify_finished",
+            f"Identify finished. {assigned} device(s) discovered.",
+            {"assigned_slave_id_count": assigned},
+        )
         return DeviceIdentifyResult(
             root_node=root,
             assigned_slave_id_count=assigned,
@@ -257,6 +285,26 @@ class DeviceIdentifySession:
             f"  Node ready: {node.device_name!r} permanent SlaveId={permanent_slave_id} "
             f"DownStreamQty={downstream_quantity}"
         )
+        self._progress(
+            "device_discovered",
+            (
+                f"Device identified: {node.device_name} "
+                f"(DeviceId={node.device_id}, SlaveId={node.permanent_modbus_slave_id})"
+            ),
+            {
+                "device_name": node.device_name,
+                "device_id": node.device_id,
+                "parameter_list_version": node.parameter_list_version,
+                "slave_id": node.permanent_modbus_slave_id,
+                "downstream_qty": node.downstream_port_quantity,
+                "parent_slave_id": (
+                    parent_node.permanent_modbus_slave_id
+                    if parent_node is not None
+                    else None
+                ),
+                "port_index": port_index_on_parent,
+            },
+        )
         return node
 
     def _scan_downstream_ports_recursively(self, hub_node: IdentifiedDeviceNode) -> None:
@@ -283,6 +331,18 @@ class DeviceIdentifySession:
                 for index in range(qty)
             ]
             try:
+                self._progress(
+                    "port_scanning",
+                    (
+                        f"Scanning port {port_index} on "
+                        f"SlaveId={hub_node.permanent_modbus_slave_id}."
+                    ),
+                    {
+                        "hub_slave_id": hub_node.permanent_modbus_slave_id,
+                        "port_index": port_index,
+                        "port_count": qty,
+                    },
+                )
                 self._log(
                     f"Port[{port_index}] of hub {hub_node.permanent_modbus_slave_id}: "
                     f"configure discovery (Min=Max=1 on this port)"
@@ -295,6 +355,17 @@ class DeviceIdentifySession:
                     parent_node=hub_node, port_index_on_parent=port_index
                 )
                 if child is None:
+                    self._progress(
+                        "empty_port",
+                        (
+                            f"No device found on port {port_index} of "
+                            f"SlaveId={hub_node.permanent_modbus_slave_id}."
+                        ),
+                        {
+                            "hub_slave_id": hub_node.permanent_modbus_slave_id,
+                            "port_index": port_index,
+                        },
+                    )
                     self._log(f"Port[{port_index}] empty — close Min=Max=0")
                     try:
                         self._write_port_min_max(hub_node, package, port_index, 0, 0)
@@ -569,6 +640,20 @@ class DeviceIdentifySession:
         self._log_lines.append(message)
         if self._log_callback is not None:
             self._log_callback(message)
+
+    def _progress(
+        self,
+        event_type: str,
+        message: str,
+        data: dict[str, Any],
+    ) -> None:
+        if self._progress_callback is None:
+            return
+        try:
+            self._progress_callback(event_type, message, data)
+        except Exception:
+            # Telemetry must never change the Identify algorithm's outcome.
+            pass
 
 
 def _find_parameter_modbus_address(

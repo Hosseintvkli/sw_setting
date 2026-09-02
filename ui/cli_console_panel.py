@@ -151,9 +151,9 @@ def script_command_lines(script_text: str) -> list[str]:
             parsed = parse_cli_invocation(line)
         except CliCommandTextError as exc:
             raise CliCommandTextError(f"Script line {line_number}: {exc}") from exc
-        if parsed.command_name == "serve-http":
+        if parsed.command_name in ("serve-http", "watch-events"):
             raise CliCommandTextError(
-                f"Script line {line_number}: serve-http is a long-running server "
+                f"Script line {line_number}: {parsed.command_name} is a long-running "
                 "command and cannot be part of a sequential script."
             )
         commands.append(line)
@@ -202,12 +202,20 @@ class CliConsolePanel(QWidget):
     command_completed = pyqtSignal(str, int, object)
     busy_changed = pyqtSignal(bool)
     session_ready = pyqtSignal(str)
+    session_event_received = pyqtSignal(object)
+    event_watcher_ready = pyqtSignal(str)
+    event_watcher_error = pyqtSignal(str)
+    event_watcher_finished = pyqtSignal(str, int)
 
     def __init__(self, project_root: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._project_root = Path(project_root).resolve()
         self._active_process: QProcess | None = None
         self._cancel_process: QProcess | None = None
+        self._event_watcher_process: QProcess | None = None
+        self._event_watcher_command_name = ""
+        self._event_watcher_stdout_buffer = ""
+        self._event_watcher_history_item: QTreeWidgetItem | None = None
         self._server_process: QProcess | None = None
         self._server_history_item: QTreeWidgetItem | None = None
         self._active_history_item: QTreeWidgetItem | None = None
@@ -287,6 +295,7 @@ class CliConsolePanel(QWidget):
 
         self.output_text_edit = QPlainTextEdit()
         self.output_text_edit.setReadOnly(True)
+        self.output_text_edit.document().setMaximumBlockCount(5000)
         output_widget = QWidget()
         output_layout = QVBoxLayout(output_widget)
         output_layout.setContentsMargins(0, 0, 0, 0)
@@ -392,6 +401,7 @@ class CliConsolePanel(QWidget):
             except json.JSONDecodeError:
                 pass
             self._cancel_process = None
+            process.deleteLater()
             self._append_output(f"[exit code {exit_code}]\n\n")
             self.command_completed.emit(command, exit_code, payload)
 
@@ -409,6 +419,129 @@ class CliConsolePanel(QWidget):
         self._cancel_process = process
         process.start(parsed.program, parsed.arguments)
         return True
+
+    def start_session_event_watcher(self, command_name: str) -> bool:
+        """Start a parallel, copyable CLI watcher for one command run."""
+        if self._event_watcher_process is not None:
+            QMessageBox.information(
+                self, "Live events", "An event watcher is already running."
+            )
+            return False
+        try:
+            command = self._session_command(
+                "watch-events",
+                "--command",
+                command_name,
+                "--json-lines",
+            )
+            parsed = parse_cli_invocation(command)
+        except CliCommandTextError as exc:
+            QMessageBox.warning(self, "Live events", str(exc))
+            return False
+
+        self._event_watcher_command_name = command_name
+        self._event_watcher_stdout_buffer = ""
+        self._event_watcher_history_item = QTreeWidgetItem(
+            ["Watching", command, ""]
+        )
+        self.command_history_tree.addTopLevelItem(
+            self._event_watcher_history_item
+        )
+        self.command_history_tree.scrollToItem(
+            self._event_watcher_history_item
+        )
+        self._append_output(f"> {command}\n")
+
+        process = QProcess(self)
+        process.setWorkingDirectory(str(self._project_root))
+        process.readyReadStandardOutput.connect(self._read_event_watcher_stdout)
+        process.readyReadStandardError.connect(self._read_event_watcher_stderr)
+        process.finished.connect(self._event_watcher_process_finished)
+        process.errorOccurred.connect(self._event_watcher_process_error)
+        self._event_watcher_process = process
+        process.start(parsed.program, parsed.arguments)
+        return True
+
+    def stop_session_event_watcher(self) -> None:
+        process = self._event_watcher_process
+        if process is None:
+            return
+        process.terminate()
+        if not process.waitForFinished(1000):
+            process.kill()
+            process.waitForFinished(1000)
+
+    def _read_event_watcher_stdout(self) -> None:
+        process = self._event_watcher_process
+        if process is None:
+            return
+        text = bytes(process.readAllStandardOutput()).decode(
+            "utf-8", errors="replace"
+        )
+        if not text:
+            return
+        self._append_output(text)
+        self._event_watcher_stdout_buffer += text
+        while "\n" in self._event_watcher_stdout_buffer:
+            line, self._event_watcher_stdout_buffer = (
+                self._event_watcher_stdout_buffer.split("\n", 1)
+            )
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") == "watch_ready":
+                self.event_watcher_ready.emit(
+                    self._event_watcher_command_name
+                )
+            else:
+                self.session_event_received.emit(event)
+
+    def _read_event_watcher_stderr(self) -> None:
+        process = self._event_watcher_process
+        if process is None:
+            return
+        text = bytes(process.readAllStandardError()).decode(
+            "utf-8", errors="replace"
+        )
+        self._append_output(text)
+        if text.strip():
+            self.event_watcher_error.emit(text.strip())
+
+    def _event_watcher_process_finished(self, exit_code: int, _status) -> None:
+        process = self._event_watcher_process
+        if process is None:
+            return
+        self._read_event_watcher_stdout()
+        self._read_event_watcher_stderr()
+        command_name = self._event_watcher_command_name
+        if self._event_watcher_history_item is not None:
+            self._event_watcher_history_item.setText(
+                0, "OK" if exit_code == 0 else "Failed"
+            )
+            self._event_watcher_history_item.setText(2, str(exit_code))
+        self._append_output(f"[watch exit code {exit_code}]\n\n")
+        self._event_watcher_process = None
+        self._event_watcher_command_name = ""
+        self._event_watcher_stdout_buffer = ""
+        self._event_watcher_history_item = None
+        process.deleteLater()
+        self.event_watcher_finished.emit(command_name, exit_code)
+
+    def _event_watcher_process_error(self, error) -> None:
+        process = self._event_watcher_process
+        if process is None:
+            return
+        self._append_output(
+            f"Event watcher process error: {process.errorString()}\n"
+        )
+        if error == QProcess.ProcessError.FailedToStart:
+            self._event_watcher_process_finished(127, None)
 
     def _session_command(self, command_name: str, *arguments: str) -> str:
         name = self._session_name()
@@ -494,7 +627,10 @@ class CliConsolePanel(QWidget):
         if self._server_history_item is not None:
             self._server_history_item.setText(0, "Stopped")
             self._server_history_item.setText(2, str(exit_code))
+        process = self._server_process
         self._server_process = None
+        if process is not None:
+            process.deleteLater()
 
     def _server_process_error(self, _error) -> None:
         if self._server_process is not None:
@@ -634,6 +770,8 @@ class CliConsolePanel(QWidget):
             ["Running", parsed.original_text, ""]
         )
         self.command_history_tree.addTopLevelItem(self._active_history_item)
+        while self.command_history_tree.topLevelItemCount() > 500:
+            self.command_history_tree.takeTopLevelItem(0)
         self.command_history_tree.scrollToItem(self._active_history_item)
         self._append_output(f"> {parsed.original_text}\n")
 
@@ -678,7 +816,8 @@ class CliConsolePanel(QWidget):
         self._finalize_active_process(exit_code)
 
     def _finalize_active_process(self, exit_code: int) -> None:
-        if self._active_process is None:
+        process = self._active_process
+        if process is None:
             return
         self._read_command_stdout()
         self._read_command_stderr()
@@ -699,6 +838,7 @@ class CliConsolePanel(QWidget):
         self._active_process = None
         self._active_history_item = None
         self._active_callback = None
+        process.deleteLater()
         self._set_command_controls_busy(False)
         self._append_output(f"[exit code {exit_code}]\n\n")
         self.command_completed.emit(command_text, exit_code, payload)
@@ -810,6 +950,7 @@ class CliConsolePanel(QWidget):
 
     def shutdown(self) -> None:
         self._script_queue.clear()
+        self.stop_session_event_watcher()
         if self._cancel_process is not None:
             self._cancel_process.terminate()
             self._cancel_process.waitForFinished(1000)

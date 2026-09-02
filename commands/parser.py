@@ -42,9 +42,10 @@ def build_argument_parser() -> argparse.ArgumentParser:
         default="192.168.1.120",
         help="Local NIC IPv4 (default: 192.168.1.120)",
     )
-    p.add_argument("--read-timeout-ms", type=int, default=200)
-    p.add_argument("--write-timeout-ms", type=int, default=200)
-    p.add_argument("--connect-timeout-ms", type=int, default=2000)
+    p.add_argument("--read-timeout-ms", type=int, default=100)
+    p.add_argument("--write-timeout-ms", type=int, default=100)
+    p.add_argument("--connect-timeout-ms", type=int, default=100)
+    p.add_argument("--command-timeout-ms", type=int, default=10_000)
     p.add_argument("--retries", type=int, default=3)
 
     sub.add_parser("disconnect", help="Close Modbus link")
@@ -56,6 +57,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     p.add_argument("--read-timeout-ms", type=int, required=True)
     p.add_argument("--write-timeout-ms", type=int, required=True)
     p.add_argument("--connect-timeout-ms", type=int, default=None)
+    p.add_argument("--command-timeout-ms", type=int, default=None)
     p.add_argument("--retries", type=int, default=None)
 
     # --- topology ---
@@ -96,10 +98,24 @@ def build_argument_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--type",
         dest="parameter_type_filter",
-        choices=("setting", "command", "all"),
+        choices=("setting", "monitoring", "command", "all"),
         default="setting",
     )
     p.add_argument("--tag2", default=None)
+
+    p = sub.add_parser(
+        "read-monitoring",
+        help="Read selected MONITORING parameters in efficient batches",
+    )
+    p.add_argument(
+        "--parameter-id",
+        dest="parameter_ids",
+        action="append",
+        type=int,
+        required=True,
+        help="ParameterId to read; repeat this option for multiple parameters",
+    )
+    p.add_argument("--slave-id", type=int, default=None)
 
     p = sub.add_parser("get-monitoring-header", help="Read fixed monitoring header")
     p.add_argument("--slave-id", type=int, default=None)

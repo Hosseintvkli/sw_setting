@@ -38,6 +38,7 @@ def handle_connect(context: CommandSessionContext, args) -> CommandResult:
                 write_timeout_milliseconds=int(args.write_timeout_ms),
             ),
             modbus_unit_identifier=1,
+            command_execution_timeout_milliseconds=int(args.command_timeout_ms),
             modbus_transaction_retry_count=retries,
         )
         link_info = {
@@ -58,6 +59,7 @@ def handle_connect(context: CommandSessionContext, args) -> CommandResult:
                 write_timeout_milliseconds=int(args.write_timeout_ms),
             ),
             modbus_unit_identifier=1,
+            command_execution_timeout_milliseconds=int(args.command_timeout_ms),
             modbus_transaction_retry_count=retries,
         )
         link_info = {
@@ -81,6 +83,7 @@ def handle_connect(context: CommandSessionContext, args) -> CommandResult:
             **link_info,
             "read_timeout_ms": int(args.read_timeout_ms),
             "write_timeout_ms": int(args.write_timeout_ms),
+            "command_timeout_ms": int(args.command_timeout_ms),
             "retries": retries,
         },
     )
@@ -143,6 +146,7 @@ def handle_set_timeouts(context: CommandSessionContext, args) -> CommandResult:
             read_timeout_milliseconds=int(args.read_timeout_ms),
             write_timeout_milliseconds=int(args.write_timeout_ms),
             connect_timeout_milliseconds=args.connect_timeout_ms,
+            command_execution_timeout_milliseconds=args.command_timeout_ms,
             transaction_retry_count=args.retries,
         )
     except (RuntimeError, DeviceModbusLinkError, ValueError) as exc:

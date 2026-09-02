@@ -244,6 +244,17 @@ Every hub port is listed as a sibling row. Port and connected device share one r
 - **Reload** re-reads with the current unit.
 - Edit Value + Enter → type validation → encode → Modbus write.
 
+**Monitoring**
+
+- Lists `MONITORING_READ_ONLY` parameters from the loaded device package.
+- Uses the same hierarchy as Settings: `Tag2` is the first level, followed by the dotted/indexed parameter-name path.
+- Each row has an independent selection checkbox; selections are retained by `ParameterId` when the selected device changes.
+- Merely opening the Monitoring tab never reads the hardware. The user must press **Start Monitoring**; only checked parameter rows then enter the read cycle.
+- Leaving the Monitoring tab, loading another device, or pressing **Stop Monitoring** stops scheduling new reads. Returning to the tab requires Start again.
+- Selected parameters are read through copyable `read-monitoring --parameter-id ...` CLI commands; adjacent registers are merged into batches of at most 125 registers.
+- A changed value highlights its row in green for 3 seconds.
+- Last-read age is shown in milliseconds. Unselected rows and rows older than 5 seconds are dimmed and show no age.
+
 **Profile**
 
 - CSV path picker.
@@ -256,6 +267,8 @@ CSV format:
 
 - Column 1: parameter `Name` exactly as in JSON.
 - Columns 2+: values. Multiple values after an array name expand from the start index in the name; out-of-bounds is an error.
+- SETTING and COMMAND rows accept values valid for their JSON `DataType`.
+- Apply writes a COMMAND value exactly as provided and does not poll it. Verify reads and compares COMMAND rows without writing them.
 
 **Commands**
 
