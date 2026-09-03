@@ -249,9 +249,11 @@ Every hub port is listed as a sibling row. Port and connected device share one r
 - Lists `MONITORING_READ_ONLY` parameters from the loaded device package.
 - Uses the same hierarchy as Settings: `Tag2` is the first level, followed by the dotted/indexed parameter-name path.
 - Each row has an independent selection checkbox; selections are retained by `ParameterId` when the selected device changes.
+- **Select All** checks every visible parameter when none is selected. If the selection is partial or complete, the same button becomes **Clear All** and clears every visible parameter.
 - Merely opening the Monitoring tab never reads the hardware. The user must press **Start Monitoring**; only checked parameter rows then enter the read cycle.
 - Leaving the Monitoring tab, loading another device, or pressing **Stop Monitoring** stops scheduling new reads. Returning to the tab requires Start again.
-- Selected parameters are read through copyable `read-monitoring --parameter-id ...` CLI commands; adjacent registers are merged into batches of at most 125 registers.
+- Selected parameters are read progressively through copyable `read-monitoring --parameter-id ...` CLI commands containing at most 250 parameters. This keeps Windows command lines bounded and lets large selections update incrementally. Inside each command, adjacent registers are merged into Modbus batches of at most 125 registers.
+- Periodic commands remain visible/copyable in CLI history, but their large JSON payload is not repeatedly rendered in the CLI output pane; values are rendered in the Monitoring table instead.
 - A changed value highlights its row in green for 3 seconds.
 - Last-read age is shown in milliseconds. Unselected rows and rows older than 5 seconds are dimmed and show no age.
 

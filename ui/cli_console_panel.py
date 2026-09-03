@@ -222,6 +222,7 @@ class CliConsolePanel(QWidget):
         self._active_command_text = ""
         self._active_stdout = ""
         self._active_stderr = ""
+        self._active_echo_output = True
         self._active_callback: CompletionCallback | None = None
         self._script_queue: deque[str] = deque()
         self._script_stop_on_error = True
@@ -340,13 +341,19 @@ class CliConsolePanel(QWidget):
         command_name: str,
         arguments: list[str] | None = None,
         completion_callback: CompletionCallback | None = None,
+        *,
+        echo_output: bool = True,
     ) -> bool:
         try:
             command = self._session_command(command_name, *(arguments or []))
         except CliCommandTextError as exc:
             QMessageBox.warning(self, "Session", str(exc))
             return False
-        return self.execute_command(command, completion_callback)
+        return self.execute_command(
+            command,
+            completion_callback,
+            echo_output=echo_output,
+        )
 
     def request_session_cancel(self) -> bool:
         """Run the copyable CLI cancel command alongside the active command."""
@@ -748,6 +755,8 @@ class CliConsolePanel(QWidget):
         self,
         command_text: str,
         completion_callback: CompletionCallback | None = None,
+        *,
+        echo_output: bool = True,
     ) -> bool:
         if self._active_process is not None:
             QMessageBox.information(
@@ -765,6 +774,7 @@ class CliConsolePanel(QWidget):
         self._active_command_text = parsed.original_text
         self._active_stdout = ""
         self._active_stderr = ""
+        self._active_echo_output = echo_output
         self._active_callback = completion_callback
         self._active_history_item = QTreeWidgetItem(
             ["Running", parsed.original_text, ""]
@@ -793,7 +803,8 @@ class CliConsolePanel(QWidget):
             "utf-8", errors="replace"
         )
         self._active_stdout += text
-        self._append_output(text)
+        if self._active_echo_output:
+            self._append_output(text)
 
     def _read_command_stderr(self) -> None:
         if self._active_process is None:
@@ -838,6 +849,7 @@ class CliConsolePanel(QWidget):
         self._active_process = None
         self._active_history_item = None
         self._active_callback = None
+        self._active_echo_output = True
         process.deleteLater()
         self._set_command_controls_busy(False)
         self._append_output(f"[exit code {exit_code}]\n\n")

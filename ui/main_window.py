@@ -48,6 +48,7 @@ _ROLE_PARAMETER_ID = Qt.ItemDataRole.UserRole + 4
 _ROLE_LAST_READ_MONOTONIC = Qt.ItemDataRole.UserRole + 5
 _ROLE_CHANGE_HIGHLIGHT_UNTIL = Qt.ItemDataRole.UserRole + 6
 _ROLE_MONITORING_VISUAL_STATE = Qt.ItemDataRole.UserRole + 7
+_MONITORING_PARAMETERS_PER_COMMAND = 250
 
 
 class DeviceSettingMainWindow(QMainWindow):
@@ -72,6 +73,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._monitoring_device_ready = False
         self._monitoring_read_in_flight = False
         self._monitoring_read_scheduled = False
+        self._monitoring_next_parameter_index = 0
         self._suppress_monitoring_item_change = False
 
         self.cli_console_panel = CliConsolePanel(Path(__file__).resolve().parent.parent)
@@ -198,11 +200,16 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_periodic_monitoring_read = QPushButton("Start Monitoring")
         self.push_button_periodic_monitoring_read.setCheckable(True)
         self.push_button_periodic_monitoring_read.setChecked(False)
+        self.push_button_toggle_all_monitoring_parameters = QPushButton("Select All")
+        self.push_button_toggle_all_monitoring_parameters.setEnabled(False)
         self.label_periodic_monitoring_status = QLabel(
             "Load a device to list Monitoring parameters."
         )
         monitoring_controls = QHBoxLayout()
         monitoring_controls.addWidget(self.push_button_periodic_monitoring_read)
+        monitoring_controls.addWidget(
+            self.push_button_toggle_all_monitoring_parameters
+        )
         monitoring_controls.addStretch(1)
         monitoring_controls.addWidget(self.label_periodic_monitoring_status)
 
@@ -352,6 +359,9 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_periodic_monitoring_read.toggled.connect(
             self._on_periodic_monitoring_toggled
         )
+        self.push_button_toggle_all_monitoring_parameters.clicked.connect(
+            self._on_toggle_all_monitoring_parameters_clicked
+        )
         self.monitoring_parameters_tree_widget.itemChanged.connect(
             self._on_monitoring_item_changed
         )
@@ -390,7 +400,10 @@ class DeviceSettingMainWindow(QMainWindow):
         if report_log:
             self._append_log(f"> {visible}")
         return self.cli_console_panel.execute_session_command(
-            command_name, arguments, callback
+            command_name,
+            arguments,
+            callback,
+            echo_output=report_log,
         )
 
     def _on_cli_busy_changed(self, busy: bool) -> None:
@@ -602,6 +615,13 @@ class DeviceSettingMainWindow(QMainWindow):
             and self._connected
             and self._settings_loaded
             and self._monitoring_device_ready
+        )
+        self.push_button_toggle_all_monitoring_parameters.setEnabled(
+            self._session_ready_flag
+            and self._connected
+            and self._settings_loaded
+            and self._monitoring_device_ready
+            and bool(self._monitoring_items_by_parameter_id)
         )
 
     def _clear_loaded_device_state(self) -> None:
@@ -996,6 +1016,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._monitoring_device_ready = False
         self._monitoring_read_scheduled = False
         self._monitoring_read_in_flight = False
+        self._monitoring_next_parameter_index = 0
         self._suppress_monitoring_item_change = True
         try:
             self.monitoring_parameters_tree_widget.clear()
@@ -1005,13 +1026,17 @@ class DeviceSettingMainWindow(QMainWindow):
         self.label_periodic_monitoring_status.setText(
             "Load a device to list Monitoring parameters."
         )
+        self._update_monitoring_selection_button()
 
     def _populate_monitoring_parameters(
         self, parameters: list[dict[str, Any]]
     ) -> None:
+        tree = self.monitoring_parameters_tree_widget
+        updates_were_enabled = tree.updatesEnabled()
+        tree.setUpdatesEnabled(False)
         self._suppress_monitoring_item_change = True
         try:
-            self.monitoring_parameters_tree_widget.clear()
+            tree.clear()
             self._monitoring_items_by_parameter_id.clear()
             categories: dict[str, QTreeWidgetItem] = {}
             branches: dict[tuple[str, tuple[str, ...]], QTreeWidgetItem] = {}
@@ -1025,9 +1050,7 @@ class DeviceSettingMainWindow(QMainWindow):
                 if category_item is None:
                     category_item = QTreeWidgetItem([category])
                     categories[category] = category_item
-                    self.monitoring_parameters_tree_widget.addTopLevelItem(
-                        category_item
-                    )
+                    tree.addTopLevelItem(category_item)
 
                 raw_segments = parameter.get("name_path_segments")
                 name = str(parameter.get("name") or "(unnamed)")
@@ -1081,8 +1104,10 @@ class DeviceSettingMainWindow(QMainWindow):
                 self._monitoring_items_by_parameter_id[parameter_id] = item
         finally:
             self._suppress_monitoring_item_change = False
+            tree.setUpdatesEnabled(updates_were_enabled)
 
         self._monitoring_device_ready = True
+        self._monitoring_next_parameter_index = 0
         count = len(self._monitoring_items_by_parameter_id)
         self.label_periodic_monitoring_status.setText(
             f"{count} Monitoring parameter(s) available."
@@ -1094,6 +1119,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self.monitoring_parameters_tree_widget.setColumnWidth(3, 80)
         self.monitoring_parameters_tree_widget.setColumnWidth(4, 90)
         self._refresh_monitoring_row_visuals()
+        self._update_monitoring_selection_button()
         self._update_action_states()
         self._schedule_next_monitoring_read()
 
@@ -1117,8 +1143,60 @@ class DeviceSettingMainWindow(QMainWindow):
                 item.setText(5, "")
             finally:
                 tree.blockSignals(signals_were_blocked)
+        self._monitoring_next_parameter_index = 0
         self._refresh_monitoring_row_visuals()
+        self._update_monitoring_selection_button()
         self._schedule_next_monitoring_read()
+
+    def _on_toggle_all_monitoring_parameters_clicked(self) -> None:
+        items = self._monitoring_items_by_parameter_id
+        if not items:
+            return
+
+        # None selected -> select every visible leaf. Partial/all selected ->
+        # clear every visible leaf, as requested.
+        select_all = not any(
+            item.checkState(1) == Qt.CheckState.Checked for item in items.values()
+        )
+        visible_parameter_ids = set(items)
+        if select_all:
+            self._monitoring_selected_parameter_ids.update(visible_parameter_ids)
+        else:
+            self._monitoring_selected_parameter_ids.difference_update(
+                visible_parameter_ids
+            )
+
+        tree = self.monitoring_parameters_tree_widget
+        signals_were_blocked = tree.blockSignals(True)
+        updates_were_enabled = tree.updatesEnabled()
+        tree.setUpdatesEnabled(False)
+        try:
+            target_state = (
+                Qt.CheckState.Checked if select_all else Qt.CheckState.Unchecked
+            )
+            for item in items.values():
+                item.setCheckState(1, target_state)
+                if not select_all:
+                    item.setData(0, _ROLE_LAST_READ_MONOTONIC, None)
+                    item.setData(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL, None)
+                    item.setText(5, "")
+        finally:
+            tree.blockSignals(signals_were_blocked)
+            tree.setUpdatesEnabled(updates_were_enabled)
+
+        self._monitoring_next_parameter_index = 0
+        self._refresh_monitoring_row_visuals()
+        self._update_monitoring_selection_button()
+        self._schedule_next_monitoring_read()
+
+    def _update_monitoring_selection_button(self) -> None:
+        any_selected = any(
+            item.checkState(1) == Qt.CheckState.Checked
+            for item in self._monitoring_items_by_parameter_id.values()
+        )
+        self.push_button_toggle_all_monitoring_parameters.setText(
+            "Clear All" if any_selected else "Select All"
+        )
 
     def _on_periodic_monitoring_toggled(self, enabled: bool) -> None:
         if enabled:
@@ -1193,15 +1271,28 @@ class DeviceSettingMainWindow(QMainWindow):
             )
             return
 
+        if self._monitoring_next_parameter_index >= len(parameter_ids):
+            self._monitoring_next_parameter_index = 0
+        batch_start_index = self._monitoring_next_parameter_index
+        batch_end_index = min(
+            batch_start_index + _MONITORING_PARAMETERS_PER_COMMAND,
+            len(parameter_ids),
+        )
+        batch_parameter_ids = parameter_ids[batch_start_index:batch_end_index]
+        self._monitoring_next_parameter_index = (
+            0 if batch_end_index >= len(parameter_ids) else batch_end_index
+        )
+
         arguments: list[str] = []
-        for parameter_id in parameter_ids:
+        for parameter_id in batch_parameter_ids:
             arguments.extend(["--parameter-id", str(parameter_id)])
         if self._selected_slave_id is not None:
             arguments.extend(["--slave-id", str(self._selected_slave_id)])
 
         self._monitoring_read_in_flight = True
         self.label_periodic_monitoring_status.setText(
-            f"Reading {len(parameter_ids)} selected parameter(s)..."
+            f"Reading selected parameters {batch_start_index + 1}–"
+            f"{batch_end_index} of {len(parameter_ids)}..."
         )
 
         def after_read(payload, exit_code: int) -> None:
@@ -1274,7 +1365,7 @@ class DeviceSettingMainWindow(QMainWindow):
         tree = self.monitoring_parameters_tree_widget
         signals_were_blocked = tree.blockSignals(True)
         try:
-            for item in self._monitoring_items_by_parameter_id.values():
+            for item in self._visible_monitoring_parameter_items():
                 selected = item.checkState(1) == Qt.CheckState.Checked
                 last_read = item.data(0, _ROLE_LAST_READ_MONOTONIC)
                 age_seconds = (
@@ -1300,15 +1391,35 @@ class DeviceSettingMainWindow(QMainWindow):
                 visual_state = (stale, highlighted)
                 if item.data(0, _ROLE_MONITORING_VISUAL_STATE) != visual_state:
                     item.setData(0, _ROLE_MONITORING_VISUAL_STATE, visual_state)
-                    foreground = QBrush(QColor("#8a8a8a")) if stale else QBrush()
-                    background = (
-                        QBrush(QColor("#b9efb5")) if highlighted else QBrush()
-                    )
+                    if highlighted:
+                        # Explicit foreground is required on dark themes; an
+                        # inherited light foreground is unreadable on green.
+                        foreground = QBrush(QColor("#12351f"))
+                        background = QBrush(QColor("#a9dfb2"))
+                    elif stale:
+                        foreground = QBrush(QColor("#8a8a8a"))
+                        background = QBrush()
+                    else:
+                        foreground = QBrush()
+                        background = QBrush()
                     for column in range(tree.columnCount()):
                         item.setForeground(column, foreground)
                         item.setBackground(column, background)
         finally:
             tree.blockSignals(signals_were_blocked)
+
+    def _visible_monitoring_parameter_items(self):
+        """Yield only parameter leaves currently painted in the viewport."""
+        tree = self.monitoring_parameters_tree_widget
+        viewport_height = tree.viewport().height()
+        item = tree.itemAt(0, 0)
+        while item is not None:
+            item_rect = tree.visualItemRect(item)
+            if item_rect.top() > viewport_height:
+                break
+            if item.data(0, _ROLE_PARAMETER_ID) is not None:
+                yield item
+            item = tree.itemBelow(item)
 
     # ----- profile -----
 
