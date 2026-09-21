@@ -61,6 +61,61 @@ def handle_execute_command(context: CommandSessionContext, args) -> CommandResul
         address = int(address)
         name = name or f"addr_{address}"
 
+    if getattr(args, "all_same_device_id", False):
+        load = context.last_settings_load_result
+        identify = context.last_identify_result
+        if load is None or identify is None or identify.root_node is None:
+            return failure(
+                "execute-command",
+                "Load settings and run identify before --all-same-device-id.",
+            )
+        targets = [
+            node
+            for node in identify.root_node.iter_depth_first()
+            if node.device_id == load.device_id_from_device
+        ]
+        if not targets:
+            return failure("execute-command", "No matching devices in the Identify topology.")
+        if any(
+            node.parameter_list_version != load.parameter_list_version_from_device
+            for node in targets
+        ):
+            return failure(
+                "execute-command",
+                "Matching DeviceIds have different parameter-list versions; "
+                "one command address cannot safely be used for all of them.",
+            )
+        executor = DeviceCommandExecutor(context.device_modbus_link)
+        results = executor.execute_command_for_units(
+            int(address), [node.permanent_modbus_slave_id for node in targets]
+        )
+        details = [
+            {
+                "slave_id": node.permanent_modbus_slave_id,
+                "name": node.device_name,
+                "success": results[node.permanent_modbus_slave_id].success,
+                "message": results[node.permanent_modbus_slave_id].message,
+                "last_read_value": results[node.permanent_modbus_slave_id].last_read_value,
+            }
+            for node in targets
+        ]
+        data = {
+            "name": name,
+            "modbus_addr": int(address),
+            "targets": details,
+            "success_count": sum(item["success"] for item in details),
+            "failure_count": sum(not item["success"] for item in details),
+        }
+        if data["failure_count"]:
+            return CommandResult(
+                ok=False,
+                command="execute-command",
+                data=data,
+                error=f"{data['failure_count']} device command(s) failed.",
+                exit_code=1,
+            )
+        return success("execute-command", data)
+
     context.device_modbus_link.set_modbus_unit_identifier_override(slave_id)
     executor = DeviceCommandExecutor(context.device_modbus_link)
     result = executor.execute_command_at_modbus_address(int(address))

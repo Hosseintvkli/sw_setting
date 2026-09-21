@@ -48,7 +48,9 @@ _ROLE_PARAMETER_ID = Qt.ItemDataRole.UserRole + 4
 _ROLE_LAST_READ_MONOTONIC = Qt.ItemDataRole.UserRole + 5
 _ROLE_CHANGE_HIGHLIGHT_UNTIL = Qt.ItemDataRole.UserRole + 6
 _ROLE_MONITORING_VISUAL_STATE = Qt.ItemDataRole.UserRole + 7
+_ROLE_TOPOLOGY_BASE_LABEL = Qt.ItemDataRole.UserRole + 8
 _MONITORING_PARAMETERS_PER_COMMAND = 250
+_MONITORING_STALE_AFTER_SECONDS = 2.0
 
 
 class DeviceSettingMainWindow(QMainWindow):
@@ -68,6 +70,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._settings_loaded = False
         self._suppress_setting_change = False
         self._selected_slave_id: int | None = None
+        self._loaded_topology_slave_id: int | None = None
         self._monitoring_selected_parameter_ids: set[int] = set()
         self._monitoring_items_by_parameter_id: dict[int, QTreeWidgetItem] = {}
         self._monitoring_device_ready = False
@@ -134,7 +137,12 @@ class DeviceSettingMainWindow(QMainWindow):
         devices_layout.addLayout(identify_buttons)
         devices_layout.addWidget(self.label_identify_progress)
         devices_layout.addWidget(self.progress_bar_identify)
-        devices_layout.addWidget(QLabel("Double-click a device to select and load it"))
+        devices_layout.addWidget(
+            QLabel(
+                "Double-click to load a device.  "
+                "● marks the currently loaded device."
+            )
+        )
         devices_layout.addWidget(self.devices_topology_tree_widget, stretch=1)
 
         self.left_tab_widget = QTabWidget()
@@ -214,9 +222,9 @@ class DeviceSettingMainWindow(QMainWindow):
         monitoring_controls.addWidget(self.label_periodic_monitoring_status)
 
         self.monitoring_parameters_tree_widget = QTreeWidget()
-        self.monitoring_parameters_tree_widget.setColumnCount(6)
+        self.monitoring_parameters_tree_widget.setColumnCount(5)
         self.monitoring_parameters_tree_widget.setHeaderLabels(
-            ["Name", "Read", "Value", "DataType", "ModbusAddr", "Last read (ms)"]
+            ["Name", "Read", "Value", "DataType", "ModbusAddr"]
         )
         self.monitoring_parameters_tree_widget.setAlternatingRowColors(True)
         self.monitoring_parameters_tree_widget.setUniformRowHeights(True)
@@ -241,15 +249,17 @@ class DeviceSettingMainWindow(QMainWindow):
         csv_row.addWidget(self.line_edit_profile_csv_path, stretch=1)
         csv_row.addWidget(self.push_button_browse_profile_csv)
         self.check_box_apply_profile_to_all_similar_device_ids = QCheckBox(
-            "Apply to all discovered devices with the same DeviceId"
+            "Apply / Verify on all discovered devices with the same DeviceId"
         )
         self.push_button_profile_apply = QPushButton("Apply")
         self.push_button_profile_verify = QPushButton("Verify")
         self.push_button_profile_save = QPushButton("Save parameters as profile...")
+        self.push_button_clear_profile_log = QPushButton("Clear Log")
         profile_buttons = QHBoxLayout()
         profile_buttons.addWidget(self.push_button_profile_apply)
         profile_buttons.addWidget(self.push_button_profile_verify)
         profile_buttons.addWidget(self.push_button_profile_save)
+        profile_buttons.addWidget(self.push_button_clear_profile_log)
         profile_buttons.addStretch(1)
         self.profile_log_text_edit = QTextEdit()
         self.profile_log_text_edit.setReadOnly(True)
@@ -270,6 +280,10 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_execute_selected_command = QPushButton(
             "Execute selected command"
         )
+        self.check_box_execute_command_on_all_similar_device_ids = QCheckBox(
+            "Execute on all discovered devices with the same DeviceId"
+        )
+        self.push_button_clear_command_log = QPushButton("Clear Log")
         self.commands_log_text_edit = QTextEdit()
         self.commands_log_text_edit.setReadOnly(True)
         self.commands_log_text_edit.setMaximumHeight(160)
@@ -279,7 +293,14 @@ class DeviceSettingMainWindow(QMainWindow):
             QLabel("COMMAND parameters — execution uses execute-command")
         )
         commands_layout.addWidget(self.commands_tree_widget, stretch=1)
-        commands_layout.addWidget(self.push_button_execute_selected_command)
+        commands_layout.addWidget(
+            self.check_box_execute_command_on_all_similar_device_ids
+        )
+        command_buttons = QHBoxLayout()
+        command_buttons.addWidget(self.push_button_execute_selected_command)
+        command_buttons.addWidget(self.push_button_clear_command_log)
+        command_buttons.addStretch(1)
+        commands_layout.addLayout(command_buttons)
         commands_layout.addWidget(self.commands_log_text_edit)
 
         self.center_tab_widget = QTabWidget()
@@ -303,7 +324,15 @@ class DeviceSettingMainWindow(QMainWindow):
         right_container = QWidget()
         right_layout = QVBoxLayout(right_container)
         right_layout.setContentsMargins(4, 4, 4, 4)
-        right_layout.addWidget(QLabel("Report Log"))
+        right_header = QHBoxLayout()
+        right_header.addWidget(QLabel("User Log"))
+        right_header.addStretch(1)
+        self.push_button_clear_status_log = QPushButton("Clear")
+        right_header.addWidget(self.push_button_clear_status_log)
+        right_layout.addLayout(right_header)
+        right_layout.addWidget(
+            QLabel("Full technical output is available in the CLI tab.")
+        )
         right_layout.addWidget(self.status_log_text_edit, stretch=1)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -376,8 +405,17 @@ class DeviceSettingMainWindow(QMainWindow):
             lambda: self._run_profile("verify-profile")
         )
         self.push_button_profile_save.clicked.connect(self._save_profile)
+        self.push_button_clear_profile_log.clicked.connect(
+            self.profile_log_text_edit.clear
+        )
         self.push_button_execute_selected_command.clicked.connect(
             self._execute_selected_device_command
+        )
+        self.push_button_clear_command_log.clicked.connect(
+            self.commands_log_text_edit.clear
+        )
+        self.push_button_clear_status_log.clicked.connect(
+            self.status_log_text_edit.clear
         )
 
     # ----- generic command/state handling -----
@@ -398,7 +436,7 @@ class DeviceSettingMainWindow(QMainWindow):
             QMessageBox.warning(self, "CLI", str(exc))
             return False
         if report_log:
-            self._append_log(f"> {visible}")
+            self._append_log(f"Running {command_name}...")
         return self.cli_console_panel.execute_session_command(
             command_name,
             arguments,
@@ -439,7 +477,8 @@ class DeviceSettingMainWindow(QMainWindow):
         ok = exit_code == 0
         if completed_command != "read-monitoring":
             self._append_log(
-                f"{'OK' if ok else 'FAILED'} exit={exit_code}: {command_text}",
+                f"{completed_command or 'Command'} "
+                f"{'completed successfully' if ok else 'failed'}.",
                 success=ok,
             )
         if not isinstance(payload, dict):
@@ -502,6 +541,8 @@ class DeviceSettingMainWindow(QMainWindow):
         elif command in ("load-settings", "reload-settings") and ok:
             self._settings_loaded = True
             self._selected_slave_id = _optional_int(data.get("slave_id"))
+            self._loaded_topology_slave_id = self._selected_slave_id
+            self._refresh_loaded_topology_marker()
             values = data.get("values")
             if isinstance(values, list):
                 self._populate_settings(
@@ -544,9 +585,35 @@ class DeviceSettingMainWindow(QMainWindow):
                 success=ok,
             )
         elif command == "execute-command":
-            self._append_command_log(
-                str(data.get("message") or error or "No result"), success=ok
-            )
+            result_lines: list[str] = []
+            targets = data.get("targets")
+            if isinstance(targets, list):
+                for target in targets:
+                    if isinstance(target, dict):
+                        line = (
+                            f"SlaveId={target.get('slave_id')} "
+                            f"{target.get('name')}: {target.get('message')}"
+                        )
+                        result_lines.append(line)
+                        self._append_command_log(
+                            line, success=bool(target.get("success"))
+                        )
+            else:
+                line = str(data.get("message") or error or "No result")
+                result_lines.append(line)
+                self._append_command_log(line, success=ok)
+            dialog_text = "\n".join(result_lines) or str(error or "No result")
+            if ok:
+                QMessageBox.information(
+                    self,
+                    "Command completed",
+                    dialog_text,
+                    QMessageBox.StandardButton.Ok,
+                )
+            else:
+                QMessageBox.critical(
+                    self, "Command failed", dialog_text, QMessageBox.StandardButton.Ok
+                )
         self._update_action_states()
 
     # ----- discovery and connection -----
@@ -576,6 +643,7 @@ class DeviceSettingMainWindow(QMainWindow):
         if not connected:
             self._settings_loaded = False
             self._selected_slave_id = None
+            self._loaded_topology_slave_id = None
             self.settings_tree_widget.clear()
             self.commands_tree_widget.clear()
             self._clear_monitoring_parameter_table()
@@ -627,6 +695,7 @@ class DeviceSettingMainWindow(QMainWindow):
     def _clear_loaded_device_state(self) -> None:
         self._settings_loaded = False
         self._selected_slave_id = None
+        self._loaded_topology_slave_id = None
         self.settings_tree_widget.clear()
         self.commands_tree_widget.clear()
         self._clear_monitoring_parameter_table()
@@ -638,6 +707,7 @@ class DeviceSettingMainWindow(QMainWindow):
     def _on_identify_clicked(self) -> None:
         self.devices_topology_tree_widget.clear()
         self._live_identify_items.clear()
+        self._clear_loaded_device_state()
         self._identify_running = True
         self._identify_cancel_requested = False
         self.label_identify_progress.setText("Preparing live Identify events...")
@@ -702,7 +772,15 @@ class DeviceSettingMainWindow(QMainWindow):
         data = event.get("data")
         data = data if isinstance(data, dict) else {}
 
-        if message and event_type not in ("command_started", "command_finished"):
+        # Low-level Modbus steps remain visible in the CLI tab. The right-hand
+        # panel is deliberately limited to information useful to an operator.
+        if message and event_type not in (
+            "log",
+            "command_started",
+            "command_finished",
+            "port_scanning",
+            "empty_port",
+        ):
             success = None
             if event_type in ("identify_failed", "identify_cancelled"):
                 success = False
@@ -786,6 +864,7 @@ class DeviceSettingMainWindow(QMainWindow):
                 ]
             )
             item.setData(0, _ROLE_NODE, node)
+            item.setData(0, _ROLE_TOPOLOGY_BASE_LABEL, label or name)
             for port in node.get("ports", []):
                 if not isinstance(port, dict):
                     continue
@@ -807,8 +886,41 @@ class DeviceSettingMainWindow(QMainWindow):
 
         self.devices_topology_tree_widget.addTopLevelItem(make_device_item(root))
         self.devices_topology_tree_widget.expandAll()
+        self._refresh_loaded_topology_marker()
         for column in range(5):
             self.devices_topology_tree_widget.resizeColumnToContents(column)
+
+    def _refresh_loaded_topology_marker(self) -> None:
+        """Keep the loaded device visually distinct from the clicked row."""
+        tree = self.devices_topology_tree_widget
+        iterator = tree.invisibleRootItem()
+
+        def update_children(parent: QTreeWidgetItem) -> None:
+            for index in range(parent.childCount()):
+                item = parent.child(index)
+                node = item.data(0, _ROLE_NODE)
+                base_label = item.data(0, _ROLE_TOPOLOGY_BASE_LABEL)
+                if isinstance(node, dict) and isinstance(base_label, str):
+                    active = (
+                        _optional_int(node.get("slave_id"))
+                        == self._loaded_topology_slave_id
+                    )
+                    item.setText(0, f"● {base_label}" if active else base_label)
+                    font = item.font(0)
+                    font.setBold(active)
+                    for column in range(tree.columnCount()):
+                        item.setFont(column, font)
+                        item.setBackground(
+                            column,
+                            QBrush(QColor("#d7f0d0")) if active else QBrush(),
+                        )
+                        item.setForeground(
+                            column,
+                            QBrush(QColor("#153d20")) if active else QBrush(),
+                        )
+                update_children(item)
+
+        update_children(iterator)
 
     def _on_topology_item_double_clicked(
         self, item: QTreeWidgetItem, _column: int
@@ -1081,7 +1193,6 @@ class DeviceSettingMainWindow(QMainWindow):
                         "",
                         str(parameter.get("data_type") or ""),
                         _display_or_empty(parameter.get("modbus_addr")),
-                        "",
                     ]
                 )
                 item.setFlags(
@@ -1140,7 +1251,6 @@ class DeviceSettingMainWindow(QMainWindow):
             try:
                 item.setData(0, _ROLE_LAST_READ_MONOTONIC, None)
                 item.setData(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL, None)
-                item.setText(5, "")
             finally:
                 tree.blockSignals(signals_were_blocked)
         self._monitoring_next_parameter_index = 0
@@ -1179,7 +1289,6 @@ class DeviceSettingMainWindow(QMainWindow):
                 if not select_all:
                     item.setData(0, _ROLE_LAST_READ_MONOTONIC, None)
                     item.setData(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL, None)
-                    item.setText(5, "")
         finally:
             tree.blockSignals(signals_were_blocked)
             tree.setUpdatesEnabled(updates_were_enabled)
@@ -1373,14 +1482,10 @@ class DeviceSettingMainWindow(QMainWindow):
                     if selected and last_read is not None
                     else None
                 )
-                stale = age_seconds is None or age_seconds > 5.0
-                age_text = (
-                    str(max(0, int(age_seconds * 1000)))
-                    if age_seconds is not None and not stale
-                    else ""
+                stale = (
+                    age_seconds is None
+                    or age_seconds > _MONITORING_STALE_AFTER_SECONDS
                 )
-                if item.text(5) != age_text:
-                    item.setText(5, age_text)
                 highlight_until = item.data(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL)
                 highlighted = (
                     highlight_until is not None and now < float(highlight_until)
@@ -1391,14 +1496,14 @@ class DeviceSettingMainWindow(QMainWindow):
                 visual_state = (stale, highlighted)
                 if item.data(0, _ROLE_MONITORING_VISUAL_STATE) != visual_state:
                     item.setData(0, _ROLE_MONITORING_VISUAL_STATE, visual_state)
-                    if highlighted:
+                    if stale:
+                        foreground = QBrush(QColor("#8a8a8a"))
+                        background = QBrush()
+                    elif highlighted:
                         # Explicit foreground is required on dark themes; an
                         # inherited light foreground is unreadable on green.
                         foreground = QBrush(QColor("#12351f"))
                         background = QBrush(QColor("#a9dfb2"))
-                    elif stale:
-                        foreground = QBrush(QColor("#8a8a8a"))
-                        background = QBrush()
                     else:
                         foreground = QBrush()
                         background = QBrush()
@@ -1471,12 +1576,22 @@ class DeviceSettingMainWindow(QMainWindow):
                 self._append_profile_log(
                     f"line {issue.get('line')}: {issue.get('message')}", success=False
                 )
+        target_names = {
+            _optional_int(target.get("slave_id")): str(target.get("name") or "")
+            for target in data.get("targets", [])
+            if isinstance(target, dict)
+        }
         for detail in data.get("details", []):
             if isinstance(detail, dict):
+                if bool(detail.get("ok")):
+                    continue
                 message = detail.get("message") or detail.get("error") or ""
+                slave_id = _optional_int(detail.get("slave_id"))
+                device_name = target_names.get(slave_id) or "(unknown device)"
                 self._append_profile_log(
-                    f"SlaveId={detail.get('slave_id')} {detail.get('name')}: {message}",
-                    success=bool(detail.get("ok")),
+                    f"Device={device_name} (SlaveId={slave_id}), "
+                    f"parameter={detail.get('name')}: {message}",
+                    success=False,
                 )
         if error:
             self._append_profile_log(str(error), success=False)
@@ -1505,7 +1620,10 @@ class DeviceSettingMainWindow(QMainWindow):
             return
         name = str(item.data(0, _ROLE_NAME) or "")
         if name:
-            self._execute("execute-command", ["--name", name])
+            arguments = ["--name", name]
+            if self.check_box_execute_command_on_all_similar_device_ids.isChecked():
+                arguments.append("--all-same-device-id")
+            self._execute("execute-command", arguments)
 
     # ----- log helpers and shutdown -----
 

@@ -220,11 +220,11 @@ class DeviceSettingTreeLoader:
 
         try:
             fw_major = self._device_modbus_link.read_holding_register_u16(
-FIRMWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS,
+                FIRMWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS,
                 modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             fw_minor = self._device_modbus_link.read_holding_register_u16(
-FIRMWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
+                FIRMWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
                 modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             firmware_version_text = f"{fw_major}.{fw_minor}"
@@ -233,11 +233,11 @@ FIRMWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
 
         try:
             hw_major = self._device_modbus_link.read_holding_register_u16(
-HARDWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS,
+                HARDWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS,
                 modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             hw_minor = self._device_modbus_link.read_holding_register_u16(
-HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
+                HARDWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
                 modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
             hardware_version_text = f"{hw_major}.{hw_minor}"

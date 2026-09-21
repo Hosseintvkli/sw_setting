@@ -144,6 +144,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     p.add_argument("--name", default=None)
     p.add_argument("--address", type=int, default=None)
     p.add_argument("--slave-id", type=int, default=None)
+    p.add_argument("--all-same-device-id", action="store_true")
 
     # --- raw modbus ---
     p = sub.add_parser("read-holding", help="Raw read holding registers")

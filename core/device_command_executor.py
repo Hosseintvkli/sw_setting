@@ -41,15 +41,31 @@ class DeviceCommandExecutor:
                 success=False, message="Not connected."
             )
 
+        write_error = self.trigger_command(modbus_address)
+        if write_error is not None:
+            return write_error
+        return self.wait_for_command_completion(modbus_address)
+
+    def trigger_command(
+        self, modbus_address: int, modbus_unit_identifier: int | None = None
+    ) -> DeviceCommandExecutionResult | None:
+        """Send 0xFFFF; a normal Modbus write response confirms acceptance only."""
         try:
             self._device_modbus_link.write_holding_register_u16(
-                modbus_address, COMMAND_TRIGGER_VALUE_U16
+                modbus_address,
+                COMMAND_TRIGGER_VALUE_U16,
+                modbus_unit_identifier=modbus_unit_identifier,
             )
         except DeviceModbusLinkError as exc:
             return DeviceCommandExecutionResult(
-                success=False,
-                message=f"Write trigger 0xFFFF failed: {exc}",
+                success=False, message=f"Write trigger 0xFFFF failed: {exc}"
             )
+        return None
+
+    def wait_for_command_completion(
+        self, modbus_address: int, modbus_unit_identifier: int | None = None
+    ) -> DeviceCommandExecutionResult:
+        """Poll a previously triggered command until 0, error code, or timeout."""
 
         wait_s = self._device_modbus_link.get_active_read_timeout_seconds()
         command_timeout_s = (
@@ -61,7 +77,7 @@ class DeviceCommandExecutor:
         while True:
             try:
                 value = self._device_modbus_link._read_holding_registers_u16_once(
-                    modbus_address, 1, None
+                    modbus_address, 1, modbus_unit_identifier
                 )[0]
                 last_value = int(value) & 0xFFFF
                 if last_value == COMMAND_SUCCESS_VALUE_U16:
@@ -96,3 +112,27 @@ class DeviceCommandExecutor:
             message="Timeout: no conclusive response while command may still be running.",
             last_read_value=last_value,
         )
+
+    def execute_command_for_units(
+        self, modbus_address: int, unit_ids: list[int]
+    ) -> dict[int, DeviceCommandExecutionResult]:
+        """Trigger every unit first, then poll each acknowledged trigger."""
+        results: dict[int, DeviceCommandExecutionResult] = {}
+        acknowledged: list[int] = []
+        for unit_id in dict.fromkeys(unit_ids):
+            if unit_id == 0:
+                results[unit_id] = DeviceCommandExecutionResult(
+                    success=False,
+                    message="Broadcast unit 0 cannot acknowledge a command trigger.",
+                )
+                continue
+            write_error = self.trigger_command(modbus_address, unit_id)
+            if write_error is not None:
+                results[unit_id] = write_error
+            else:
+                acknowledged.append(unit_id)
+        for unit_id in acknowledged:
+            results[unit_id] = self.wait_for_command_completion(
+                modbus_address, unit_id
+            )
+        return results

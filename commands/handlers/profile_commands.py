@@ -7,7 +7,12 @@ from pathlib import Path
 from commands.context import CommandSessionContext
 from commands.registry import CommandRegistry
 from commands.result import CommandResult, failure, success
+from core.codegen_parameter_list_models import ParameterAccessKind
 from core.device_modbus_link import DeviceModbusLinkError
+from core.device_command_executor import (
+    COMMAND_TRIGGER_VALUE_U16,
+    DeviceCommandExecutor,
+)
 from core.device_setting_tree_loader import (
     DeviceSettingTreeLoader,
     DeviceSettingTreeLoaderError,
@@ -73,15 +78,21 @@ def _run_profile(
     if getattr(args, "all_same_device_id", False):
         identify = context.last_identify_result
         if identify is None or identify.root_node is None:
-            targets.append((int(current_unit), "current"))
+            return failure(command_name, "Run identify before --all-same-device-id.")
         else:
             for node in identify.root_node.iter_depth_first():
                 if node.device_id == current_device_id:
+                    if node.parameter_list_version != package.parameter_list_version:
+                        return failure(
+                            command_name,
+                            "Matching DeviceIds have different parameter-list versions; "
+                            "one profile cannot safely be applied to all of them.",
+                        )
                     targets.append(
                         (node.permanent_modbus_slave_id, node.device_name)
                     )
             if not targets:
-                targets.append((int(current_unit), "current"))
+                return failure(command_name, "No matching devices in the Identify topology.")
     else:
         targets.append((int(current_unit), "current"))
 
@@ -97,6 +108,15 @@ def _run_profile(
             context.device_modbus_link.set_modbus_unit_identifier_override(slave_id)
             for assignment in parse_result.assignments:
                 definition = assignment.parameter_definition
+                if (
+                    not verify_only
+                    and getattr(args, "all_same_device_id", False)
+                    and definition.parameter_access_kind == ParameterAccessKind.COMMAND_WRITE
+                    and assignment.parsed_value == COMMAND_TRIGGER_VALUE_U16
+                ):
+                    # Trigger this command on every target only after the
+                    # ordinary profile writes have finished on every target.
+                    continue
                 try:
                     if verify_only:
                         count = definition.modbus_register_size
@@ -164,6 +184,34 @@ def _run_profile(
                             "error": str(exc),
                         }
                     )
+        if not verify_only and getattr(args, "all_same_device_id", False):
+            executor = DeviceCommandExecutor(context.device_modbus_link)
+            for assignment in parse_result.assignments:
+                definition = assignment.parameter_definition
+                if (
+                    definition.parameter_access_kind != ParameterAccessKind.COMMAND_WRITE
+                    or assignment.parsed_value != COMMAND_TRIGGER_VALUE_U16
+                ):
+                    continue
+                results = executor.execute_command_for_units(
+                    definition.modbus_address, [slave_id for slave_id, _ in targets]
+                )
+                for slave_id, _ in targets:
+                    command_result = results[slave_id]
+                    if command_result.success:
+                        ok_count += 1
+                    else:
+                        fail_count += 1
+                    if args.verbose or not command_result.success:
+                        details.append(
+                            {
+                                "slave_id": slave_id,
+                                "name": assignment.parameter_name,
+                                "ok": command_result.success,
+                                "message": command_result.message,
+                                "last_read_value": command_result.last_read_value,
+                            }
+                        )
     finally:
         context.device_modbus_link.set_modbus_unit_identifier_override(previous_override)
 

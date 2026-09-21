@@ -8,10 +8,10 @@ SlaveId register changes).
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-# import time
 
 from core.codegen_parameter_list_catalog import (
     CodeGenParameterListCatalog,
@@ -112,6 +112,10 @@ class DeviceIdentifySession:
             )
             self._broadcast_write_u16(HOLDING_ADDRESS_IDENTIFY_STATUS, 1)
             self._log("Broadcast IdentifyStatus=1 (no reply expected)")
+            self._wait_for_device_state_to_settle(
+                self._settle_seconds_after_broadcast(),
+                "broadcast Identify setup",
+            )
 
             self._log(
                 f"STEP probe root: READ unit={TEMPORARY_DISCOVERY_MODBUS_UNIT_IDENTIFIER} "
@@ -238,6 +242,10 @@ class DeviceIdentifySession:
         try:
             self._write_u16(HOLDING_ADDRESS_SLAVE_ID, permanent_slave_id, unit)
             self._log(f"Assigned SlaveId={permanent_slave_id}")
+            self._wait_for_device_state_to_settle(
+                self._settle_seconds_after_slave_id_assign(),
+                f"SlaveId={permanent_slave_id} assignment",
+            )
         except DeviceModbusLinkError as exc:
             self._log(f"  → assign write FAIL: {exc}")
             raise DeviceIdentifySessionError(
@@ -349,6 +357,13 @@ class DeviceIdentifySession:
                 )
                 self._configure_hub_ports_for_discovery_scan(
                     hub_node, package, port_index
+                )
+                self._wait_for_device_state_to_settle(
+                    self._device_modbus_link.get_active_write_timeout_seconds(),
+                    (
+                        f"routing on hub SlaveId="
+                        f"{hub_node.permanent_modbus_slave_id} port[{port_index}]"
+                    ),
                 )
 
                 child = self._discover_node_on_temporary_slave_one(
@@ -629,6 +644,14 @@ class DeviceIdentifySession:
     def _settle_seconds_after_slave_id_assign(self) -> float:
         """Same Write timeout window for manual simulator unit change."""
         return self._device_modbus_link.get_active_write_timeout_seconds()
+
+    def _wait_for_device_state_to_settle(self, seconds: float, reason: str) -> None:
+        """Allow broadcast/routing writes to take effect before the next read."""
+        delay = max(0.0, float(seconds))
+        if delay <= 0.0:
+            return
+        self._log(f"Wait {delay * 1000:.0f} ms for {reason} to settle")
+        time.sleep(delay)
 
     def _log(self, message: str) -> None:
         if self._cancel_check is not None and self._cancel_check():
