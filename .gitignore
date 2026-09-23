@@ -1,6 +1,15 @@
 *.pyc
 __pycache__/
+
+# Local editor state
+/.obsidian/
+
+# Runtime session pointers
+/.sw_setting_http_session*.json
+
+# PyInstaller and packaged application output
 /build/
 /dist/
 /*.spec
 *.exe
+*.msi
