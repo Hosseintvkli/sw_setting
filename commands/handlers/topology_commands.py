@@ -118,6 +118,12 @@ def handle_select_device(context: CommandSessionContext, args) -> CommandResult:
     if slave_id is not None:
         slave_id = int(slave_id)
         node = context.find_node_by_slave_id(slave_id)
+        if node is not None and not node.parameter_list_available:
+            return failure(
+                "select-device",
+                f"Cannot select {node.device_name} (SlaveId={slave_id}): "
+                f"parameter-list version {node.parameter_list_version} is unavailable.",
+            )
         context.selected_slave_id = slave_id
         context.device_modbus_link.set_modbus_unit_identifier_override(slave_id)
         data: dict[str, Any] = {"slave_id": slave_id}
@@ -154,6 +160,13 @@ def handle_select_device(context: CommandSessionContext, args) -> CommandResult:
                 f"Candidates: {[m.permanent_modbus_slave_id for m in matches]}",
             )
         node = matches[0]
+        if not node.parameter_list_available:
+            return failure(
+                "select-device",
+                f"Cannot select {node.device_name} "
+                f"(SlaveId={node.permanent_modbus_slave_id}): parameter-list "
+                f"version {node.parameter_list_version} is unavailable.",
+            )
         context.selected_slave_id = node.permanent_modbus_slave_id
         context.device_modbus_link.set_modbus_unit_identifier_override(
             node.permanent_modbus_slave_id
@@ -225,6 +238,8 @@ def node_to_dict(node: IdentifiedDeviceNode) -> dict[str, Any]:
         "parameter_list_version": node.parameter_list_version,
         "slave_id": node.permanent_modbus_slave_id,
         "downstream_qty": node.downstream_port_quantity,
+        "parameter_list_available": node.parameter_list_available,
+        "parameter_list_error": node.parameter_list_error,
         "ports": ports,
     }
 
@@ -235,6 +250,11 @@ def format_topology_tree_text(node: IdentifiedDeviceNode, indent: int = 0) -> st
         f"{pad}{node.device_name}  slave={node.permanent_modbus_slave_id}  "
         f"id={node.device_id}  ver={node.parameter_list_version}  "
         f"ports={node.downstream_port_quantity}"
+        + (
+            "  [parameter list unavailable]"
+            if not node.parameter_list_available
+            else ""
+        )
     ]
     for port_index in range(node.downstream_port_quantity):
         child = node.children_by_port_index.get(port_index)

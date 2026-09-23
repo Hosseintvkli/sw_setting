@@ -295,6 +295,7 @@ class CliConsolePanel(QWidget):
         script_layout.addLayout(script_buttons)
 
         self.output_text_edit = QPlainTextEdit()
+        self.output_text_edit.setObjectName("cliOutputText")
         self.output_text_edit.setReadOnly(True)
         self.output_text_edit.document().setMaximumBlockCount(5000)
         output_widget = QWidget()

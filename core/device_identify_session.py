@@ -226,16 +226,32 @@ class DeviceIdentifySession:
             self._log(f"  → no answer / read failed: {exc}")
             return None
 
+        package: CodeGenParameterListPackage | None = None
+        parameter_list_error: str | None = None
         try:
             package = self._catalog.load_parameter_list_package(
                 device_id, parameter_list_version
             )
             self._log(f"  JSON: {package.info.device_name!r}")
         except CodeGenParameterListCatalogError as exc:
-            self._log(f"  → JSON FAIL: {exc}")
-            raise DeviceIdentifySessionError(
-                f"No JSON for DeviceId={device_id} Version={parameter_list_version}: {exc}"
-            ) from exc
+            parameter_list_error = str(exc)
+            self._log(
+                f"  → JSON unavailable for DeviceId={device_id} "
+                f"Version={parameter_list_version}: {exc}"
+            )
+
+        database_entry = self._catalog.find_device_database_entry_by_device_id(
+            device_id
+        )
+        device_name = (
+            package.info.device_name
+            if package is not None
+            else (
+                database_entry.device_name
+                if database_entry is not None
+                else f"Unknown DeviceId={device_id}"
+            )
+        )
 
         permanent_slave_id = self._allocate_permanent_slave_id()
         self._log(f"  Set permanent SlaveId={permanent_slave_id}")
@@ -256,10 +272,11 @@ class DeviceIdentifySession:
         node = IdentifiedDeviceNode(
             device_id=device_id,
             parameter_list_version=parameter_list_version,
-            device_name=package.info.device_name,
+            device_name=device_name,
             permanent_modbus_slave_id=permanent_slave_id,
             downstream_port_quantity=0,
             parameter_list_package=package,
+            parameter_list_error=parameter_list_error,
             parent_node=parent_node,
             port_index_on_parent=port_index_on_parent,
         )
@@ -293,18 +310,27 @@ class DeviceIdentifySession:
             f"  Node ready: {node.device_name!r} permanent SlaveId={permanent_slave_id} "
             f"DownStreamQty={downstream_quantity}"
         )
+        parameter_list_available = node.parameter_list_available
+        event_message = (
+            f"Device identified: {node.device_name} "
+            f"(DeviceId={node.device_id}, SlaveId={node.permanent_modbus_slave_id})"
+        )
+        if not parameter_list_available:
+            event_message += (
+                f"; parameter-list version {node.parameter_list_version} "
+                "is not available in this software."
+            )
         self._progress(
             "device_discovered",
-            (
-                f"Device identified: {node.device_name} "
-                f"(DeviceId={node.device_id}, SlaveId={node.permanent_modbus_slave_id})"
-            ),
+            event_message,
             {
                 "device_name": node.device_name,
                 "device_id": node.device_id,
                 "parameter_list_version": node.parameter_list_version,
                 "slave_id": node.permanent_modbus_slave_id,
                 "downstream_qty": node.downstream_port_quantity,
+                "parameter_list_available": parameter_list_available,
+                "parameter_list_error": node.parameter_list_error,
                 "parent_slave_id": (
                     parent_node.permanent_modbus_slave_id
                     if parent_node is not None
@@ -324,6 +350,24 @@ class DeviceIdentifySession:
             return
 
         package = hub_node.parameter_list_package
+        if package is None:
+            message = (
+                f"Cannot scan {hub_node.downstream_port_quantity} downstream port(s) "
+                f"of {hub_node.device_name}: parameter-list version "
+                f"{hub_node.parameter_list_version} is unavailable."
+            )
+            self._log(message)
+            self._progress(
+                "parameter_list_missing",
+                message,
+                {
+                    "device_name": hub_node.device_name,
+                    "device_id": hub_node.device_id,
+                    "parameter_list_version": hub_node.parameter_list_version,
+                    "slave_id": hub_node.permanent_modbus_slave_id,
+                },
+            )
+            return
         qty = hub_node.downstream_port_quantity
         self._log(
             f"=== Scan ports on hub SlaveId={hub_node.permanent_modbus_slave_id} "

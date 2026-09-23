@@ -7,6 +7,7 @@ to reduce round-trips versus one transaction per parameter.
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,7 +48,12 @@ ProgressCallback = Callable[[int, int, str], None]
 
 
 def get_fixed_codegen_json_root_directory() -> Path:
-    package_root_directory = Path(__file__).resolve().parent.parent
+    if getattr(sys, "frozen", False):
+        # Keep the CodeGen database outside PyInstaller's private _internal
+        # directory so a complete release folder can be copied or updated.
+        package_root_directory = Path(sys.executable).resolve().parent
+    else:
+        package_root_directory = Path(__file__).resolve().parent.parent
     return package_root_directory / "files" / "codegen_output" / "JSON"
 
 

@@ -362,6 +362,34 @@ Before write (tree edit or Profile):
 
 ---
 
+## 16. Versioned Windows EXE build
+
+Use the official build entry point; do not invoke PyInstaller directly:
+
+```powershell
+py -3.14 build_exe.py
+```
+
+Before PyInstaller starts, this command reads the manually maintained `Major`
+and `Minor` values from `version/project_version.py`. It calculates `Build1` as
+the number of days since `2000-01-01` and `Build2` as the number of seconds
+since local midnight, then writes all four constants to `generated_version.py`.
+This process does not inspect or modify Git. The window title uses this format:
+
+```text
+sw_setting (VMajor.Minor.Build1.Build2)
+```
+
+The build is intentionally `onedir`, because the GUI launches the packaged
+executable in CLI mode for its command-driven operations. Output is written to
+`dist/sw_setting/`. Copy this entire directory to the destination computer;
+Python and all required packages/DLLs are included under `_internal`, while the
+runtime CodeGen database is available externally at
+`files/codegen_output/JSON`. No Python installation is required on the target
+computer. Copying only `sw_setting.exe` is not supported.
+
+---
+
 ## License / ownership
 
 Internal tooling for device parameter configuration. Adjust license and branding as needed for your organization.

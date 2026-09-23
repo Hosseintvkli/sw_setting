@@ -18,9 +18,10 @@ class IdentifiedDeviceNode:
     device_name: str
     permanent_modbus_slave_id: int
     downstream_port_quantity: int
-    parameter_list_package: CodeGenParameterListPackage = field(
+    parameter_list_package: CodeGenParameterListPackage | None = field(
         repr=False, compare=False
     )
+    parameter_list_error: str | None = None
     parent_node: IdentifiedDeviceNode | None = None
     port_index_on_parent: int | None = None
     # port_index -> child node (only ports that answered)
@@ -28,6 +29,10 @@ class IdentifiedDeviceNode:
     # Software mirror of DownStreamsSetting[i] min/max on this hub
     downstream_port_slave_id_min: dict[int, int] = field(default_factory=dict)
     downstream_port_slave_id_max: dict[int, int] = field(default_factory=dict)
+
+    @property
+    def parameter_list_available(self) -> bool:
+        return self.parameter_list_package is not None
 
     def iter_depth_first(self):
         yield self
