@@ -29,20 +29,19 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from commands.command_request_builder import structured_request_to_tokens
 from commands.context import CommandSessionContext
 from commands.processor import CommandProcessor
 
 
 class CommandBody(BaseModel):
-    command: str = Field(..., description="Command name or full command line")
-    args: dict[str, Any] | None = Field(
-        default=None, description="Optional structured arguments"
-    )
-    tokens: list[str] | None = Field(
-        default=None, description="Optional raw argv (advanced)"
+    model_config = ConfigDict(extra="forbid")
+
+    tokens: list[str] = Field(
+        ...,
+        min_length=1,
+        description="Complete argv-style command; tokens[0] is the command name",
     )
 
 
@@ -272,11 +271,7 @@ def create_app() -> FastAPI:
         """
         state = _get_session(session_id)
 
-        try:
-            payload = body.model_dump()
-            tokens = structured_request_to_tokens(payload)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        tokens = list(body.tokens)
 
         with state.lock:
             if state.busy:

@@ -36,6 +36,98 @@
 
 اصل معماری این است که منطق سخت‌افزار و قواعد دامنه داخل `core` قرار بگیرند. Handlerها ورودی Command را به Core متصل کنند. CLI و GUI نباید الگوریتم Modbus یا Identify را دوباره پیاده‌سازی کنند.
 
+## ۱.۱. دیاگرام ارتباطات داخلی لایهٔ Core
+
+این نمودار فقط وابستگی‌های داخل `core` را نشان می‌دهد. جهت پیکان به معنی «استفاده می‌کند» است؛ برای مثال `device_setting_tree_loader` از `device_modbus_link` استفاده می‌کند.
+
+```mermaid
+flowchart TB
+    communication[communication_settings.py<br/>مدل تنظیمات ارتباط]
+    discovery[host_communication_discovery.py<br/>کشف COM و Network میزبان]
+    link[device_modbus_link.py<br/>ارتباط Modbus]
+    codec[modbus_register_value_codec.py<br/>تبدیل مقدار و رجیستر]
+    validation[parameter_value_validation.py<br/>اعتبارسنجی مقدار]
+    models[codegen_parameter_list_models.py<br/>مدل‌های CodeGen]
+    catalog[codegen_parameter_list_catalog.py<br/>Catalog فایل‌های JSON]
+    topology[device_topology_models.py<br/>مدل درخت دستگاه‌ها]
+    profile[setting_profile_csv.py<br/>خواندن و نوشتن Profile]
+    commandExecutor[device_command_executor.py<br/>اجرای Command و Poll]
+    settingsLoader[device_setting_tree_loader.py<br/>بارگذاری Settingها]
+    identify[device_identify_session.py<br/>الگوریتم Identify]
+
+    link --> communication
+    catalog --> models
+    topology --> models
+    profile --> models
+    profile --> validation
+    commandExecutor --> link
+    settingsLoader --> link
+    settingsLoader --> catalog
+    settingsLoader --> codec
+    settingsLoader --> models
+    identify --> link
+    identify --> catalog
+    identify --> topology
+    identify --> models
+
+    classDef base fill:#eef4fb,stroke:#32336c,color:#20242a
+    classDef workflow fill:#f6e6c5,stroke:#d2ae6d,color:#20242a
+    classDef standalone fill:#f2f3f5,stroke:#8b929b,color:#20242a
+    class communication,link,codec,validation,models,catalog,topology base
+    class profile,commandExecutor,settingsLoader,identify workflow
+    class discovery standalone
+```
+
+`host_communication_discovery.py` در داخل Core به فایل دیگری وابسته نیست؛ خروجی آن مستقیماً توسط Handler ارتباط مصرف می‌شود. فایل‌های `device_setting_tree_loader.py` و `device_identify_session.py` هماهنگ‌کننده‌های اصلی Core هستند و چند سرویس پایه را کنار هم قرار می‌دهند.
+
+## ۱.۲. دیاگرام ارتباطات داخلی لایه‌های بالاتر از Core
+
+در این نمودار عمداً خود Core و اتصال Handlerها به آن نمایش داده نشده‌اند. انتهای مسیر، Handler است و هدف نمودار نشان‌دادن ورود فرمان، نگهداری Session، Parse و Dispatch در لایه‌های بالاتر است.
+
+```mermaid
+flowchart TB
+    operator[کاربر / PowerShell]
+    gui[main.py و ui/main_window.py<br/>رابط گرافیکی]
+    console[ui/cli_console_panel.py<br/>QProcess و نمایش فرمان‌ها]
+    cli[cli.py<br/>نقطه ورود CLI]
+    client[commands/session_client.py<br/>Client شبکه و Session pointer]
+    server[commands/http_session_server.py<br/>FastAPI و SessionState]
+    context[commands/context.py<br/>CommandSessionContext]
+    processor[commands/processor.py<br/>Parse و Dispatch]
+    parser[commands/parser.py<br/>تعریف یگانه Commandها]
+    registry[commands/registry.py<br/>نگاشت Command به Handler]
+    handlers[commands/handlers/*.py<br/>Handlerهای فرمان]
+    result[commands/result.py<br/>CommandResult]
+
+    operator --> cli
+    gui --> console
+    console --> cli
+    cli -->|فرمان Sessionدار| client
+    client -->|HTTP: tokens| server
+    cli -->|اجرای محلی One-shot| processor
+    cli -->|serve-http| server
+    server -->|هر Session یک نمونه| context
+    server -->|هر Session یک نمونه| processor
+    processor --> parser
+    processor --> registry
+    processor --> context
+    registry --> handlers
+    handlers --> context
+    handlers --> result
+    processor --> result
+    server -->|JSON response / Event| client
+    client --> cli
+
+    classDef entry fill:#eef4fb,stroke:#32336c,color:#20242a
+    classDef session fill:#f6e6c5,stroke:#d2ae6d,color:#20242a
+    classDef command fill:#f2f3f5,stroke:#6b7280,color:#20242a
+    class operator,gui,console,cli entry
+    class client,server,context session
+    class processor,parser,registry,handlers,result command
+```
+
+در مسیر HTTP، بدنهٔ فرمان فقط یک فهرست `tokens` است و `tokens[0]` نام فرمان را نگه می‌دارد. بنابراین تعریف و اعتبارسنجی آرگومان‌های هر Command فقط در `parser.py` انجام می‌شود.
+
 ---
 
 # ۲. لایهٔ `core`: منطق اصلی پروژه
@@ -212,7 +304,7 @@ No response = احتمالاً هنوز مشغول؛ ادامه تا Timeout
 
 تابع کمکی عمومی:
 
-- `get_fixed_codegen_json_root_directory()`: مسیر پیش‌فرض `files/codegen_output/JSON` را می‌سازد.
+- `get_fixed_codegen_json_root_directory()`: در اجرای Source مسیر `files/codegen_output/JSON` پروژه و در اجرای EXE همان مسیر خارجی کنار پوشهٔ برنامه را می‌سازد. CodeGen داخل EXE یا `_internal` قرار نمی‌گیرد و با جایگزین‌کردن پوشه قابل به‌روزرسانی است.
 
 مدل‌های خروجی:
 
@@ -240,9 +332,11 @@ No response = احتمالاً هنوز مشغول؛ ادامه تا Timeout
 
 متد عمومی اصلی:
 
-- `run_identify()`: دستگاه ریشه را پیدا می‌کند، JSON مناسب هر دستگاه را بارگذاری می‌کند، Slave ID دائمی اختصاص می‌دهد، تعداد پورت‌های پایین‌دست را می‌خواند، Routing هر Hub را برای اسکن تنظیم می‌کند و به‌صورت بازگشتی فرزندان را کشف می‌کند.
+- `run_identify()`: دستگاه ریشه را پیدا می‌کند، JSON مناسب هر دستگاه را جست‌وجو می‌کند، Slave ID دائمی اختصاص می‌دهد، تعداد پورت‌های پایین‌دست را می‌خواند، Routing هر Hub را برای اسکن تنظیم می‌کند و به‌صورت بازگشتی فرزندان را کشف می‌کند.
 
 خروجی `DeviceIdentifyResult` است. اگر عملیات در میانه شکست بخورد، تا حد امکان Partial Topology داخل Exception نگه داشته می‌شود. Cancel از نوع Cooperative است؛ یعنی Workflow در نقاط بررسی Callback متوقف می‌شود، نه با کشتن Thread.
+
+نبودن Package دقیق یک دستگاه دیگر Identify را متوقف نمی‌کند. نام دستگاه از `cg_database_deviceid.json` گرفته می‌شود و Node همراه `DeviceId`، `SlaveId` و `ParameterListVersion` با وضعیت «Parameter List unavailable» در Topology باقی می‌ماند. GUI آن را قرمز نشان می‌دهد و اجازه Load کردنش را نمی‌دهد. اگر چنین دستگاهی Hub باشد، خود Hub شناخته می‌شود ولی چون آدرس پارامترهای Routing بدون JSON معلوم نیست، زیرشاخه‌های آن قابل اسکن نیستند.
 
 ---
 
@@ -424,17 +518,7 @@ Tokenها
 
 `execute_line(...)` همین کار را برای یک رشته فرمان انجام می‌دهد. Processor خودش منطق Modbus ندارد؛ فقط Parse و Dispatch می‌کند و Exception کنترل‌نشده Handler را به Failure تبدیل می‌کند.
 
-## ۴.۶. `commands/command_request_builder.py`
-
-این فایل میان JSON ساختاریافته HTTP و Tokenهای CLI تبدیل انجام می‌دهد.
-
-- `args_dict_to_tokens(...)`: نام Command و دیکشنری آرگومان‌ها را به Token تبدیل می‌کند.
-- `command_line_string_to_structured(...)`: یک خط فرمان را به `{command, args}` تبدیل می‌کند.
-- `structured_request_to_tokens(...)`: بدنه HTTP را، چه دارای `tokens` باشد و چه `command/args`، به فهرست Token استاندارد Processor تبدیل می‌کند.
-
-هدف این است که ورودی HTTP نیز در نهایت از همان Parser و Processor مسیر CLI عبور کند.
-
-## ۴.۷. `commands/http_session_server.py`
+## ۴.۶. `commands/http_session_server.py`
 
 این فایل سرور FastAPI چندنشستی را پیاده می‌کند.
 
@@ -460,9 +544,11 @@ Endpointهای اصلی:
 | `GET /sessions/{id}/logs` | دریافت Logهای اخیر |
 | `GET /sessions/{id}/events` | دریافت Eventهای شماره‌دار با Long Polling |
 
+بدنهٔ `POST .../command` فقط به شکل `{"tokens": [...]}` پذیرفته می‌شود. عنصر اول نام Command است و Server بدون تعریف دوبارهٔ آرگومان‌ها، کل فهرست را به `CommandProcessor.execute_tokens` می‌دهد.
+
 فرمان با `asyncio.to_thread` در Thread Pool اجرا می‌شود تا Event Loop بتواند هم‌زمان Cancel و Eventها را پاسخ دهد. در هر Session فقط یک Command هم‌زمان مجاز است؛ Sessionهای متفاوت می‌توانند مستقل کار کنند.
 
-## ۴.۸. `commands/session_client.py`
+## ۴.۷. `commands/session_client.py`
 
 این فایل سمت Client ارتباط HTTP است و توسط `cli.py` استفاده می‌شود.
 
@@ -533,7 +619,7 @@ python cli.py --session gui load-settings --slave-id 244
 
 ## ۶.۱. `main.py`
 
-نقطه ورود GUI است؛ `QApplication` را می‌سازد، `DeviceSettingMainWindow` را نمایش می‌دهد و Event Loop برنامه را اجرا می‌کند.
+نقطه ورود GUI است؛ `QApplication` را می‌سازد، آیکون `files/icon/icon.ico` را تنظیم می‌کند، `DeviceSettingMainWindow` را نمایش می‌دهد و Event Loop برنامه را اجرا می‌کند. در نسخه Frozen همین فایل می‌تواند با آرگومان داخلی `cli.py` در حالت CLI اجرا شود تا GUI فرمان‌هایش را بدون نیاز به نصب Python بفرستد.
 
 ## ۶.۲. `ui/cli_console_panel.py`
 
@@ -569,9 +655,41 @@ Main Window نتیجه JSON فرمان‌ها را Render می‌کند، اما
 
 ---
 
-# ۷. چهار جریان مهم برای ارائه
+# ۷. تولید نسخه و بستهٔ قابل‌انتقال Windows
 
-## ۷.۱. اتصال
+## ۷.۱. `version/project_version.py` و `version/prepare_version.py`
+
+`VERSION_MAJOR` و `VERSION_MINOR` به‌صورت دستی در `project_version.py` تعیین می‌شوند. پیش از هر Build، `prepare_version.py` دو بخش دیگر را محاسبه می‌کند:
+
+- `Build1`: تعداد روزهای گذشته از `2000-01-01`؛
+- `Build2`: تعداد ثانیه‌های گذشته از نیمه‌شب زمان محلی.
+
+چهار مقدار در `generated_version.py` نوشته می‌شوند و عنوان برنامه به شکل زیر ساخته می‌شود:
+
+```text
+sw_setting (VMajor.Minor.Build1.Build2)
+```
+
+این فرایند به Git وابسته نیست و فایل‌های Repository را Stage نمی‌کند.
+
+## ۷.۲. `build_exe.py`
+
+این فایل نقطه رسمی Build ویندوز است و ابتدا نسخه را تولید و سپس PyInstaller را اجرا می‌کند. خروجی فعلی از نوع `onedir` و در `dist/sw_setting/` است:
+
+```text
+dist/sw_setting/
+├── sw_setting.exe
+├── _internal/                    کتابخانه Python، PyQt و سایر dependencyها
+└── files/codegen_output/JSON/    دیتابیس خارجی و قابل‌جایگزینی CodeGen
+```
+
+روی سیستم مقصد نصب Python یا Packageهای پروژه لازم نیست، ولی باید کل پوشه `dist/sw_setting` منتقل شود؛ کپی‌کردن EXE به‌تنهایی کافی نیست. CodeGen داخل فایل اجرایی قرار ندارد و کاربر می‌تواند پوشهٔ جدید `codegen_output` را جایگزین نسخه قبلی کند.
+
+---
+
+# ۸. چهار جریان مهم برای ارائه
+
+## ۸.۱. اتصال
 
 ```text
 GUI یا PowerShell
@@ -583,7 +701,7 @@ GUI یا PowerShell
 → pymodbus TCP/Serial
 ```
 
-## ۷.۲. Identify
+## ۸.۲. Identify
 
 ```text
 GUI یا PowerShell
@@ -596,7 +714,7 @@ GUI یا PowerShell
 → GUI/CLI
 ```
 
-## ۷.۳. خواندن Settingها
+## ۸.۳. خواندن Settingها
 
 ```text
 load-settings
@@ -609,7 +727,7 @@ load-settings
 → DeviceSettingTreeLoadResult در Context
 ```
 
-## ۷.۴. نوشتن خام یک رجیستر
+## ۸.۴. نوشتن خام یک رجیستر
 
 ```text
 write-holding --address 100 --value 7 --slave-id 244
@@ -629,7 +747,7 @@ write-holding --address 100 --value 7 --slave-id 244
 
 ---
 
-# ۸. جمع‌بندی پیشنهادی برای پایان ارائه
+# ۹. جمع‌بندی پیشنهادی برای پایان ارائه
 
 پروژه چهار مرز روشن دارد:
 
@@ -639,4 +757,3 @@ write-holding --address 100 --value 7 --slave-id 244
 4. **GUI** فقط فرمان CLI می‌سازد، اجرا می‌کند و خروجی آن را نمایش می‌دهد.
 
 مزیت این ساختار آن است که یک عملیات مانند `write-holding`، `identify` یا `apply-profile` از PowerShell، Script و GUI از یک مسیر مشترک عبور می‌کند. بنابراین رفع خطا در Handler یا Core، رفتار همه رابط‌ها را هم‌زمان اصلاح می‌کند و GUI به پیاده‌سازی موازی منطق سخت‌افزار تبدیل نمی‌شود.
-

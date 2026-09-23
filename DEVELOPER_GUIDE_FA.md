@@ -127,7 +127,6 @@ Unit صریح همان فراخوانی → override لینک → Unit پیش‌
 |---|---|
 | `commands/__init__.py` | export ساده `CommandProcessor`. |
 | `commands/parser.py` | تعریف تمام subcommandها و آرگومان‌ها با `argparse`؛ تبدیل token یا خط متنی به `ParsedCommandLine`. اگر نام option، default، required یا help اشتباه است از اینجا شروع کنید. |
-| `commands/command_request_builder.py` | تبدیل JSON ساختاریافته HTTP به argv token و برعکس. positionalها را قبول نمی‌کند. ایراد تفاوت ورودی HTTP و shell معمولاً اینجاست. |
 | `commands/result.py` | قرارداد خروجی همه فرمان‌ها: `ok`، `command`، `data`، `error` و `exit_code`؛ تبدیل به JSON. |
 | `commands/context.py` | state طول‌عمر نشست، انتخاب Slave، package بارگذاری‌شده و helperهای پیش‌شرط. |
 | `commands/registry.py` | نگاشت نام command به handler و ثبت همه گروه‌های handler. فرمانی که parse می‌شود ولی handler ندارد یا برعکس، این فایل و `register()` همان handler را بررسی کنید. |
@@ -307,7 +306,7 @@ device_command_commands.py
 | علامت یا حوزه مشکل | ابتدا بررسی شود | سپس بررسی شود |
 |---|---|---|
 | CLI فرمان را نمی‌شناسد یا option رد می‌شود | `commands/parser.py` | `registry.py` و `register()` handler |
-| HTTP JSON به token اشتباه تبدیل می‌شود | `command_request_builder.py` | `parser.py` |
+| HTTP فرمان را رد می‌کند یا token اشتباه می‌رسد | بدنه `{"tokens": [...]}` در Client و `CommandBody` در `http_session_server.py` | `session_client.py` و سپس `parser.py` |
 | فرمان محلی کار می‌کند ولی HTTP نه | `http_session_server.py`، `session_client.py` | فایل `.sw_setting_http_session.json` و log endpoint |
 | session پیدا نمی‌شود | `session_client.py` | حافظه `_sessions` سرور و restart شدن uvicorn |
 | HTTP 409 | `SessionState.busy` و `state.lock` در server | command طولانی یا cancel ناقص |

@@ -148,7 +148,7 @@ def call_http_session_tokens(
     return _http_json_request(
         "POST",
         f"{base_url}/sessions/{session_id}/command",
-        {"command": tokens[0] if tokens else "?", "tokens": list(tokens)},
+        {"tokens": list(tokens)},
         timeout_seconds=timeout_seconds,
     )
 
