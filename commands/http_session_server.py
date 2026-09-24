@@ -5,7 +5,7 @@ HTTP session server for sw_setting.
 - Each session has its own Modbus link + CommandSessionContext.
 - Long commands (e.g. identify) can be cancelled via POST .../cancel.
 
-Bind default: 0.0.0.0:8000 (reachable from other machines on the LAN).
+Bind default: 127.0.0.1:8000. Use 0.0.0.0 explicitly for trusted LAN access.
 
 Endpoints:
   GET  /health
@@ -334,7 +334,7 @@ def create_app() -> FastAPI:
     return app
 
 
-def run_http_server(host: str = "0.0.0.0", port: int = 8000) -> None:
+def run_http_server(host: str = "127.0.0.1", port: int = 8000) -> None:
     import uvicorn
 
     app = create_app()

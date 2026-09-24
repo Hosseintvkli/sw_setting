@@ -44,11 +44,16 @@ class GroupDeviceCommandTests(unittest.TestCase):
         self.assertTrue(results[244].success)
         self.assertTrue(results[245].success)
         self.assertEqual([item[0] for item in link.operations[:2]], ["write", "write"])
-        self.assertEqual(link.operations[:2], [
-            ("write", 244, 100, 0xFFFF),
-            ("write", 245, 100, 0xFFFF),
-        ])
-        self.assertEqual([item[0] for item in link.operations[2:]], ["read", "read", "read"])
+        self.assertEqual(
+            link.operations[:2],
+            [
+                ("write", 244, 100, 0xFFFF),
+                ("write", 245, 100, 0xFFFF),
+            ],
+        )
+        self.assertEqual(
+            [item[0] for item in link.operations[2:]], ["read", "read", "read"]
+        )
 
     def test_failed_write_is_not_polled_but_other_units_continue(self):
         link = FakeLink({245: [7]}, failed_writes={244})
@@ -64,10 +69,12 @@ class GroupDeviceCommandTests(unittest.TestCase):
     def test_profile_triggers_all_matching_units_before_polling(self):
         link = FakeLink({244: [0], 245: [0]})
         definition = SimpleNamespace(
+            parameter_name="ResetCommand",
             parameter_access_kind=ParameterAccessKind.COMMAND_WRITE,
             modbus_address=100,
             data_type_name="U16",
         )
+        package = SimpleNamespace(parameter_list_version=1, parameters=[definition])
         assignment = SimpleNamespace(
             parameter_definition=definition,
             parsed_value=0xFFFF,
@@ -79,21 +86,27 @@ class GroupDeviceCommandTests(unittest.TestCase):
                 parameter_list_version=1,
                 permanent_modbus_slave_id=unit_id,
                 device_name=f"device_{unit_id}",
+                parameter_list_package=package,
             )
             for unit_id in (244, 245)
         ]
         context = SimpleNamespace(
             require_connected=lambda: None,
-            loaded_package=lambda: SimpleNamespace(parameter_list_version=1),
+            loaded_package=lambda: package,
             last_settings_load_result=SimpleNamespace(device_id_from_device=1004),
             selected_slave_id=244,
             last_identify_result=SimpleNamespace(
                 root_node=SimpleNamespace(iter_depth_first=lambda: iter(nodes))
             ),
             device_modbus_link=link,
+            cancel_check=lambda: False,
         )
         args = SimpleNamespace(
-            file=str(Path(__file__)), all_same_device_id=True, verbose=True
+            file=str(Path(__file__)),
+            all_same_device_id=True,
+            allow_partial=False,
+            skip_incompatible=False,
+            verbose=True,
         )
         with patch(
             "commands.handlers.profile_commands.load_setting_profile_assignments_from_csv",
@@ -103,9 +116,9 @@ class GroupDeviceCommandTests(unittest.TestCase):
 
         self.assertTrue(result.ok)
         self.assertEqual(result.data["ok_count"], 2)
-        self.assertEqual([item[0] for item in link.operations], [
-            "write", "write", "read", "read"
-        ])
+        self.assertEqual(
+            [item[0] for item in link.operations], ["write", "write", "read", "read"]
+        )
 
 
 if __name__ == "__main__":

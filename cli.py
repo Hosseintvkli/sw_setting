@@ -12,7 +12,11 @@ import json
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent
+_ROOT = (
+    Path(sys.executable).resolve().parent
+    if getattr(sys, "frozen", False)
+    else Path(__file__).resolve().parent
+)
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
@@ -78,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if argv and argv[0] == "serve-http":
-        host = "0.0.0.0"
+        host = "127.0.0.1"
         port = 8000
         i = 1
         while i < len(argv):
@@ -255,7 +259,7 @@ def main(argv: list[str] | None = None) -> int:
     if not argv:
         print(
             "Usage:\n"
-            "  python cli.py serve-http [--host 0.0.0.0] [--port 8000]\n"
+            "  python cli.py serve-http [--host 127.0.0.1] [--port 8000]\n"
             "  python cli.py [--session NAME] serve [--host 127.0.0.1] [--port 8000]\n"
             "  python cli.py [--session NAME] <command> [args...]\n"
             "  python cli.py [--session NAME] watch-events --command NAME\n"

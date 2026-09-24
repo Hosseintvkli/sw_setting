@@ -61,6 +61,20 @@ QRadioButton::indicator:checked {
     image: url("__RADIO_CHECKED__");
 }
 
+QCheckBox {
+    spacing: 7px;
+    padding: 3px 5px;
+    color: #27313d;
+}
+QCheckBox::indicator, QTreeWidget::indicator {
+    width: 16px;
+    height: 16px;
+    image: url("__CHECKBOX_UNCHECKED__");
+}
+QCheckBox::indicator:checked, QTreeWidget::indicator:checked {
+    image: url("__CHECKBOX_CHECKED__");
+}
+
 QTabWidget::pane {
     border: 1px solid #d1d5db;
     background: #ffffff;
@@ -170,8 +184,8 @@ QTreeWidget, QTableView, QTextEdit, QPlainTextEdit {
     border-radius: 2px;
     background: #ffffff;
     alternate-background-color: #f7f8fa;
-    selection-background-color: #32336c;
-    selection-color: #ffffff;
+    selection-background-color: #cfe5f6;
+    selection-color: #132536;
 }
 QTreeWidget::item {
     min-height: 21px;
@@ -207,11 +221,16 @@ QGroupBox#deviceInformationBox {
     background: #d2ae6d;
     border: 1px solid #ad8744;
     border-radius: 5px;
-    padding-top: 10px;
+    margin-top: 13px;
+    padding-top: 12px;
 }
 QGroupBox#deviceInformationBox::title {
     color: #32336c;
-    background: #f5f6f8;
+    background: #f8e6bd;
+    border: 1px solid #ad8744;
+    border-radius: 3px;
+    padding: 1px 7px;
+    left: 8px;
     font-weight: 600;
 }
 QGroupBox#deviceInformationBox QLabel#deviceInfoValue {
@@ -221,6 +240,22 @@ QGroupBox#deviceInformationBox QLabel#deviceInfoValue {
     border-radius: 2px;
     padding: 1px 6px;
     min-height: 19px;
+}
+QGroupBox#deviceInformationBox QLabel#deviceInfoCaption {
+    background: #e5c98f;
+    color: #2f2a21;
+    border: 1px solid #ae8847;
+    border-radius: 2px;
+    padding: 1px 4px;
+    min-height: 19px;
+}
+QLabel#monitoringSelectionSummary {
+    color: #32336c;
+    font-weight: 600;
+    padding: 2px 6px;
+    border: 1px solid #c2c7d0;
+    border-radius: 3px;
+    background: #eef3f8;
 }
 
 QWidget#reportLogPanel {
@@ -233,18 +268,28 @@ QTextEdit#commandLogText, QPlainTextEdit#cliOutputText {
     font-size: 9pt;
 }
 
-QLabel#identifyStateLabel {
-    color: #5e4b17;
-    background: #fff7db;
-    border: 1px solid #dfca82;
-    border-radius: 3px;
-    padding: 4px 6px;
-}
-
 QStatusBar {
     background: #e9ecf0;
     border-top: 1px solid #c5cad1;
-    min-height: 22px;
+    min-height: 36px;
+}
+QProgressBar#globalOperationProgress {
+    min-height: 26px;
+    max-height: 26px;
+    margin: 0;
+    background: #eaf3fa;
+    border: 1px solid #82afd0;
+    border-radius: 5px;
+}
+QLabel#globalOperationLabel {
+    padding: 1px 9px;
+    color: #17334f;
+    background: transparent;
+    font-weight: 600;
+}
+QProgressBar#globalOperationProgress::chunk {
+    background: #8fc5eb;
+    border-radius: 4px;
 }
 QLabel#statusSegment {
     border: 1px solid #b8bec7;
@@ -319,4 +364,12 @@ OPERATOR_STYLESHEET = OPERATOR_STYLESHEET.replace(
 OPERATOR_STYLESHEET = OPERATOR_STYLESHEET.replace(
     "__RADIO_CHECKED__",
     (Path(__file__).resolve().parent / "assets" / "radio_checked.svg").as_posix(),
+)
+OPERATOR_STYLESHEET = OPERATOR_STYLESHEET.replace(
+    "__CHECKBOX_UNCHECKED__",
+    (Path(__file__).resolve().parent / "assets" / "checkbox_unchecked.svg").as_posix(),
+)
+OPERATOR_STYLESHEET = OPERATOR_STYLESHEET.replace(
+    "__CHECKBOX_CHECKED__",
+    (Path(__file__).resolve().parent / "assets" / "checkbox_checked.svg").as_posix(),
 )

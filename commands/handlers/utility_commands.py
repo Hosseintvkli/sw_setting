@@ -8,8 +8,9 @@ from commands.context import CommandSessionContext
 from commands.parser import build_argument_parser
 from commands.registry import CommandRegistry, build_default_registry
 from commands.result import CommandResult, failure, success
+from generated_version import VERSION_TEXT
 
-TOOL_VERSION = "0.1.0-cli"
+TOOL_VERSION = VERSION_TEXT
 
 
 def register(registry: CommandRegistry) -> None:

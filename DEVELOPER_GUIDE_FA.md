@@ -27,7 +27,7 @@ core: Modbus، JSON، codec، validation، Identify، Profile، Command
 pymodbus / serial port / TCP / فایل‌های CodeGen JSON
 ```
 
-CLI، HTTP و تمام کنترل‌های GUI از لایه `commands` استفاده می‌کنند. GUI برای هر اقدام یک فرمان واقعی و قابل کپی `python cli.py ...` می‌سازد و آن را با `QProcess` روی session نام‌دار اجرا می‌کند؛ پوشه `ui` هیچ import مستقیمی از `core` ندارد.
+CLI، HTTP و تمام کنترل‌های GUI از لایه `commands` استفاده می‌کنند. GUI برای هر اقدام یک فرمان واقعی و قابل کپی می‌سازد و آن را با `QProcess` روی session نام‌دار اجرا می‌کند: در اجرای سورس به شکل `python cli.py ...` و در بستهٔ نهایی به شکل `sw_setting_cli.exe ...`. پوشه `ui` هیچ import مستقیمی از `core` ندارد.
 
 ## ۲. مسیرهای اجرای برنامه
 
@@ -63,6 +63,15 @@ python cli.py --session gui serve
 python cli.py --session gui connect --port COM3
 python cli.py --session gui identify
 python cli.py --session gui serve-stop
+```
+
+در نسخهٔ Buildشده، همین مسیر بدون نصب Python در دسترس است:
+
+```text
+sw_setting_cli.exe serve-http --host 127.0.0.1 --port 8000
+sw_setting_cli.exe --session gui serve
+sw_setting_cli.exe --session gui connect ...
+sw_setting_cli.exe --session gui identify
 ```
 
 نشست نام‌دار در `.sw_setting_http_session.<NAME>.json` ذخیره می‌شود؛ نام فقط می‌تواند شامل حروف و ارقام ASCII و `. _ -` باشد. نبودن نشست نام‌دار خطاست و به اجرای محلی یک‌باره fallback نمی‌شود. sessionها فقط در حافظه سرورند؛ restart سرور آن‌ها را از بین می‌برد و ممکن است فایل‌های اشاره‌گر محلی stale شوند.
@@ -298,7 +307,7 @@ device_command_commands.py
 | فایل | مسئولیت |
 |---|---|
 | `ui/communication_panel.py` | فرم خالص Serial/TCP و timeoutها؛ آرگومان‌های `connect` را می‌سازد و نتیجه `list-serial-ports`/`list-networks` را نمایش می‌دهد. discovery یا Modbus I/O ندارد. |
-| `ui/cli_console_panel.py` | CLI قابل مشاهده داخل GUI؛ اجرای بدون shell خطوط کامل `python cli.py ...` با `QProcess`، session نام‌دار، history/copy، stdout/stderr/exit code، اجرای ترتیبی script و مدیریت خودکار `serve-http`. پردازش‌های پایان‌یافته با `deleteLater()` آزاد می‌شوند و history/output سقف دارند. فرمان دوره‌ای Monitoring در history قابل‌کپی می‌ماند، اما JSON حجیم آن در output pane تکرار نمی‌شود و فقط برای به‌روزرسانی جدول parse می‌شود. |
+| `ui/cli_console_panel.py` | CLI قابل مشاهده داخل GUI؛ اجرای بدون shell فرمان‌های `python cli.py ...` در حالت سورس و `sw_setting_cli.exe ...` در بستهٔ نهایی با `QProcess`، session نام‌دار، history/copy، stdout/stderr/exit code، اجرای ترتیبی script و مدیریت خودکار `serve-http`. Scriptهای قدیمی با فرم Python در نسخهٔ بسته‌بندی‌شده نیز شناخته و به EXE مستقل نگاشت می‌شوند. پردازش‌های پایان‌یافته با `deleteLater()` آزاد می‌شوند و history/output سقف دارند. فرمان دوره‌ای Monitoring در history قابل‌کپی می‌ماند، اما JSON حجیم آن در output pane تکرار نمی‌شود و فقط برای به‌روزرسانی جدول parse می‌شود. |
 | `ui/main_window.py` | layout و تبدیل رخداد widgetها به command؛ مصرف JSON نتیجه برای topology، setting tree، header، Monitoring، Profile و COMMAND. درخت Monitoring مانند Setting از `Tag2` و سپس اجزای نقطه‌ای/آرایه‌ای Name ساخته می‌شود و Checkbox فقط روی برگ است. ورود به تب read را آغاز نمی‌کند: کاربر باید Start را بزند و فقط برگ‌های تیک‌خورده خوانده می‌شوند؛ خروج از تب چرخه را متوقف می‌کند. انتخاب‌ها با ParameterId حفظ می‌شوند و برای جلوگیری از عبور از محدودیت command line و نمایش تدریجی، در فرمان‌های قابل‌کپی حداکثر ۲۵۰ پارامتری خوانده می‌شوند. تایمر highlight/stale فقط برگ‌های قابل‌مشاهده در viewport را بازآرایی می‌کند. تمام عملیات از `CliConsolePanel` عبور می‌کنند. |
 
 ## ۱۰. نقشه عیب‌یابی
@@ -338,7 +347,7 @@ device_command_commands.py
 ## ۱۱. نقاط حساس فعلی
 
 - CLI مسیر واحد اجراست؛ GUI فقط تولیدکننده command و نمایش‌دهنده JSON نتیجه است.
-- HTTP روی `0.0.0.0:8000`، با CORS باز و بدون authentication اجرا می‌شود؛ برای شبکه غیرقابل‌اعتماد مناسب نیست.
+- HTTP به‌طور پیش‌فرض روی `127.0.0.1:8000` اجرا می‌شود. برای دسترسی راه‌دور باید `--host 0.0.0.0` صریحاً داده شود؛ چون CORS باز است و authentication وجود ندارد، این حالت فقط برای LAN قابل‌اعتماد مناسب است.
 - sessionهای HTTP پایدار روی دیسک نیستند؛ فقط اشاره‌گر client ذخیره می‌شود.
 - `CommandProcessor` exceptionهای handler را به failure کوتاه تبدیل می‌کند؛ برای traceback در HTTP logها را ببینید.
 - `DeviceModbusLink` retry دستی مشخصی برای read دارد؛ مسیر write و broadcast رفتار متفاوت دارند.
@@ -350,6 +359,18 @@ device_command_commands.py
 - discovery شبکه GUI نیز فرمان `list-networks` را اجرا می‌کند؛ تنها پیاده‌سازی discovery در `core/host_communication_discovery.py` است.
 
 ## ۱۲. وابستگی‌های اجرایی
+
+Build رسمی با `python build_exe.py` دو فایل اجرایی را در یک بسته می‌سازد:
+
+```text
+dist/sw_setting/
+├── sw_setting_gui.exe
+├── sw_setting_cli.exe
+├── _internal/
+└── files/codegen_output/JSON/
+```
+
+`sw_setting_gui.exe` از نوع windowed و فقط نقطهٔ ورود GUI است. `sw_setting_cli.exe` از نوع console است و هم فرمان‌های CLI و هم `serve-http` مستقل را اجرا می‌کند. GUI در حالت بسته‌بندی‌شده فرمان‌ها و سرور تحت مالکیت خود را با همین EXE دوم راه می‌اندازد. اگر در `127.0.0.1:8000` از قبل سروری فعال باشد، GUI به آن attach می‌شود و هنگام خروج آن process خارجی را متوقف نمی‌کند. کل پوشهٔ بالا باید منتقل شود؛ دو EXE کتابخانه‌های مشترکشان را از `_internal` می‌خوانند و CodeGen بیرون از فایل‌های اجرایی قابل‌جایگزینی باقی می‌ماند.
 
 - Python؛
 - `pymodbus` برای RTU/TCP؛

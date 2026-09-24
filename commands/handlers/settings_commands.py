@@ -12,6 +12,7 @@ from core.codegen_parameter_list_models import (
 from core.device_modbus_link import DeviceModbusLinkError
 from core.device_setting_tree_loader import (
     DeviceSettingTreeLoader,
+    DeviceSettingTreeLoadCancelled,
     DeviceSettingTreeLoaderError,
 )
 from core.modbus_register_value_codec import (
@@ -60,6 +61,27 @@ def _loaded_package_for_slave(context: CommandSessionContext, slave_id: int):
     return load.parameter_list_package
 
 
+def _emit_load_progress(
+    context: CommandSessionContext,
+    command_name: str,
+    current: int,
+    total: int,
+    message: str,
+) -> None:
+    progress = getattr(context, "progress", None)
+    if callable(progress):
+        progress(
+            "operation_progress",
+            message,
+            {
+                "operation": command_name,
+                "current": current,
+                "total": total,
+                "phase": "read",
+            },
+        )
+
+
 def _load_settings_impl(
     context: CommandSessionContext, args, command_name: str
 ) -> CommandResult:
@@ -77,16 +99,23 @@ def _load_settings_impl(
         device_modbus_link=context.device_modbus_link,
         modbus_slave_unit_identifier=slave_id,
         codegen_json_root_directory=context.codegen_json_root_directory,
+        cancel_check=context.cancel_check,
     )
     try:
         result = loader.load_setting_tree_from_connected_device(
-            progress_callback=lambda c, t, m: context.log(m)
+            progress_callback=lambda current, total, message: _emit_load_progress(
+                context, command_name, current, total, message
+            )
         )
+    except DeviceSettingTreeLoadCancelled as exc:
+        return failure(command_name, str(exc), exit_code=130)
     except DeviceSettingTreeLoaderError as exc:
         return failure(command_name, str(exc))
 
     context.last_settings_load_result = result
-    error_count = sum(1 for leaf in result.setting_leaf_values if leaf.read_error_message)
+    error_count = sum(
+        1 for leaf in result.setting_leaf_values if leaf.read_error_message
+    )
     data = {
         "slave_id": slave_id,
         "device_id": result.device_id_from_device,
@@ -102,6 +131,7 @@ def _load_settings_impl(
                 "value": leaf.display_value_text,
                 "modbus_addr": leaf.parameter.modbus_address,
                 "data_type": leaf.parameter.data_type_name,
+                "tag1": leaf.parameter.category_tag_1,
                 "tag2": leaf.parameter.tag_2,
                 "name_path_segments": leaf.parameter.name_path_segments,
                 "error": leaf.read_error_message,

@@ -249,11 +249,24 @@ def _append_single_assignment(
 
 def save_setting_profile_csv(
     csv_file_path: Path,
-    rows: list[tuple[str, str]],
+    grouped_rows: list[tuple[str, list[tuple[str, str]]]],
+    *,
+    serial_number: int | None,
+    firmware_version: str,
+    hardware_version: str,
 ) -> None:
-    """Write Name,Value rows (UTF-8)."""
+    """Write a grouped UTF-8 CSV profile with ignored device-information comments."""
     csv_file_path.parent.mkdir(parents=True, exist_ok=True)
     with csv_file_path.open("w", encoding="utf-8", newline="") as file_handle:
+        file_handle.write(f"# SerialNo: {serial_number if serial_number is not None else ''}\n")
+        file_handle.write(f"# FW_Version: {firmware_version}\n")
+        file_handle.write(f"# HW_Version: {hardware_version}\n")
+        file_handle.write("\n")
         writer = csv.writer(file_handle)
-        for parameter_name, value_text in rows:
-            writer.writerow([parameter_name, value_text])
+        for group_index, (tag_1, rows) in enumerate(grouped_rows):
+            display_tag = tag_1 or "(No Tag1)"
+            file_handle.write(f"# Tag1: {display_tag}\n")
+            for parameter_name, value_text in rows:
+                writer.writerow([parameter_name, value_text])
+            if group_index < len(grouped_rows) - 1:
+                file_handle.write("\n")

@@ -9,6 +9,23 @@ from core.codegen_parameter_list_models import ParameterAccessKind
 from core.device_command_executor import DeviceCommandExecutor
 
 
+def _emit_command_progress(
+    context: CommandSessionContext, current: int, total: int, message: str
+) -> None:
+    progress = getattr(context, "progress", None)
+    if callable(progress):
+        progress(
+            "operation_progress",
+            message,
+            {
+                "operation": "execute-command",
+                "current": current,
+                "total": total,
+                "phase": "command",
+            },
+        )
+
+
 def register(registry: CommandRegistry) -> None:
     registry.register("list-commands", handle_list_commands)
     registry.register("execute-command", handle_execute_command)
@@ -69,25 +86,93 @@ def handle_execute_command(context: CommandSessionContext, args) -> CommandResul
                 "execute-command",
                 "Load settings and run identify before --all-same-device-id.",
             )
-        targets = [
+        candidate_targets = [
             node
             for node in identify.root_node.iter_depth_first()
             if node.device_id == load.device_id_from_device
         ]
-        if not targets:
-            return failure("execute-command", "No matching devices in the Identify topology.")
-        if any(
-            node.parameter_list_version != load.parameter_list_version_from_device
-            for node in targets
-        ):
+        if not candidate_targets:
             return failure(
-                "execute-command",
-                "Matching DeviceIds have different parameter-list versions; "
-                "one command address cannot safely be used for all of them.",
+                "execute-command", "No matching devices in the Identify topology."
             )
-        executor = DeviceCommandExecutor(context.device_modbus_link)
+
+        targets = []
+        incompatible_targets: list[dict] = []
+        for node in candidate_targets:
+            reason: str | None = None
+            target_parameter = None
+            if node.parameter_list_package is None:
+                reason = "parameter-list JSON is unavailable"
+            else:
+                if name:
+                    target_parameter = next(
+                        (
+                            parameter
+                            for parameter in node.parameter_list_package.parameters
+                            if parameter.parameter_name == name
+                            and parameter.parameter_access_kind
+                            == ParameterAccessKind.COMMAND_WRITE
+                        ),
+                        None,
+                    )
+                else:
+                    target_parameter = next(
+                        (
+                            parameter
+                            for parameter in node.parameter_list_package.parameters
+                            if parameter.modbus_address == int(address)
+                            and parameter.parameter_access_kind
+                            == ParameterAccessKind.COMMAND_WRITE
+                        ),
+                        None,
+                    )
+                if target_parameter is None:
+                    reason = "command parameter is unavailable"
+                elif target_parameter.modbus_address != int(address):
+                    reason = (
+                        "command Modbus address differs "
+                        f"({target_parameter.modbus_address} != {int(address)})"
+                    )
+            if reason is not None:
+                incompatible_targets.append(
+                    {
+                        "slave_id": node.permanent_modbus_slave_id,
+                        "name": node.device_name,
+                        "reason": reason,
+                    }
+                )
+            else:
+                targets.append(node)
+
+        if incompatible_targets and not getattr(args, "skip_incompatible", False):
+            from commands.result import CommandResult
+
+            return CommandResult(
+                ok=False,
+                command="execute-command",
+                data={
+                    "name": name,
+                    "modbus_addr": int(address),
+                    "requires_confirmation": True,
+                    "compatible_target_count": len(targets),
+                    "incompatible_targets": incompatible_targets,
+                },
+                error="Some matching devices cannot execute this command.",
+                exit_code=3,
+            )
+        if not targets:
+            return failure("execute-command", "No compatible target devices remain.")
+
+        executor = DeviceCommandExecutor(
+            context.device_modbus_link,
+            cancel_check=context.cancel_check,
+        )
         results = executor.execute_command_for_units(
-            int(address), [node.permanent_modbus_slave_id for node in targets]
+            int(address),
+            [node.permanent_modbus_slave_id for node in targets],
+            progress_callback=lambda current, total, message: _emit_command_progress(
+                context, current, total, message
+            ),
         )
         details = [
             {
@@ -95,7 +180,9 @@ def handle_execute_command(context: CommandSessionContext, args) -> CommandResul
                 "name": node.device_name,
                 "success": results[node.permanent_modbus_slave_id].success,
                 "message": results[node.permanent_modbus_slave_id].message,
-                "last_read_value": results[node.permanent_modbus_slave_id].last_read_value,
+                "last_read_value": results[
+                    node.permanent_modbus_slave_id
+                ].last_read_value,
             }
             for node in targets
         ]
@@ -105,6 +192,7 @@ def handle_execute_command(context: CommandSessionContext, args) -> CommandResul
             "targets": details,
             "success_count": sum(item["success"] for item in details),
             "failure_count": sum(not item["success"] for item in details),
+            "incompatible_targets": incompatible_targets,
         }
         if data["failure_count"]:
             return CommandResult(
@@ -117,8 +205,15 @@ def handle_execute_command(context: CommandSessionContext, args) -> CommandResul
         return success("execute-command", data)
 
     context.device_modbus_link.set_modbus_unit_identifier_override(slave_id)
-    executor = DeviceCommandExecutor(context.device_modbus_link)
+    executor = DeviceCommandExecutor(
+        context.device_modbus_link,
+        cancel_check=context.cancel_check,
+    )
+    _emit_command_progress(
+        context, 0, 1, f"Executing {name} on SlaveId={slave_id}"
+    )
     result = executor.execute_command_at_modbus_address(int(address))
+    _emit_command_progress(context, 1, 1, result.message)
     data = {
         "name": name,
         "modbus_addr": int(address),

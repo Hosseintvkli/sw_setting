@@ -124,15 +124,25 @@ def build_argument_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("apply-profile", help="Apply CSV profile to device(s)")
     p.add_argument("--file", required=True)
     p.add_argument("--all-same-device-id", action="store_true")
+    p.add_argument("--allow-partial", action="store_true")
+    p.add_argument("--skip-incompatible", action="store_true")
     p.add_argument("--verbose", action="store_true")
 
     p = sub.add_parser("verify-profile", help="Verify CSV against device(s)")
     p.add_argument("--file", required=True)
     p.add_argument("--all-same-device-id", action="store_true")
+    p.add_argument("--allow-partial", action="store_true")
+    p.add_argument("--skip-incompatible", action="store_true")
     p.add_argument("--verbose", action="store_true")
 
     p = sub.add_parser("save-profile", help="Reload then save SETTING values to CSV")
     p.add_argument("--file", required=True)
+    p.add_argument(
+        "--tag1",
+        action="append",
+        default=None,
+        help="Include one Tag1 category (repeatable). Omit to save all categories.",
+    )
 
     p = sub.add_parser("parse-profile", help="Parse/validate CSV only")
     p.add_argument("--file", required=True)
@@ -145,6 +155,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     p.add_argument("--address", type=int, default=None)
     p.add_argument("--slave-id", type=int, default=None)
     p.add_argument("--all-same-device-id", action="store_true")
+    p.add_argument("--skip-incompatible", action="store_true")
 
     # --- raw modbus ---
     p = sub.add_parser("read-holding", help="Raw read holding registers")
@@ -193,9 +204,7 @@ def parse_command_tokens(tokens: list[str]) -> ParsedCommandLine:
     try:
         namespace = parser.parse_args(list(tokens))
     except SystemExit as exc:
-        raise ValueError(
-            f"Invalid command or arguments: {' '.join(tokens)}"
-        ) from exc
+        raise ValueError(f"Invalid command or arguments: {' '.join(tokens)}") from exc
     command_name = getattr(namespace, "command_name", None)
     if not command_name:
         raise ValueError("No command name parsed")

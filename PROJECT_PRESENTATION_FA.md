@@ -87,9 +87,9 @@ flowchart TB
 ```mermaid
 flowchart TB
     operator[کاربر / PowerShell]
-    gui[main.py و ui/main_window.py<br/>رابط گرافیکی]
+    gui[main.py / sw_setting_gui.exe<br/>رابط گرافیکی]
     console[ui/cli_console_panel.py<br/>QProcess و نمایش فرمان‌ها]
-    cli[cli.py<br/>نقطه ورود CLI]
+    cli[cli.py / sw_setting_cli.exe<br/>نقطه ورود CLI و Server]
     client[commands/session_client.py<br/>Client شبکه و Session pointer]
     server[commands/http_session_server.py<br/>FastAPI و SessionState]
     context[commands/context.py<br/>CommandSessionContext]
@@ -617,9 +617,17 @@ python cli.py --session gui identify
 python cli.py --session gui load-settings --slave-id 244
 ```
 
+در نسخهٔ Buildشده همین فرمان‌ها با فایل اجرایی مستقل CLI نمایش داده می‌شوند:
+
+```text
+sw_setting_cli.exe --session gui connect ...
+sw_setting_cli.exe --session gui identify
+sw_setting_cli.exe --session gui load-settings --slave-id 244
+```
+
 ## ۶.۱. `main.py`
 
-نقطه ورود GUI است؛ `QApplication` را می‌سازد، آیکون `files/icon/icon.ico` را تنظیم می‌کند، `DeviceSettingMainWindow` را نمایش می‌دهد و Event Loop برنامه را اجرا می‌کند. در نسخه Frozen همین فایل می‌تواند با آرگومان داخلی `cli.py` در حالت CLI اجرا شود تا GUI فرمان‌هایش را بدون نیاز به نصب Python بفرستد.
+نقطه ورود اختصاصی GUI است؛ `QApplication` را می‌سازد، آیکون `files/icon/icon.ico` را تنظیم می‌کند، `DeviceSettingMainWindow` را نمایش می‌دهد و Event Loop برنامه را اجرا می‌کند. در نسخهٔ Buildشده، `main.py` فقط در `sw_setting_gui.exe` قرار دارد و اجرای فرمان‌ها به فایل مستقل `sw_setting_cli.exe` سپرده می‌شود؛ بنابراین GUI هیچ حالت مخفی CLI ندارد.
 
 ## ۶.۲. `ui/cli_console_panel.py`
 
@@ -674,16 +682,25 @@ sw_setting (VMajor.Minor.Build1.Build2)
 
 ## ۷.۲. `build_exe.py`
 
-این فایل نقطه رسمی Build ویندوز است و ابتدا نسخه را تولید و سپس PyInstaller را اجرا می‌کند. خروجی فعلی از نوع `onedir` و در `dist/sw_setting/` است:
+این فایل نقطه رسمی Build ویندوز است. نسخه را یک بار تولید می‌کند، سپس دو Build جداگانهٔ PyInstaller می‌سازد و وابستگی‌های آن‌ها را در یک پوشهٔ مشترک ادغام می‌کند. خروجی نهایی از نوع `onedir` و در `dist/sw_setting/` است:
 
 ```text
 dist/sw_setting/
-├── sw_setting.exe
+├── sw_setting_gui.exe             رابط گرافیکی بدون پنجرهٔ Console
+├── sw_setting_cli.exe             CLI و HTTP Server مستقل با Console
 ├── _internal/                    کتابخانه Python، PyQt و سایر dependencyها
 └── files/codegen_output/JSON/    دیتابیس خارجی و قابل‌جایگزینی CodeGen
 ```
 
-روی سیستم مقصد نصب Python یا Packageهای پروژه لازم نیست، ولی باید کل پوشه `dist/sw_setting` منتقل شود؛ کپی‌کردن EXE به‌تنهایی کافی نیست. CodeGen داخل فایل اجرایی قرار ندارد و کاربر می‌تواند پوشهٔ جدید `codegen_output` را جایگزین نسخه قبلی کند.
+روی سیستم مقصد نصب Python یا Packageهای پروژه لازم نیست، ولی باید کل پوشه `dist/sw_setting` منتقل شود؛ کپی‌کردن یکی از EXEها به‌تنهایی کافی نیست، چون هر دو از `_internal` مشترک استفاده می‌کنند. CodeGen داخل فایل اجرایی قرار ندارد و کاربر می‌تواند پوشهٔ جدید `codegen_output` را جایگزین نسخه قبلی کند.
+
+سرور را می‌توان بدون GUI اجرا کرد:
+
+```text
+sw_setting_cli.exe serve-http --host 127.0.0.1 --port 8000
+```
+
+GUI ابتدا سلامت همین آدرس محلی را بررسی می‌کند. اگر سرور از قبل فعال باشد به آن متصل می‌شود و هنگام خروج آن را نمی‌بندد؛ اگر فعال نباشد، GUI فایل `sw_setting_cli.exe` کنار خودش را برای اجرای سرور راه‌اندازی می‌کند و هنگام خروج فقط همان process تحت مالکیت خودش را متوقف می‌کند. برای دسترسی از یک رایانهٔ دیگر می‌توان سرور را صریحاً با `--host 0.0.0.0` اجرا کرد، اما چون API فعلاً authentication ندارد این حالت فقط برای شبکهٔ قابل‌اعتماد مناسب است.
 
 ---
 

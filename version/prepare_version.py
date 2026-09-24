@@ -73,6 +73,7 @@ def _write_python_version(project_root: Path, version: ApplicationVersion) -> No
             )
         ),
         encoding="utf-8",
+        newline="\n",
     )
     temporary.replace(target)
 

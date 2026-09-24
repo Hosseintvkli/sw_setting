@@ -28,8 +28,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    if getattr(sys, "frozen", False) and len(sys.argv) > 1 and sys.argv[1] == "cli.py":
-        from cli import main as cli_main
-
-        raise SystemExit(cli_main(sys.argv[2:]))
     main()

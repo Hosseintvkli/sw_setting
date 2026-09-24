@@ -380,13 +380,30 @@ This process does not inspect or modify Git. The window title uses this format:
 sw_setting (VMajor.Minor.Build1.Build2)
 ```
 
-The build is intentionally `onedir`, because the GUI launches the packaged
-executable in CLI mode for its command-driven operations. Output is written to
-`dist/sw_setting/`. Copy this entire directory to the destination computer;
-Python and all required packages/DLLs are included under `_internal`, while the
-runtime CodeGen database is available externally at
-`files/codegen_output/JSON`. No Python installation is required on the target
-computer. Copying only `sw_setting.exe` is not supported.
+The build intentionally produces two executables in one shared `onedir`
+release:
+
+```text
+dist/sw_setting/
+|-- sw_setting_gui.exe       # windowed GUI
+|-- sw_setting_cli.exe       # console CLI and standalone HTTP server
+|-- _internal/               # Python, PyQt, packages, and native DLLs
+`-- files/codegen_output/JSON/  # external, replaceable CodeGen database
+```
+
+The packaged GUI sends every command through the sibling
+`sw_setting_cli.exe`. The CLI executable can also run the server independently:
+
+```powershell
+.\sw_setting_cli.exe serve-http --host 127.0.0.1 --port 8000
+```
+
+Use `--host 0.0.0.0` only when remote clients on a trusted LAN must connect;
+the HTTP API currently has no authentication. Copy the entire
+`dist/sw_setting/` directory to the destination computer. No Python
+installation is required there. The CodeGen directory remains outside the
+executables and can be replaced independently. Copying either EXE alone is not
+supported because both use the shared `_internal` directory.
 
 ---
 

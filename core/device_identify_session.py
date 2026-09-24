@@ -33,6 +33,14 @@ TEMPORARY_DISCOVERY_MODBUS_UNIT_IDENTIFIER = 1
 FIRST_PERMANENT_MODBUS_SLAVE_ID = 247
 LAST_PERMANENT_MODBUS_SLAVE_ID = 2
 
+# A routing write is acknowledged by the hub before its downstream path is
+# necessarily ready to forward the temporary discovery SlaveId.  Keep this
+# independent from the user-facing Modbus read/write timeout (which may be as
+# low as 100 ms for normal commands).
+DISCOVERY_ROUTING_SETTLE_SECONDS = 0.5
+DISCOVERY_PORT_PROBE_ATTEMPTS = 3
+DISCOVERY_PORT_PROBE_RETRY_DELAY_SECONDS = 0.25
+
 LogCallback = Callable[[str], None]
 ProgressCallback = Callable[[str, str, dict[str, Any]], None]
 
@@ -403,14 +411,14 @@ class DeviceIdentifySession:
                     hub_node, package, port_index
                 )
                 self._wait_for_device_state_to_settle(
-                    self._device_modbus_link.get_active_write_timeout_seconds(),
+                    DISCOVERY_ROUTING_SETTLE_SECONDS,
                     (
                         f"routing on hub SlaveId="
                         f"{hub_node.permanent_modbus_slave_id} port[{port_index}]"
                     ),
                 )
 
-                child = self._discover_node_on_temporary_slave_one(
+                child = self._probe_downstream_port_with_retry(
                     parent_node=hub_node, port_index_on_parent=port_index
                 )
                 if child is None:
@@ -486,6 +494,31 @@ class DeviceIdentifySession:
                 )
                 wrapped.routing_restored = True
                 raise wrapped from port_exc
+
+    def _probe_downstream_port_with_retry(
+        self,
+        parent_node: IdentifiedDeviceNode,
+        port_index_on_parent: int,
+    ) -> IdentifiedDeviceNode | None:
+        """Probe a newly-opened downstream route before declaring it empty."""
+        for attempt in range(1, DISCOVERY_PORT_PROBE_ATTEMPTS + 1):
+            child = self._discover_node_on_temporary_slave_one(
+                parent_node=parent_node, port_index_on_parent=port_index
+            )
+            if child is not None:
+                return child
+            if attempt >= DISCOVERY_PORT_PROBE_ATTEMPTS:
+                break
+            self._log(
+                f"  No response on port[{port_index}]; retry "
+                f"{attempt + 1}/{DISCOVERY_PORT_PROBE_ATTEMPTS} after "
+                f"{DISCOVERY_PORT_PROBE_RETRY_DELAY_SECONDS * 1000:.0f} ms"
+            )
+            self._wait_for_device_state_to_settle(
+                DISCOVERY_PORT_PROBE_RETRY_DELAY_SECONDS,
+                f"retry probe on port[{port_index}]",
+            )
+        return None
 
     def _restore_hub_port_routing_after_failure(
         self,

@@ -147,9 +147,7 @@ def handle_select_device(context: CommandSessionContext, args) -> CommandResult:
                 "No topology for DeviceId lookup. Pass --slave-id or run identify.",
             )
         matches = [
-            n
-            for n in result.root_node.iter_depth_first()
-            if n.device_id == device_id
+            n for n in result.root_node.iter_depth_first() if n.device_id == device_id
         ]
         if not matches:
             return failure("select-device", f"No node with DeviceId={device_id}")
@@ -184,7 +182,9 @@ def handle_select_device(context: CommandSessionContext, args) -> CommandResult:
     return failure("select-device", "Provide --slave-id or --device-id")
 
 
-def handle_clear_device_selection(context: CommandSessionContext, args) -> CommandResult:
+def handle_clear_device_selection(
+    context: CommandSessionContext, args
+) -> CommandResult:
     context.selected_slave_id = None
     context.device_modbus_link.set_modbus_unit_identifier_override(None)
     return success("clear-device-selection", {"selected_slave_id": None})
@@ -259,7 +259,7 @@ def format_topology_tree_text(node: IdentifiedDeviceNode, indent: int = 0) -> st
     for port_index in range(node.downstream_port_quantity):
         child = node.children_by_port_index.get(port_index)
         if child is None:
-            lines.append(f"{pad}  port[{port_index}]: (no connection)")
+            lines.append(f"{pad}  port[{port_index}]:")
         else:
             lines.append(
                 f"{pad}  port[{port_index}]: {child.device_name}  "

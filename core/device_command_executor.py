@@ -13,6 +13,7 @@ Protocol:
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from core.device_modbus_link import DeviceModbusLink, DeviceModbusLinkError
@@ -30,16 +31,19 @@ class DeviceCommandExecutionResult:
 
 
 class DeviceCommandExecutor:
-    def __init__(self, device_modbus_link: DeviceModbusLink) -> None:
+    def __init__(
+        self,
+        device_modbus_link: DeviceModbusLink,
+        cancel_check: Callable[[], bool] | None = None,
+    ) -> None:
         self._device_modbus_link = device_modbus_link
+        self._cancel_check = cancel_check
 
     def execute_command_at_modbus_address(
         self, modbus_address: int
     ) -> DeviceCommandExecutionResult:
         if not self._device_modbus_link.is_connected:
-            return DeviceCommandExecutionResult(
-                success=False, message="Not connected."
-            )
+            return DeviceCommandExecutionResult(success=False, message="Not connected.")
 
         write_error = self.trigger_command(modbus_address)
         if write_error is not None:
@@ -75,6 +79,12 @@ class DeviceCommandExecutor:
 
         last_value: int | None = None
         while True:
+            if self._cancel_check is not None and self._cancel_check():
+                return DeviceCommandExecutionResult(
+                    success=False,
+                    message="Command wait cancelled by user.",
+                    last_read_value=last_value,
+                )
             try:
                 value = self._device_modbus_link._read_holding_registers_u16_once(
                     modbus_address, 1, modbus_unit_identifier
@@ -114,25 +124,42 @@ class DeviceCommandExecutor:
         )
 
     def execute_command_for_units(
-        self, modbus_address: int, unit_ids: list[int]
+        self,
+        modbus_address: int,
+        unit_ids: list[int],
+        progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[int, DeviceCommandExecutionResult]:
         """Trigger every unit first, then poll each acknowledged trigger."""
         results: dict[int, DeviceCommandExecutionResult] = {}
         acknowledged: list[int] = []
-        for unit_id in dict.fromkeys(unit_ids):
+        unique_unit_ids = list(dict.fromkeys(unit_ids))
+        total = max(1, len(unique_unit_ids))
+        completed = 0
+        for unit_id in unique_unit_ids:
             if unit_id == 0:
                 results[unit_id] = DeviceCommandExecutionResult(
                     success=False,
                     message="Broadcast unit 0 cannot acknowledge a command trigger.",
                 )
+                completed += 1
+                if progress_callback is not None:
+                    progress_callback(completed, total, f"SlaveId={unit_id} rejected")
                 continue
             write_error = self.trigger_command(modbus_address, unit_id)
             if write_error is not None:
                 results[unit_id] = write_error
+                completed += 1
+                if progress_callback is not None:
+                    progress_callback(
+                        completed, total, f"Command write failed on SlaveId={unit_id}"
+                    )
             else:
                 acknowledged.append(unit_id)
         for unit_id in acknowledged:
-            results[unit_id] = self.wait_for_command_completion(
-                modbus_address, unit_id
-            )
+            results[unit_id] = self.wait_for_command_completion(modbus_address, unit_id)
+            completed += 1
+            if progress_callback is not None:
+                progress_callback(
+                    completed, total, f"Command completed on SlaveId={unit_id}"
+                )
         return results

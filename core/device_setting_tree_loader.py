@@ -90,12 +90,17 @@ class DeviceSettingTreeLoaderError(Exception):
     pass
 
 
+class DeviceSettingTreeLoadCancelled(DeviceSettingTreeLoaderError):
+    pass
+
+
 class DeviceSettingTreeLoader:
     def __init__(
         self,
         device_modbus_link: DeviceModbusLink,
         modbus_slave_unit_identifier: int,
         codegen_json_root_directory: Path | None = None,
+        cancel_check: Callable[[], bool] | None = None,
     ) -> None:
         self._device_modbus_link = device_modbus_link
         self._modbus_slave_unit_identifier = modbus_slave_unit_identifier
@@ -104,6 +109,13 @@ class DeviceSettingTreeLoader:
             if codegen_json_root_directory is not None
             else get_fixed_codegen_json_root_directory()
         )
+        self._cancel_check = cancel_check
+
+    def _raise_if_cancelled(self) -> None:
+        if self._cancel_check is not None and self._cancel_check():
+            raise DeviceSettingTreeLoadCancelled(
+                "Loading parameters cancelled by user."
+            )
 
     def load_setting_tree_from_connected_device(
         self,
@@ -111,6 +123,7 @@ class DeviceSettingTreeLoader:
     ) -> DeviceSettingTreeLoadResult:
         if not self._device_modbus_link.is_connected:
             raise DeviceSettingTreeLoaderError("Device is not connected.")
+        self._raise_if_cancelled()
 
         def report(step: int, total: int, message: str) -> None:
             if progress_callback is not None:
@@ -141,6 +154,7 @@ class DeviceSettingTreeLoader:
             device_id=device_id,
             parameter_list_version=parameter_list_version,
         )
+        self._raise_if_cancelled()
 
         report(
             PROGRESS_HEADER_DONE,
@@ -165,6 +179,7 @@ class DeviceSettingTreeLoader:
             for parameter in package.parameters
             if parameter.parameter_access_kind == ParameterAccessKind.SETTING_READ_WRITE
         ]
+        self._raise_if_cancelled()
 
         def report_register_progress(current: int, total: int, message: str) -> None:
             safe_total = max(total, 1)
@@ -189,6 +204,7 @@ class DeviceSettingTreeLoader:
         setting_leaf_values: list[SettingParameterTreeLeafValue] = []
         total_params = max(len(setting_parameters), 1)
         for index, parameter in enumerate(setting_parameters):
+            self._raise_if_cancelled()
             if index % 50 == 0:
                 decode_progress = PROGRESS_REGISTER_READS_DONE + int(
                     (PROGRESS_TOTAL - PROGRESS_REGISTER_READS_DONE)
@@ -271,7 +287,9 @@ class DeviceSettingTreeLoader:
             firmware_version_text=firmware_version_text,
         )
 
-    def _register_count_for_parameter(self, parameter: CodeGenParameterDefinition) -> int:
+    def _register_count_for_parameter(
+        self, parameter: CodeGenParameterDefinition
+    ) -> int:
         if parameter.modbus_register_size > 0:
             return parameter.modbus_register_size
         return register_count_for_data_type_name(parameter.data_type_name)
@@ -307,6 +325,7 @@ class DeviceSettingTreeLoader:
         for range_start, range_end in merged_intervals:
             address = range_start
             while address < range_end:
+                self._raise_if_cancelled()
                 count = min(MAX_HOLDING_REGISTERS_PER_MODBUS_READ, range_end - address)
                 try:
                     values = self._device_modbus_link.read_holding_registers_u16(

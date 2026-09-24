@@ -13,10 +13,12 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import QEasingCurve, QTimer, Qt, QVariantAnimation
-from PyQt6.QtGui import QBrush, QColor
+from PyQt6.QtGui import QBrush, QColor, QGuiApplication
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QFormLayout,
     QGridLayout,
@@ -30,6 +32,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSplitter,
+    QScrollArea,
     QTabWidget,
     QTextEdit,
     QTreeWidget,
@@ -76,16 +79,19 @@ class DeviceSettingMainWindow(QMainWindow):
         self._cli_busy = False
         self._identify_running = False
         self._identify_cancel_requested = False
+        self._settings_load_running = False
+        self._profile_operation_running = False
+        self._operation_cancel_requested = False
         self._live_identify_items: dict[int, QTreeWidgetItem] = {}
-        self._live_identify_port_items: dict[
-            tuple[int, int], QTreeWidgetItem
-        ] = {}
+        self._live_identify_port_items: dict[tuple[int, int], QTreeWidgetItem] = {}
         self._device_discovery_animations: set[QVariantAnimation] = set()
         self._session_ready_flag = False
         self._settings_loaded = False
+        self._loaded_profile_tag1_categories: list[str] = []
         self._suppress_setting_change = False
         self._selected_slave_id: int | None = None
         self._loaded_topology_slave_id: int | None = None
+        self._pending_device_slave_id: int | None = None
         self._monitoring_selected_parameter_ids: set[int] = set()
         self._monitoring_items_by_parameter_id: dict[int, QTreeWidgetItem] = {}
         self._monitoring_device_ready = False
@@ -93,6 +99,11 @@ class DeviceSettingMainWindow(QMainWindow):
         self._monitoring_read_scheduled = False
         self._monitoring_next_parameter_index = 0
         self._suppress_monitoring_item_change = False
+        self._pending_watched_command: tuple[
+            str, list[str], object, bool, str, bool
+        ] | None = None
+        self._global_progress_command: str | None = None
+        self._global_progress_generation = 0
 
         self.cli_console_panel = CliConsolePanel(Path(__file__).resolve().parent.parent)
         self._build_ui()
@@ -100,9 +111,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._connect_signals()
         self._monitoring_visual_timer = QTimer(self)
         self._monitoring_visual_timer.setInterval(100)
-        self._monitoring_visual_timer.timeout.connect(
-            self._on_monitoring_visual_timer
-        )
+        self._monitoring_visual_timer.timeout.connect(self._on_monitoring_visual_timer)
         self._monitoring_visual_timer.start()
         self._set_connected_state(False)
         self._append_log(
@@ -112,14 +121,11 @@ class DeviceSettingMainWindow(QMainWindow):
     def _build_ui(self) -> None:
         # ----- left: communication -----
         self.communication_settings_panel = CommunicationSettingsPanel()
-        self.push_button_connect = QPushButton("Connect")
-        self.push_button_disconnect = QPushButton("Disconnect")
-        self.push_button_connect.setObjectName("primaryActionButton")
-        self.push_button_disconnect.setObjectName("dangerActionButton")
-        self.label_connection_state = QLabel("State: Disconnected")
+        self.push_button_connection_toggle = QPushButton("Connect")
+        self.push_button_connection_toggle.setObjectName("primaryActionButton")
         connection_buttons = QHBoxLayout()
-        connection_buttons.addWidget(self.push_button_connect)
-        connection_buttons.addWidget(self.push_button_disconnect)
+        connection_buttons.setContentsMargins(12, 0, 0, 0)
+        connection_buttons.addWidget(self.push_button_connection_toggle)
         connection_buttons.addStretch(1)
 
         communicate_tab = QWidget()
@@ -127,7 +133,6 @@ class DeviceSettingMainWindow(QMainWindow):
         communicate_layout.setContentsMargins(0, 0, 0, 0)
         communicate_layout.addWidget(self.communication_settings_panel)
         communicate_layout.addLayout(connection_buttons)
-        communicate_layout.addWidget(self.label_connection_state)
         communicate_layout.addStretch(1)
 
         # ----- left: topology -----
@@ -135,11 +140,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_cancel_identify = QPushButton("Cancel Identify")
         self.push_button_run_identify.setObjectName("primaryActionButton")
         self.push_button_cancel_identify.setObjectName("dangerActionButton")
-        self.label_identify_progress = QLabel("Idle")
-        self.label_identify_progress.setObjectName("identifyStateLabel")
-        self.progress_bar_identify = QProgressBar()
-        self.progress_bar_identify.setRange(0, 0)
-        self.progress_bar_identify.hide()
+        self.push_button_cancel_identify.hide()
         identify_buttons = QHBoxLayout()
         identify_buttons.addWidget(self.push_button_run_identify)
         identify_buttons.addWidget(self.push_button_cancel_identify)
@@ -152,8 +153,6 @@ class DeviceSettingMainWindow(QMainWindow):
         devices_tab = QWidget()
         devices_layout = QVBoxLayout(devices_tab)
         devices_layout.addLayout(identify_buttons)
-        devices_layout.addWidget(self.label_identify_progress)
-        devices_layout.addWidget(self.progress_bar_identify)
         devices_layout.addWidget(
             QLabel(
                 "Double-click to load a device.  "
@@ -194,14 +193,18 @@ class DeviceSettingMainWindow(QMainWindow):
         )
         for field_index, (caption, value_label) in enumerate(info_fields):
             column = field_index * 2
-            monitoring_grid.addWidget(QLabel(caption), 0, column)
+            caption_label = QLabel(caption)
+            caption_label.setObjectName("deviceInfoCaption")
+            monitoring_grid.addWidget(caption_label, 0, column)
             monitoring_grid.addWidget(value_label, 0, column + 1)
-        monitoring_grid.addWidget(QLabel("Name:"), 1, 0)
+        name_caption_label = QLabel("Name:")
+        name_caption_label.setObjectName("deviceInfoCaption")
+        monitoring_grid.addWidget(name_caption_label, 1, 0)
         monitoring_grid.addWidget(self.label_monitoring_device_name, 1, 1, 1, 9)
         monitoring_box = QGroupBox("Device Information")
         monitoring_box.setObjectName("deviceInformationBox")
         monitoring_box.setLayout(monitoring_grid)
-        monitoring_box.setMaximumHeight(82)
+        monitoring_box.setMaximumHeight(92)
 
         self.push_button_reload_settings_tree = QPushButton("Reload")
         self.push_button_reload_settings_tree.setObjectName("secondaryActionButton")
@@ -211,11 +214,9 @@ class DeviceSettingMainWindow(QMainWindow):
         toolbar.addStretch(1)
         toolbar.addWidget(self.label_selected_device)
 
-        self.progress_bar_settings_load = QProgressBar()
-        self.progress_bar_settings_load.setRange(0, 0)
-        self.progress_bar_settings_load.hide()
-        self.label_settings_load_status = QLabel("")
-        self.label_settings_load_status.hide()
+        self.push_button_cancel_settings_load = QPushButton("Cancel Load")
+        self.push_button_cancel_settings_load.setObjectName("dangerActionButton")
+        self.push_button_cancel_settings_load.hide()
 
         # ----- parameters -----
         self.settings_tree_widget = QTreeWidget()
@@ -228,32 +229,45 @@ class DeviceSettingMainWindow(QMainWindow):
         self.settings_tree_widget.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
+        self.line_edit_settings_filter = QLineEdit()
+        self.line_edit_settings_filter.setPlaceholderText(
+            "Type part of a parameter name..."
+        )
+        self.line_edit_settings_filter.setClearButtonEnabled(True)
+        self.line_edit_settings_filter.setEnabled(False)
+        settings_filter_layout = QHBoxLayout()
+        settings_filter_layout.addWidget(QLabel("Search parameters:"))
+        settings_filter_layout.addWidget(self.line_edit_settings_filter, stretch=1)
+        self.push_button_copy_setting_name = QPushButton("Copy Name")
+        self.push_button_copy_setting_name.setObjectName("secondaryActionButton")
+        self.push_button_copy_setting_name.setEnabled(False)
+        settings_filter_layout.addWidget(self.push_button_copy_setting_name)
         parameters_tab = QWidget()
         parameters_layout = QVBoxLayout(parameters_tab)
         parameters_layout.addWidget(
-            QLabel("SETTING R/W — double-click Value, then Enter to execute set-parameter")
+            QLabel(
+                "SETTING R/W — double-click Value, then Enter to execute set-parameter"
+            )
         )
         parameters_layout.addWidget(self.settings_tree_widget, stretch=1)
+        parameters_layout.addLayout(settings_filter_layout)
 
         # ----- periodic monitoring -----
         self.push_button_periodic_monitoring_read = QPushButton("Start Monitoring")
-        self.push_button_periodic_monitoring_read.setObjectName(
-            "primaryActionButton"
-        )
+        self.push_button_periodic_monitoring_read.setObjectName("primaryActionButton")
         self.push_button_periodic_monitoring_read.setCheckable(True)
         self.push_button_periodic_monitoring_read.setChecked(False)
         self.push_button_toggle_all_monitoring_parameters = QPushButton("Select All")
         self.push_button_toggle_all_monitoring_parameters.setEnabled(False)
-        self.label_periodic_monitoring_status = QLabel(
-            "Load a device to list Monitoring parameters."
+        self.label_monitoring_selection_summary = QLabel("0 available · 0 selected")
+        self.label_monitoring_selection_summary.setObjectName(
+            "monitoringSelectionSummary"
         )
         monitoring_controls = QHBoxLayout()
         monitoring_controls.addWidget(self.push_button_periodic_monitoring_read)
-        monitoring_controls.addWidget(
-            self.push_button_toggle_all_monitoring_parameters
-        )
+        monitoring_controls.addWidget(self.push_button_toggle_all_monitoring_parameters)
         monitoring_controls.addStretch(1)
-        monitoring_controls.addWidget(self.label_periodic_monitoring_status)
+        monitoring_controls.addWidget(self.label_monitoring_selection_summary)
 
         self.monitoring_parameters_tree_widget = QTreeWidget()
         self.monitoring_parameters_tree_widget.setColumnCount(5)
@@ -263,6 +277,17 @@ class DeviceSettingMainWindow(QMainWindow):
         self.monitoring_parameters_tree_widget.setAlternatingRowColors(True)
         self.monitoring_parameters_tree_widget.setUniformRowHeights(True)
         self.monitoring_parameters_tree_widget.setRootIsDecorated(True)
+        self.line_edit_monitoring_filter = QLineEdit()
+        self.line_edit_monitoring_filter.setPlaceholderText(
+            "Type part of a Monitoring parameter name..."
+        )
+        self.line_edit_monitoring_filter.setClearButtonEnabled(True)
+        self.line_edit_monitoring_filter.setEnabled(False)
+        monitoring_filter_layout = QHBoxLayout()
+        monitoring_filter_layout.addWidget(QLabel("Search parameters:"))
+        monitoring_filter_layout.addWidget(
+            self.line_edit_monitoring_filter, stretch=1
+        )
         monitoring_tab = QWidget()
         monitoring_layout = QVBoxLayout(monitoring_tab)
         monitoring_layout.addLayout(monitoring_controls)
@@ -273,6 +298,7 @@ class DeviceSettingMainWindow(QMainWindow):
             self.monitoring_parameters_tree_widget,
             stretch=1,
         )
+        monitoring_layout.addLayout(monitoring_filter_layout)
         self.monitoring_tab = monitoring_tab
 
         # ----- profile -----
@@ -283,21 +309,28 @@ class DeviceSettingMainWindow(QMainWindow):
         csv_row.addWidget(self.line_edit_profile_csv_path, stretch=1)
         csv_row.addWidget(self.push_button_browse_profile_csv)
         self.check_box_apply_profile_to_all_similar_device_ids = QCheckBox(
-            "Apply / Verify on all discovered devices with the same DeviceId"
+            "Apply / Verify to all same devices"
+        )
+        self.check_box_apply_profile_to_all_similar_device_ids.setToolTip(
+            "Apply or verify on every compatible discovered device of this type."
         )
         self.push_button_profile_apply = QPushButton("Apply")
         self.push_button_profile_verify = QPushButton("Verify")
         self.push_button_profile_save = QPushButton("Save parameters as profile...")
         self.push_button_clear_profile_log = QPushButton("Clear Log")
+        self.push_button_cancel_profile = QPushButton("Cancel")
         self.push_button_profile_apply.setObjectName("primaryActionButton")
         self.push_button_profile_verify.setObjectName("secondaryActionButton")
         self.push_button_profile_save.setObjectName("secondaryActionButton")
         self.push_button_clear_profile_log.setObjectName("dangerActionButton")
+        self.push_button_cancel_profile.setObjectName("dangerActionButton")
+        self.push_button_cancel_profile.hide()
         profile_buttons = QHBoxLayout()
         profile_buttons.addWidget(self.push_button_profile_apply)
         profile_buttons.addWidget(self.push_button_profile_verify)
         profile_buttons.addWidget(self.push_button_profile_save)
         profile_buttons.addWidget(self.push_button_clear_profile_log)
+        profile_buttons.addWidget(self.push_button_cancel_profile)
         profile_buttons.addStretch(1)
         self.profile_log_text_edit = QTextEdit()
         self.profile_log_text_edit.setObjectName("profileLogText")
@@ -316,14 +349,19 @@ class DeviceSettingMainWindow(QMainWindow):
         self.commands_tree_widget.setColumnCount(3)
         self.commands_tree_widget.setHeaderLabels(["Name", "ModbusAddr", "DataType"])
         self.commands_tree_widget.setUniformRowHeights(True)
+        self.commands_tree_widget.setAlternatingRowColors(True)
+        self.commands_tree_widget.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
         self.push_button_execute_selected_command = QPushButton(
             "Execute selected command"
         )
-        self.push_button_execute_selected_command.setObjectName(
-            "primaryActionButton"
-        )
+        self.push_button_execute_selected_command.setObjectName("primaryActionButton")
         self.check_box_execute_command_on_all_similar_device_ids = QCheckBox(
-            "Execute on all discovered devices with the same DeviceId"
+            "Apply to all same devices"
+        )
+        self.check_box_execute_command_on_all_similar_device_ids.setToolTip(
+            "Execute on every compatible discovered device of this type."
         )
         self.push_button_clear_command_log = QPushButton("Clear Log")
         self.push_button_clear_command_log.setObjectName("dangerActionButton")
@@ -359,8 +397,9 @@ class DeviceSettingMainWindow(QMainWindow):
         center_layout.setContentsMargins(4, 4, 4, 4)
         center_layout.addLayout(toolbar)
         center_layout.addWidget(monitoring_box)
-        center_layout.addWidget(self.progress_bar_settings_load)
-        center_layout.addWidget(self.label_settings_load_status)
+        settings_load_progress_layout = QHBoxLayout()
+        settings_load_progress_layout.addWidget(self.push_button_cancel_settings_load)
+        center_layout.addLayout(settings_load_progress_layout)
         center_layout.addWidget(self.center_tab_widget, stretch=1)
 
         self.status_log_text_edit = QTextEdit()
@@ -410,10 +449,35 @@ class DeviceSettingMainWindow(QMainWindow):
     def _build_status_bar(self) -> None:
         status = self.statusBar()
         status.setSizeGripEnabled(False)
+        self.global_progress_container = QWidget()
+        self.global_progress_container.setObjectName("globalProgressContainer")
+        self.global_progress_container.setFixedSize(380, 34)
+        progress_layout = QGridLayout(self.global_progress_container)
+        progress_layout.setContentsMargins(3, 3, 5, 3)
+        self.progress_bar_global = QProgressBar()
+        self.progress_bar_global.setObjectName("globalOperationProgress")
+        self.progress_bar_global.setRange(0, 100)
+        self.progress_bar_global.setValue(0)
+        self.progress_bar_global.setFormat("")
+        self.progress_bar_global.hide()
+        self.label_global_operation = QLabel("")
+        self.label_global_operation.setObjectName("globalOperationLabel")
+        self.label_global_operation.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label_global_operation.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self.label_global_operation.hide()
+        progress_layout.addWidget(self.progress_bar_global, 0, 0)
+        progress_layout.addWidget(self.label_global_operation, 0, 0)
         self.label_status_connection = QLabel("Modbus Connection")
         self.label_status_identification = QLabel("Identification")
         self.label_status_device_id = QLabel("File DeviceID: None")
         self.label_status_serial_no = QLabel("File SerialNo: None")
+        self.label_status_connection.setFixedWidth(135)
+        self.label_status_identification.setFixedWidth(105)
+        self.label_status_device_id.setFixedWidth(145)
+        self.label_status_serial_no.setFixedWidth(145)
+        status.addWidget(self.global_progress_container)
         for label in (
             self.label_status_connection,
             self.label_status_identification,
@@ -449,9 +513,7 @@ class DeviceSettingMainWindow(QMainWindow):
             item.setForeground(column, QBrush(QColor("#17334f")))
 
     @staticmethod
-    def _style_unconnected_port_item(
-        item: QTreeWidgetItem, column_count: int
-    ) -> None:
+    def _style_unconnected_port_item(item: QTreeWidgetItem, column_count: int) -> None:
         font = item.font(0)
         font.setItalic(True)
         muted_foreground = QBrush(QColor("#8b929b"))
@@ -496,12 +558,8 @@ class DeviceSettingMainWindow(QMainWindow):
         self.cli_console_panel.session_event_received.connect(
             self._on_live_session_event
         )
-        self.cli_console_panel.event_watcher_ready.connect(
-            self._on_event_watcher_ready
-        )
-        self.cli_console_panel.event_watcher_error.connect(
-            self._on_event_watcher_error
-        )
+        self.cli_console_panel.event_watcher_ready.connect(self._on_event_watcher_ready)
+        self.cli_console_panel.event_watcher_error.connect(self._on_event_watcher_error)
         self.cli_console_panel.event_watcher_finished.connect(
             self._on_event_watcher_finished
         )
@@ -511,14 +569,18 @@ class DeviceSettingMainWindow(QMainWindow):
         self.communication_settings_panel.refresh_networks_requested.connect(
             self._refresh_networks
         )
-        self.push_button_connect.clicked.connect(self._on_connect_clicked)
-        self.push_button_disconnect.clicked.connect(self._on_disconnect_clicked)
+        self.push_button_connection_toggle.clicked.connect(
+            self._on_connection_toggle_clicked
+        )
         self.push_button_run_identify.clicked.connect(self._on_identify_clicked)
         self.push_button_cancel_identify.clicked.connect(
             self._on_cancel_identify_clicked
         )
         self.push_button_reload_settings_tree.clicked.connect(
             self._on_reload_settings_clicked
+        )
+        self.push_button_cancel_settings_load.clicked.connect(
+            lambda: self._request_operation_cancel("parameter loading")
         )
         self.devices_topology_tree_widget.itemDoubleClicked.connect(
             self._on_topology_item_double_clicked
@@ -527,6 +589,13 @@ class DeviceSettingMainWindow(QMainWindow):
             self._on_setting_item_double_clicked
         )
         self.settings_tree_widget.itemChanged.connect(self._on_setting_item_changed)
+        self.settings_tree_widget.currentItemChanged.connect(
+            self._on_setting_current_item_changed
+        )
+        self.line_edit_settings_filter.textChanged.connect(self._filter_settings_tree)
+        self.push_button_copy_setting_name.clicked.connect(
+            self._copy_selected_setting_name
+        )
         self.push_button_periodic_monitoring_read.toggled.connect(
             self._on_periodic_monitoring_toggled
         )
@@ -536,9 +605,10 @@ class DeviceSettingMainWindow(QMainWindow):
         self.monitoring_parameters_tree_widget.itemChanged.connect(
             self._on_monitoring_item_changed
         )
-        self.center_tab_widget.currentChanged.connect(
-            self._on_center_tab_changed
+        self.line_edit_monitoring_filter.textChanged.connect(
+            self._filter_monitoring_tree
         )
+        self.center_tab_widget.currentChanged.connect(self._on_center_tab_changed)
         self.push_button_browse_profile_csv.clicked.connect(self._browse_profile)
         self.push_button_profile_apply.clicked.connect(
             lambda: self._run_profile("apply-profile")
@@ -550,8 +620,17 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_clear_profile_log.clicked.connect(
             self.profile_log_text_edit.clear
         )
+        self.push_button_cancel_profile.clicked.connect(
+            lambda: self._request_operation_cancel("profile operation")
+        )
         self.push_button_execute_selected_command.clicked.connect(
             self._execute_selected_device_command
+        )
+        self.commands_tree_widget.itemDoubleClicked.connect(
+            lambda _item, _column: self._execute_selected_device_command()
+        )
+        self.commands_tree_widget.currentItemChanged.connect(
+            self._on_selected_device_command_changed
         )
         self.push_button_clear_command_log.clicked.connect(
             self.commands_log_text_edit.clear
@@ -586,18 +665,125 @@ class DeviceSettingMainWindow(QMainWindow):
             echo_output=report_log,
         )
 
+    def _execute_with_live_progress(
+        self,
+        command_name: str,
+        arguments: list[str] | None = None,
+        callback=None,
+        *,
+        indeterminate: bool = False,
+        operation_label: str | None = None,
+        report_log: bool = True,
+    ) -> bool:
+        """Start the event watcher first, then run one long CLI command."""
+        if self._pending_watched_command is not None:
+            QMessageBox.information(
+                self, "Operation in progress", "Another live operation is starting."
+            )
+            return False
+        arguments = list(arguments or [])
+        label = operation_label or command_name
+        self._pending_watched_command = (
+            command_name,
+            arguments,
+            callback,
+            report_log,
+            label,
+            indeterminate,
+        )
+        self._begin_global_progress(command_name, label, indeterminate=indeterminate)
+        if self.cli_console_panel.start_session_event_watcher(command_name):
+            return True
+        self._pending_watched_command = None
+        self._finish_global_progress(command_name, ok=False, message="Could not start")
+        return False
+
+    def _begin_global_progress(
+        self, command_name: str, message: str, *, indeterminate: bool
+    ) -> None:
+        self._global_progress_generation += 1
+        self._global_progress_command = command_name
+        self._set_global_progress_text(message)
+        self.label_global_operation.show()
+        if indeterminate:
+            self.progress_bar_global.setRange(0, 0)
+        else:
+            self.progress_bar_global.setRange(0, 100)
+            self.progress_bar_global.setValue(0)
+        self.progress_bar_global.setFormat("")
+        self.progress_bar_global.show()
+
+    def _set_global_progress_text(
+        self, message: str, percent: int | None = None
+    ) -> None:
+        text = str(message or "Working...").strip()
+        if percent is not None:
+            text = f"{text} — {percent}%"
+        text = self.label_global_operation.fontMetrics().elidedText(
+            text,
+            Qt.TextElideMode.ElideRight,
+            350,
+        )
+        self.label_global_operation.setText(text)
+
+    def _update_global_progress(
+        self,
+        command_name: str,
+        message: str,
+        *,
+        current: int | None = None,
+        total: int | None = None,
+    ) -> None:
+        if self._global_progress_command != command_name:
+            return
+        if current is None or total is None or total <= 0:
+            self.progress_bar_global.setRange(0, 0)
+            self._set_global_progress_text(message)
+            return
+        percent = max(0, min(100, round(100 * current / total)))
+        self.progress_bar_global.setRange(0, 100)
+        self.progress_bar_global.setFormat("")
+        self.progress_bar_global.setValue(percent)
+        self._set_global_progress_text(message, percent)
+
+    def _finish_global_progress(
+        self, command_name: str, *, ok: bool, message: str | None = None
+    ) -> None:
+        if self._global_progress_command != command_name:
+            return
+        self.progress_bar_global.setRange(0, 100)
+        self.progress_bar_global.setValue(100 if ok else self.progress_bar_global.value())
+        self.progress_bar_global.setFormat("")
+        self._set_global_progress_text(
+            message or (f"{command_name} completed" if ok else f"{command_name} failed"),
+            100 if ok else None,
+        )
+        generation = self._global_progress_generation
+
+        def hide_if_still_current() -> None:
+            if generation != self._global_progress_generation:
+                return
+            self.progress_bar_global.hide()
+            self.label_global_operation.hide()
+            self._global_progress_command = None
+
+        QTimer.singleShot(1800, hide_if_still_current)
+
     def _on_cli_busy_changed(self, busy: bool) -> None:
         self._cli_busy = busy
         self._update_action_states()
         if not busy:
+            if self._pending_device_slave_id is not None:
+                slave_id = self._pending_device_slave_id
+                self._pending_device_slave_id = None
+                QTimer.singleShot(0, lambda: self._select_and_load_device(slave_id))
+                return
             self._schedule_next_monitoring_read()
 
     def _on_session_ready(self, session_name: str) -> None:
         self._session_ready_flag = True
         self._append_log(f"CLI session ready: {session_name}", success=True)
-        self._refresh_serial_ports(
-            lambda _payload, _code: self._refresh_networks()
-        )
+        self._refresh_serial_ports(lambda _payload, _code: self._refresh_networks())
 
     def _on_any_cli_command_completed(
         self, command_text: str, exit_code: int, payload: object
@@ -610,16 +796,21 @@ class DeviceSettingMainWindow(QMainWindow):
             self._identify_running = False
             self._identify_cancel_requested = False
             if exit_code == 0:
-                self.label_identify_progress.setText("Identify finished")
                 self._set_status_segment(
                     self.label_status_identification, _STATUS_OK_COLOR
                 )
             else:
-                self.label_identify_progress.setText("Identify stopped")
                 self._set_status_segment(
                     self.label_status_identification, _STATUS_ERROR_COLOR
                 )
-            self.progress_bar_identify.hide()
+            self._update_action_states()
+        elif completed_command in ("load-settings", "reload-settings"):
+            self._settings_load_running = False
+            self._operation_cancel_requested = False
+            self._update_action_states()
+        elif completed_command in ("apply-profile", "verify-profile", "save-profile"):
+            self._profile_operation_running = False
+            self._operation_cancel_requested = False
             self._update_action_states()
 
         ok = exit_code == 0
@@ -630,11 +821,20 @@ class DeviceSettingMainWindow(QMainWindow):
                 success=ok,
             )
         if not isinstance(payload, dict):
+            if completed_command == self._global_progress_command:
+                self._finish_global_progress(completed_command, ok=ok)
             return
         command = str(payload.get("command") or "")
         data = payload.get("data")
         data = data if isinstance(data, dict) else {}
         error = payload.get("error")
+        if completed_command == self._global_progress_command:
+            if data.get("requires_confirmation"):
+                self.progress_bar_global.hide()
+                self.label_global_operation.hide()
+                self._global_progress_command = None
+            else:
+                self._finish_global_progress(completed_command, ok=ok)
         if command == "cancel":
             cancel_was_sent_to_running_command = bool(data.get("busy"))
             if not ok or not cancel_was_sent_to_running_command:
@@ -661,9 +861,7 @@ class DeviceSettingMainWindow(QMainWindow):
                     if isinstance(port, dict):
                         normalized_ports.append(port)
                     elif isinstance(port, str):
-                        normalized_ports.append(
-                            {"device": port, "description": ""}
-                        )
+                        normalized_ports.append({"device": port, "description": ""})
             self.communication_settings_panel.set_available_serial_ports(
                 normalized_ports
             )
@@ -690,7 +888,9 @@ class DeviceSettingMainWindow(QMainWindow):
             self._settings_loaded = True
             self._selected_slave_id = _optional_int(data.get("slave_id"))
             self._loaded_topology_slave_id = self._selected_slave_id
-            self._refresh_loaded_topology_marker()
+            loaded_item = self._refresh_loaded_topology_marker()
+            if loaded_item is not None:
+                self._animate_loaded_device_item(loaded_item)
             values = data.get("values")
             if isinstance(values, list):
                 self._populate_settings(
@@ -706,9 +906,7 @@ class DeviceSettingMainWindow(QMainWindow):
             self.label_status_device_id.setText(
                 f"File DeviceID: {data.get('device_id', 'None')}"
             )
-            self._set_status_segment(
-                self.label_status_device_id, _STATUS_OK_COLOR
-            )
+            self._set_status_segment(self.label_status_device_id, _STATUS_OK_COLOR)
         elif command == "get-monitoring-header" and ok:
             self._apply_monitoring_data(data)
         elif command == "list-commands" and ok:
@@ -734,7 +932,8 @@ class DeviceSettingMainWindow(QMainWindow):
                 else []
             )
         elif command in ("apply-profile", "verify-profile", "parse-profile"):
-            self._render_profile_result(command, data, ok, error)
+            if not data.get("requires_confirmation"):
+                self._render_profile_result(command, data, ok, error)
         elif command == "save-profile":
             self._append_profile_log(
                 f"{'SAVE OK' if ok else 'SAVE FAILED'}: "
@@ -742,6 +941,13 @@ class DeviceSettingMainWindow(QMainWindow):
                 success=ok,
             )
         elif command == "execute-command":
+            if data.get("requires_confirmation"):
+                self._append_command_log(
+                    str(error or "Confirmation is required before execution."),
+                    success=False,
+                )
+                self._update_action_states()
+                return
             result_lines: list[str] = []
             targets = data.get("targets")
             if isinstance(targets, list):
@@ -755,11 +961,30 @@ class DeviceSettingMainWindow(QMainWindow):
                         self._append_command_log(
                             line, success=bool(target.get("success"))
                         )
+                for target in data.get("incompatible_targets", []):
+                    if isinstance(target, dict):
+                        self._append_command_log(
+                            f"Skipped SlaveId={target.get('slave_id')} "
+                            f"{target.get('name')}: {target.get('reason')}",
+                            success=False,
+                        )
+                success_count = int(data.get("success_count") or 0)
+                failure_count = int(data.get("failure_count") or 0)
+                if failure_count:
+                    dialog_text = (
+                        f"Command succeeded on {success_count} device(s) and failed "
+                        f"on {failure_count} device(s).\n\n"
+                        "See the Command log for details."
+                    )
+                else:
+                    dialog_text = (
+                        f"Command applied successfully to {success_count} device(s)."
+                    )
             else:
                 line = str(data.get("message") or error or "No result")
                 result_lines.append(line)
                 self._append_command_log(line, success=ok)
-            dialog_text = "\n".join(result_lines) or str(error or "No result")
+                dialog_text = "\n".join(result_lines) or str(error or "No result")
             if ok:
                 QMessageBox.information(
                     self,
@@ -792,15 +1017,25 @@ class DeviceSettingMainWindow(QMainWindow):
     def _on_disconnect_clicked(self) -> None:
         self._execute("disconnect")
 
+    def _on_connection_toggle_clicked(self) -> None:
+        if self._connected:
+            self._on_disconnect_clicked()
+        else:
+            self._on_connect_clicked()
+
     def _set_connected_state(self, connected: bool) -> None:
         self._connected = connected
-        self.label_connection_state.setText(
-            "State: Connected" if connected else "State: Disconnected"
+        self.push_button_connection_toggle.setText(
+            "Disconnect" if connected else "Connect"
         )
-        self.push_button_connect.setText("Connected" if connected else "Connect")
-        self.label_connection_state.setStyleSheet(
-            "QLabel { font-weight: 600; "
-            f"color: {'#08751f' if connected else '#a00000'}; }}"
+        self.push_button_connection_toggle.setObjectName(
+            "dangerActionButton" if connected else "primaryActionButton"
+        )
+        self.push_button_connection_toggle.style().unpolish(
+            self.push_button_connection_toggle
+        )
+        self.push_button_connection_toggle.style().polish(
+            self.push_button_connection_toggle
         )
         self._set_status_segment(
             self.label_status_connection,
@@ -819,8 +1054,7 @@ class DeviceSettingMainWindow(QMainWindow):
 
     def _update_action_states(self) -> None:
         ready = self._session_ready_flag and not self._cli_busy
-        self.push_button_connect.setEnabled(ready and not self._connected)
-        self.push_button_disconnect.setEnabled(ready and self._connected)
+        self.push_button_connection_toggle.setEnabled(ready)
         self.push_button_run_identify.setEnabled(
             ready and self._connected and not self._identify_running
         )
@@ -835,12 +1069,28 @@ class DeviceSettingMainWindow(QMainWindow):
             if self._identify_running and self._identify_cancel_requested
             else "Cancel Identify"
         )
+        self.push_button_cancel_identify.setVisible(self._identify_running)
+        self.push_button_cancel_settings_load.setVisible(self._settings_load_running)
+        self.push_button_cancel_settings_load.setEnabled(
+            self._settings_load_running and not self._operation_cancel_requested
+        )
+        self.push_button_cancel_profile.setVisible(self._profile_operation_running)
+        self.push_button_cancel_profile.setEnabled(
+            self._profile_operation_running and not self._operation_cancel_requested
+        )
         self.push_button_reload_settings_tree.setEnabled(ready and self._connected)
+        self.line_edit_settings_filter.setEnabled(self._settings_loaded)
+        current_setting_item = self.settings_tree_widget.currentItem()
+        self.push_button_copy_setting_name.setEnabled(
+            self._settings_loaded
+            and current_setting_item is not None
+            and current_setting_item.data(0, _ROLE_KIND) == "setting"
+        )
         self.communication_settings_panel.setEnabled(ready and not self._connected)
         profile_ready = ready and self._connected and self._settings_loaded
         self.push_button_profile_apply.setEnabled(profile_ready)
         self.push_button_profile_verify.setEnabled(profile_ready)
-        self.push_button_profile_save.setEnabled(ready and self._connected)
+        self.push_button_profile_save.setEnabled(profile_ready)
         self.push_button_execute_selected_command.setEnabled(
             profile_ready and self.commands_tree_widget.topLevelItemCount() > 0
         )
@@ -857,11 +1107,15 @@ class DeviceSettingMainWindow(QMainWindow):
             and self._monitoring_device_ready
             and bool(self._monitoring_items_by_parameter_id)
         )
+        self.line_edit_monitoring_filter.setEnabled(
+            self._settings_loaded and self._monitoring_device_ready
+        )
 
     def _clear_loaded_device_state(self) -> None:
         self._settings_loaded = False
         self._selected_slave_id = None
         self._loaded_topology_slave_id = None
+        self._loaded_profile_tag1_categories.clear()
         self.settings_tree_widget.clear()
         self.commands_tree_widget.clear()
         self._clear_monitoring_parameter_table()
@@ -876,63 +1130,86 @@ class DeviceSettingMainWindow(QMainWindow):
         self._live_identify_items.clear()
         self._live_identify_port_items.clear()
         self._clear_loaded_device_state()
-        self._set_status_segment(
-            self.label_status_identification, _STATUS_BUSY_COLOR
-        )
+        self._set_status_segment(self.label_status_identification, _STATUS_BUSY_COLOR)
         self._identify_running = True
         self._identify_cancel_requested = False
-        self.label_identify_progress.setText("Preparing live Identify events...")
-        self.progress_bar_identify.show()
         self._update_action_states()
-        try:
-            visible = self.cli_console_panel.build_session_command(
-                "watch-events",
-                "--command",
-                "identify",
-                "--json-lines",
-            )
-        except ValueError as exc:
+        if not self._execute_with_live_progress(
+            "identify",
+            indeterminate=True,
+            operation_label="Preparing Identify...",
+        ):
             self._identify_running = False
-            self.progress_bar_identify.hide()
-            self._update_action_states()
-            QMessageBox.warning(self, "Identify", str(exc))
-            return
-        self._append_log(f"> {visible}")
-        if not self.cli_console_panel.start_session_event_watcher("identify"):
-            self._identify_running = False
-            self.label_identify_progress.setText("Could not start live events")
-            self.progress_bar_identify.hide()
             self._update_action_states()
 
     def _on_event_watcher_ready(self, command_name: str) -> None:
-        if command_name != "identify" or not self._identify_running:
+        pending = self._pending_watched_command
+        if pending is None or pending[0] != command_name:
             return
-        self.label_identify_progress.setText("Starting Identify...")
-        if not self._execute("identify"):
+        (
+            _command_name,
+            arguments,
+            callback,
+            report_log,
+            operation_label,
+            _indeterminate,
+        ) = pending
+        self._pending_watched_command = None
+        self._set_global_progress_text(operation_label)
+        if command_name == "identify":
+            self._update_global_progress("identify", "Identify starting")
+        if not self._execute(
+            command_name,
+            arguments,
+            callback,
+            report_log=report_log,
+        ):
             self.cli_console_panel.stop_session_event_watcher()
-            self._identify_running = False
-            self.label_identify_progress.setText("Identify could not start")
-            self.progress_bar_identify.hide()
+            self._finish_global_progress(
+                command_name, ok=False, message=f"{operation_label} could not start"
+            )
+            if command_name == "identify":
+                self._identify_running = False
+            elif command_name in ("load-settings", "reload-settings"):
+                self._settings_load_running = False
+            elif command_name in (
+                "apply-profile",
+                "verify-profile",
+                "save-profile",
+            ):
+                self._profile_operation_running = False
             self._update_action_states()
 
-    def _on_event_watcher_finished(
-        self, command_name: str, exit_code: int
-    ) -> None:
-        if command_name != "identify":
-            return
+    def _on_event_watcher_finished(self, command_name: str, exit_code: int) -> None:
+        pending = self._pending_watched_command
+        if pending is not None and pending[0] == command_name:
+            self._pending_watched_command = None
+            self._finish_global_progress(
+                command_name, ok=False, message="Live progress could not start"
+            )
+            if command_name == "identify":
+                self._identify_running = False
+            elif command_name in ("load-settings", "reload-settings"):
+                self._settings_load_running = False
+            elif command_name in (
+                "apply-profile",
+                "verify-profile",
+                "save-profile",
+            ):
+                self._profile_operation_running = False
+            self._update_action_states()
         if exit_code != 0:
             self._append_log(
-                f"Live Identify events stopped with exit code {exit_code}.",
+                f"Live {command_name} events stopped with exit code {exit_code}.",
                 success=False,
             )
-            self._set_status_segment(
-                self.label_status_identification, _STATUS_ERROR_COLOR
-            )
-        if self._identify_running and not self._cli_busy:
+            if command_name == "identify":
+                self._set_status_segment(
+                    self.label_status_identification, _STATUS_ERROR_COLOR
+                )
+        if command_name == "identify" and self._identify_running and not self._cli_busy:
             self._identify_running = False
             self._identify_cancel_requested = False
-            self.label_identify_progress.setText("Live event watcher stopped")
-            self.progress_bar_identify.hide()
             self._update_action_states()
 
     def _on_event_watcher_error(self, message: str) -> None:
@@ -946,12 +1223,22 @@ class DeviceSettingMainWindow(QMainWindow):
         data = event.get("data")
         data = data if isinstance(data, dict) else {}
 
+        if event_type == "operation_progress":
+            operation = str(data.get("operation") or "")
+            self._update_global_progress(
+                operation,
+                message,
+                current=_optional_int(data.get("current")),
+                total=_optional_int(data.get("total")),
+            )
+
         # Low-level Modbus steps remain visible in the CLI tab. The right-hand
         # panel is deliberately limited to information useful to an operator.
         if message and event_type not in (
             "log",
             "command_started",
             "command_finished",
+            "operation_progress",
             "port_scanning",
             "empty_port",
         ):
@@ -970,45 +1257,45 @@ class DeviceSettingMainWindow(QMainWindow):
             self._append_log(message, success=success)
 
         if event_type == "identify_started":
-            self.label_identify_progress.setText("Identify is running...")
+            self._update_global_progress("identify", "Identify running")
             self._set_status_segment(
                 self.label_status_identification, _STATUS_BUSY_COLOR
             )
         elif event_type == "port_scanning":
-            self.label_identify_progress.setText(message)
+            self._update_global_progress(
+                "identify", f"Identify: port {data.get('port_index', '?')}"
+            )
         elif event_type == "device_discovered":
-            self.label_identify_progress.setText(message)
+            self._update_global_progress(
+                "identify", f"Found: {data.get('device_name', 'device')}"
+            )
             self._add_live_identified_device(data)
         elif event_type == "empty_port":
+            self._update_global_progress(
+                "identify", f"Empty port: {data.get('port_index', '?')}"
+            )
             self._mark_live_empty_port(data)
         elif event_type == "cancel_requested":
-            self.label_identify_progress.setText(
-                "Cancelling Identify and restoring routing..."
+            self._update_global_progress(
+                "identify", "Cancelling Identify..."
             )
         elif event_type == "identify_cancelled":
-            self.label_identify_progress.setText("Identify cancelled")
             self._set_status_segment(
                 self.label_status_identification, _STATUS_CANCELLED_COLOR
             )
         elif event_type == "identify_failed":
-            self.label_identify_progress.setText("Identify failed")
             self._set_status_segment(
                 self.label_status_identification, _STATUS_ERROR_COLOR
             )
         elif event_type == "identify_finished":
-            self.label_identify_progress.setText(message)
-            self._set_status_segment(
-                self.label_status_identification, _STATUS_OK_COLOR
-            )
+            self._set_status_segment(self.label_status_identification, _STATUS_OK_COLOR)
 
     def _add_live_identified_device(self, data: dict[str, Any]) -> None:
         slave_id = _optional_int(data.get("slave_id"))
         if slave_id is None or slave_id in self._live_identify_items:
             return
         device_name = str(data.get("device_name") or "(unknown)")
-        parameter_list_available = (
-            data.get("parameter_list_available") is not False
-        )
+        parameter_list_available = data.get("parameter_list_available") is not False
         port_index = _optional_int(data.get("port_index"))
         parent_slave_id = _optional_int(data.get("parent_slave_id"))
         label = (
@@ -1070,13 +1357,11 @@ class DeviceSettingMainWindow(QMainWindow):
         port_key = (hub_slave_id, port_index)
         item = self._live_identify_port_items.get(port_key)
         if item is None:
-            item = QTreeWidgetItem(
-                [f"port[{port_index}]: (connection not established)"]
-            )
+            item = QTreeWidgetItem([f"port[{port_index}]:"])
             self._live_identify_port_items[port_key] = item
             parent_item.addChild(item)
         else:
-            item.setText(0, f"port[{port_index}]: (connection not established)")
+            item.setText(0, f"port[{port_index}]:")
 
         self._style_unconnected_port_item(
             item, self.devices_topology_tree_widget.columnCount()
@@ -1106,9 +1391,7 @@ class DeviceSettingMainWindow(QMainWindow):
                 round(255 + (42 - 255) * progress),
             )
             try:
-                for column in range(
-                    self.devices_topology_tree_widget.columnCount()
-                ):
+                for column in range(self.devices_topology_tree_widget.columnCount()):
                     item.setBackground(column, QBrush(background_color))
                     item.setForeground(column, QBrush(foreground_color))
             except RuntimeError:
@@ -1116,9 +1399,7 @@ class DeviceSettingMainWindow(QMainWindow):
 
         def finish_row() -> None:
             try:
-                for column in range(
-                    self.devices_topology_tree_widget.columnCount()
-                ):
+                for column in range(self.devices_topology_tree_widget.columnCount()):
                     item.setBackground(column, QBrush())
                     item.setForeground(column, QBrush())
             except RuntimeError:
@@ -1145,7 +1426,23 @@ class DeviceSettingMainWindow(QMainWindow):
         self._append_log(f"> {visible}")
         if self.cli_console_panel.request_session_cancel():
             self._identify_cancel_requested = True
-            self.label_identify_progress.setText("Requesting cancellation...")
+            self._update_global_progress("identify", "Cancelling Identify...")
+            self._update_action_states()
+
+    def _request_operation_cancel(self, operation_label: str) -> None:
+        if self._operation_cancel_requested:
+            return
+        if self.cli_console_panel.request_session_cancel():
+            self._operation_cancel_requested = True
+            if self._settings_load_running:
+                self._update_global_progress(
+                    self._global_progress_command or "load-settings",
+                    "Cancelling parameter loading...",
+                )
+            if self._profile_operation_running:
+                self._append_profile_log(
+                    f"Cancelling {operation_label}...", success=False
+                )
             self._update_action_states()
 
     def _populate_topology(self, root: dict[str, Any]) -> None:
@@ -1156,9 +1453,7 @@ class DeviceSettingMainWindow(QMainWindow):
 
         def make_device_item(node: dict[str, Any], label: str | None = None):
             name = str(node.get("device_name") or f"DeviceId={node.get('device_id')}")
-            parameter_list_available = (
-                node.get("parameter_list_available") is not False
-            )
+            parameter_list_available = node.get("parameter_list_available") is not False
             display_label = label or name
             if not parameter_list_available:
                 display_label += " (parameter list unavailable)"
@@ -1180,16 +1475,13 @@ class DeviceSettingMainWindow(QMainWindow):
                 child = port.get("device")
                 if port.get("connected") and isinstance(child, dict):
                     child_name = str(
-                        child.get("device_name")
-                        or f"DeviceId={child.get('device_id')}"
+                        child.get("device_name") or f"DeviceId={child.get('device_id')}"
                     )
                     item.addChild(
                         make_device_item(child, f"port[{port_index}]: {child_name}")
                     )
                 else:
-                    empty_port_item = QTreeWidgetItem(
-                        [f"port[{port_index}]: (connection not established)"]
-                    )
+                    empty_port_item = QTreeWidgetItem([f"port[{port_index}]:"])
                     self._style_unconnected_port_item(
                         empty_port_item,
                         self.devices_topology_tree_widget.columnCount(),
@@ -1210,12 +1502,14 @@ class DeviceSettingMainWindow(QMainWindow):
         for column in range(5):
             self.devices_topology_tree_widget.resizeColumnToContents(column)
 
-    def _refresh_loaded_topology_marker(self) -> None:
+    def _refresh_loaded_topology_marker(self) -> QTreeWidgetItem | None:
         """Keep the loaded device visually distinct from the clicked row."""
         tree = self.devices_topology_tree_widget
         iterator = tree.invisibleRootItem()
+        active_item: QTreeWidgetItem | None = None
 
         def update_children(parent: QTreeWidgetItem) -> None:
+            nonlocal active_item
             for index in range(parent.childCount()):
                 item = parent.child(index)
                 node = item.data(0, _ROLE_NODE)
@@ -1226,9 +1520,7 @@ class DeviceSettingMainWindow(QMainWindow):
                         self._style_missing_parameter_list_item(
                             item,
                             tree.columnCount(),
-                            parameter_list_version=node.get(
-                                "parameter_list_version"
-                            ),
+                            parameter_list_version=node.get("parameter_list_version"),
                             error=node.get("parameter_list_error"),
                         )
                         update_children(item)
@@ -1237,6 +1529,8 @@ class DeviceSettingMainWindow(QMainWindow):
                         _optional_int(node.get("slave_id"))
                         == self._loaded_topology_slave_id
                     )
+                    if active:
+                        active_item = item
                     item.setText(0, f"● {base_label}" if active else base_label)
                     font = item.font(0)
                     font.setBold(active)
@@ -1253,12 +1547,51 @@ class DeviceSettingMainWindow(QMainWindow):
                 update_children(item)
 
         update_children(iterator)
+        return active_item
+
+    def _animate_loaded_device_item(self, item: QTreeWidgetItem) -> None:
+        """Briefly highlight the device whose data has just been loaded."""
+        animation = QVariantAnimation(self)
+        animation.setDuration(650)
+        animation.setStartValue(QColor("#8fc5eb"))
+        animation.setEndValue(QColor("#d7f0d0"))
+        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._device_discovery_animations.add(animation)
+
+        def update_row(background_color: QColor) -> None:
+            try:
+                for column in range(self.devices_topology_tree_widget.columnCount()):
+                    item.setBackground(column, QBrush(background_color))
+                    item.setForeground(column, QBrush(QColor("#153d20")))
+            except RuntimeError:
+                animation.stop()
+
+        def finish_row() -> None:
+            try:
+                for column in range(self.devices_topology_tree_widget.columnCount()):
+                    item.setBackground(column, QBrush(QColor("#d7f0d0")))
+                    item.setForeground(column, QBrush(QColor("#153d20")))
+            except RuntimeError:
+                pass
+            self._device_discovery_animations.discard(animation)
+            animation.deleteLater()
+
+        animation.valueChanged.connect(update_row)
+        animation.finished.connect(finish_row)
+        animation.start()
 
     def _on_topology_item_double_clicked(
         self, item: QTreeWidgetItem, _column: int
     ) -> None:
         node = item.data(0, _ROLE_NODE)
         if not isinstance(node, dict):
+            return
+        if not self._connected:
+            QMessageBox.warning(
+                self,
+                "Device is disconnected",
+                "Connect to the device network before loading this device.",
+            )
             return
         if node.get("parameter_list_available") is False:
             QMessageBox.warning(
@@ -1277,34 +1610,58 @@ class DeviceSettingMainWindow(QMainWindow):
         if slave_id is None:
             return
 
+        self._stop_periodic_monitoring("Monitoring stopped for device change.")
+        if self._cli_busy:
+            self._pending_device_slave_id = slave_id
+            self._append_log(
+                f"Waiting for the current read before loading SlaveId={slave_id}."
+            )
+            return
+        self._select_and_load_device(slave_id)
+
+    def _select_and_load_device(self, slave_id: int) -> None:
+        if not self._connected:
+            QMessageBox.warning(
+                self,
+                "Device is disconnected",
+                "Connect to the device network before loading this device.",
+            )
+            return
+
         def after_select(_payload, exit_code: int) -> None:
             if exit_code == 0:
-                self.center_tab_widget.setCurrentIndex(0)
                 self._load_settings(slave_id=slave_id)
 
-        self._execute(
-            "select-device", ["--slave-id", str(slave_id)], after_select
-        )
+        self._execute("select-device", ["--slave-id", str(slave_id)], after_select)
 
     # ----- settings -----
 
     def _on_reload_settings_clicked(self) -> None:
         self._load_settings(reload=True)
 
-    def _load_settings(self, *, slave_id: int | None = None, reload: bool = False) -> None:
+    def _load_settings(
+        self, *, slave_id: int | None = None, reload: bool = False
+    ) -> None:
         command = "reload-settings" if reload else "load-settings"
+        if (
+            slave_id is not None
+            and self._loaded_topology_slave_id is not None
+            and slave_id != self._loaded_topology_slave_id
+        ):
+            self._monitoring_selected_parameter_ids.clear()
         arguments = ["--dump-values"]
         if slave_id is not None:
             arguments.extend(["--slave-id", str(slave_id)])
-        self.progress_bar_settings_load.show()
-        self.label_settings_load_status.setText("Running load-settings through CLI...")
-        self.label_settings_load_status.show()
+        self._settings_load_running = True
+        self._operation_cancel_requested = False
+        self._update_action_states()
         self._stop_periodic_monitoring("Monitoring stopped for device load.")
         self._clear_monitoring_parameter_table()
 
         def after_load(_payload, exit_code: int) -> None:
-            self.progress_bar_settings_load.hide()
-            self.label_settings_load_status.hide()
+            self._settings_load_running = False
+            self._operation_cancel_requested = False
+            self._update_action_states()
             if exit_code != 0:
                 return
 
@@ -1324,12 +1681,28 @@ class DeviceSettingMainWindow(QMainWindow):
             )
             self._execute("get-monitoring-header", header_args, after_header)
 
-        self._execute(command, arguments, after_load)
+        if not self._execute_with_live_progress(
+            command,
+            arguments,
+            after_load,
+            operation_label="Loading device settings...",
+        ):
+            self._settings_load_running = False
+            self._operation_cancel_requested = False
+            self._update_action_states()
 
     def _populate_settings(self, values: list[dict[str, Any]]) -> None:
         self._suppress_setting_change = True
         try:
             self.settings_tree_widget.clear()
+            self._loaded_profile_tag1_categories = sorted(
+                {
+                    str(value.get("tag1") or "")
+                    for value in values
+                    if isinstance(value, dict)
+                },
+                key=lambda value: (not value, value.casefold()),
+            )
             categories: dict[str, QTreeWidgetItem] = {}
             branches: dict[tuple[str, tuple[str, ...]], QTreeWidgetItem] = {}
             for value in values:
@@ -1390,8 +1763,52 @@ class DeviceSettingMainWindow(QMainWindow):
             self.settings_tree_widget.setColumnWidth(0, 420)
             self.settings_tree_widget.setColumnWidth(1, 160)
             self.settings_tree_widget.setColumnWidth(2, 75)
+            self._filter_settings_tree(self.line_edit_settings_filter.text())
         finally:
             self._suppress_setting_change = False
+
+    def _filter_settings_tree(self, filter_text: str) -> None:
+        """Show setting leaves whose complete parameter name contains the text."""
+        query = str(filter_text or "").strip().casefold()
+
+        def update_item_visibility(item: QTreeWidgetItem) -> bool:
+            if item.data(0, _ROLE_KIND) == "setting":
+                parameter_name = str(item.data(0, _ROLE_NAME) or item.text(0) or "")
+                visible = not query or query in parameter_name.casefold()
+            else:
+                visible = False
+                for index in range(item.childCount()):
+                    if update_item_visibility(item.child(index)):
+                        visible = True
+
+            item.setHidden(not visible)
+            if query and visible and item.data(0, _ROLE_KIND) != "setting":
+                item.setExpanded(True)
+            return visible
+
+        for index in range(self.settings_tree_widget.topLevelItemCount()):
+            update_item_visibility(self.settings_tree_widget.topLevelItem(index))
+
+    def _on_setting_current_item_changed(
+        self,
+        current: QTreeWidgetItem | None,
+        _previous: QTreeWidgetItem | None,
+    ) -> None:
+        self.push_button_copy_setting_name.setEnabled(
+            self._settings_loaded
+            and current is not None
+            and current.data(0, _ROLE_KIND) == "setting"
+        )
+
+    def _copy_selected_setting_name(self) -> None:
+        item = self.settings_tree_widget.currentItem()
+        if item is None or item.data(0, _ROLE_KIND) != "setting":
+            return
+        name = str(item.data(0, _ROLE_NAME) or "").strip()
+        if not name:
+            return
+        QGuiApplication.clipboard().setText(name)
+        self._append_log(f"Copied parameter name: {name}", success=True)
 
     def _on_setting_item_double_clicked(
         self, item: QTreeWidgetItem, column: int
@@ -1404,9 +1821,7 @@ class DeviceSettingMainWindow(QMainWindow):
         ):
             self.settings_tree_widget.editItem(item, 1)
 
-    def _on_setting_item_changed(
-        self, item: QTreeWidgetItem, column: int
-    ) -> None:
+    def _on_setting_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
         if self._suppress_setting_change or column != 1:
             return
         if item.data(0, _ROLE_KIND) != "setting":
@@ -1431,7 +1846,11 @@ class DeviceSettingMainWindow(QMainWindow):
                 QMessageBox.warning(
                     self,
                     "set-parameter failed",
-                    str(payload.get("error") if isinstance(payload, dict) else "No result"),
+                    str(
+                        payload.get("error")
+                        if isinstance(payload, dict)
+                        else "No result"
+                    ),
                 )
                 return
             data = payload.get("data")
@@ -1496,14 +1915,10 @@ class DeviceSettingMainWindow(QMainWindow):
             self._monitoring_items_by_parameter_id.clear()
         finally:
             self._suppress_monitoring_item_change = False
-        self.label_periodic_monitoring_status.setText(
-            "Load a device to list Monitoring parameters."
-        )
+        self._update_monitoring_selection_summary()
         self._update_monitoring_selection_button()
 
-    def _populate_monitoring_parameters(
-        self, parameters: list[dict[str, Any]]
-    ) -> None:
+    def _populate_monitoring_parameters(self, parameters: list[dict[str, Any]]) -> None:
         tree = self.monitoring_parameters_tree_widget
         updates_were_enabled = tree.updatesEnabled()
         tree.setUpdatesEnabled(False)
@@ -1522,6 +1937,7 @@ class DeviceSettingMainWindow(QMainWindow):
                 category_item = categories.get(category)
                 if category_item is None:
                     category_item = QTreeWidgetItem([category])
+                    category_item.setData(0, _ROLE_KIND, "monitoring_category")
                     self._style_tree_group_item(category_item, tree.columnCount())
                     categories[category] = category_item
                     tree.addTopLevelItem(category_item)
@@ -1544,6 +1960,7 @@ class DeviceSettingMainWindow(QMainWindow):
                     branch = branches.get(key)
                     if branch is None:
                         branch = QTreeWidgetItem([segment])
+                        branch.setData(0, _ROLE_KIND, "monitoring_branch")
                         branches[key] = branch
                         parent.addChild(branch)
                     parent = branch
@@ -1564,11 +1981,15 @@ class DeviceSettingMainWindow(QMainWindow):
                     | Qt.ItemFlag.ItemIsSelectable
                 )
                 item.setData(0, _ROLE_PARAMETER_ID, parameter_id)
+                item.setData(0, _ROLE_KIND, "monitoring_parameter")
+                item.setData(0, _ROLE_NAME, name)
                 item.setCheckState(
                     1,
-                    Qt.CheckState.Checked
-                    if parameter_id in self._monitoring_selected_parameter_ids
-                    else Qt.CheckState.Unchecked,
+                    (
+                        Qt.CheckState.Checked
+                        if parameter_id in self._monitoring_selected_parameter_ids
+                        else Qt.CheckState.Unchecked
+                    ),
                 )
                 description = str(parameter.get("description") or "").strip()
                 if description:
@@ -1581,10 +2002,6 @@ class DeviceSettingMainWindow(QMainWindow):
 
         self._monitoring_device_ready = True
         self._monitoring_next_parameter_index = 0
-        count = len(self._monitoring_items_by_parameter_id)
-        self.label_periodic_monitoring_status.setText(
-            f"{count} Monitoring parameter(s) available."
-        )
         self.monitoring_parameters_tree_widget.expandToDepth(0)
         self.monitoring_parameters_tree_widget.setColumnWidth(0, 360)
         self.monitoring_parameters_tree_widget.setColumnWidth(1, 55)
@@ -1592,13 +2009,14 @@ class DeviceSettingMainWindow(QMainWindow):
         self.monitoring_parameters_tree_widget.setColumnWidth(3, 80)
         self.monitoring_parameters_tree_widget.setColumnWidth(4, 90)
         self._refresh_monitoring_row_visuals()
+        self._refresh_monitoring_branch_visuals()
+        self._filter_monitoring_tree(self.line_edit_monitoring_filter.text())
+        self._update_monitoring_selection_summary()
         self._update_monitoring_selection_button()
         self._update_action_states()
         self._schedule_next_monitoring_read()
 
-    def _on_monitoring_item_changed(
-        self, item: QTreeWidgetItem, column: int
-    ) -> None:
+    def _on_monitoring_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
         if self._suppress_monitoring_item_change or column != 1:
             return
         parameter_id = _optional_int(item.data(0, _ROLE_PARAMETER_ID))
@@ -1617,6 +2035,8 @@ class DeviceSettingMainWindow(QMainWindow):
                 tree.blockSignals(signals_were_blocked)
         self._monitoring_next_parameter_index = 0
         self._refresh_monitoring_row_visuals()
+        self._refresh_monitoring_branch_visuals()
+        self._update_monitoring_selection_summary()
         self._update_monitoring_selection_button()
         self._schedule_next_monitoring_read()
 
@@ -1657,6 +2077,8 @@ class DeviceSettingMainWindow(QMainWindow):
 
         self._monitoring_next_parameter_index = 0
         self._refresh_monitoring_row_visuals()
+        self._refresh_monitoring_branch_visuals()
+        self._update_monitoring_selection_summary()
         self._update_monitoring_selection_button()
         self._schedule_next_monitoring_read()
 
@@ -1669,24 +2091,75 @@ class DeviceSettingMainWindow(QMainWindow):
             "Clear All" if any_selected else "Select All"
         )
 
+    def _update_monitoring_selection_summary(self) -> None:
+        available_count = len(self._monitoring_items_by_parameter_id)
+        selected_count = sum(
+            item.checkState(1) == Qt.CheckState.Checked
+            for item in self._monitoring_items_by_parameter_id.values()
+        )
+        self.label_monitoring_selection_summary.setText(
+            f"{available_count} available · {selected_count} selected"
+        )
+
+    def _filter_monitoring_tree(self, filter_text: str) -> None:
+        """Show Monitoring leaves whose complete parameter name matches."""
+        query = str(filter_text or "").strip().casefold()
+
+        def update_item_visibility(item: QTreeWidgetItem) -> bool:
+            if item.data(0, _ROLE_KIND) == "monitoring_parameter":
+                parameter_name = str(item.data(0, _ROLE_NAME) or item.text(0) or "")
+                visible = not query or query in parameter_name.casefold()
+            else:
+                visible = False
+                for child_index in range(item.childCount()):
+                    if update_item_visibility(item.child(child_index)):
+                        visible = True
+            item.setHidden(not visible)
+            if query and visible and item.childCount() > 0:
+                item.setExpanded(True)
+            return visible
+
+        tree = self.monitoring_parameters_tree_widget
+        for index in range(tree.topLevelItemCount()):
+            update_item_visibility(tree.topLevelItem(index))
+
+    def _refresh_monitoring_branch_visuals(self) -> None:
+        """Keep a structure muted until at least one descendant is selected."""
+        tree = self.monitoring_parameters_tree_widget
+
+        def update_branch(item: QTreeWidgetItem) -> bool:
+            if item.data(0, _ROLE_KIND) == "monitoring_parameter":
+                return item.checkState(1) == Qt.CheckState.Checked
+
+            has_selected_descendant = False
+            for index in range(item.childCount()):
+                child_selected = update_branch(item.child(index))
+                has_selected_descendant = has_selected_descendant or child_selected
+            if item.data(0, _ROLE_KIND) == "monitoring_branch":
+                foreground = QBrush(
+                    QColor("#24313d" if has_selected_descendant else "#969da6")
+                )
+                font = item.font(0)
+                font.setBold(has_selected_descendant)
+                for column in range(tree.columnCount()):
+                    item.setForeground(column, foreground)
+                    item.setFont(column, font)
+            return has_selected_descendant
+
+        for index in range(tree.topLevelItemCount()):
+            update_branch(tree.topLevelItem(index))
+
     def _on_periodic_monitoring_toggled(self, enabled: bool) -> None:
         if enabled:
             self.push_button_periodic_monitoring_read.setText("Stop Monitoring")
-            self.label_periodic_monitoring_status.setText(
-                "Monitoring started; select parameters to read."
-            )
             self._schedule_next_monitoring_read()
         else:
             self.push_button_periodic_monitoring_read.setText("Start Monitoring")
-            self.label_periodic_monitoring_status.setText(
-                "Monitoring is stopped."
-            )
 
-    def _stop_periodic_monitoring(self, status_message: str) -> None:
+    def _stop_periodic_monitoring(self, _status_message: str) -> None:
         if self.push_button_periodic_monitoring_read.isChecked():
             self.push_button_periodic_monitoring_read.setChecked(False)
         self._monitoring_read_scheduled = False
-        self.label_periodic_monitoring_status.setText(status_message)
 
     def _on_center_tab_changed(self, _index: int) -> None:
         if self.center_tab_widget.currentWidget() is self.monitoring_tab:
@@ -1737,9 +2210,6 @@ class DeviceSettingMainWindow(QMainWindow):
             if item.checkState(1) == Qt.CheckState.Checked
         ]
         if not parameter_ids:
-            self.label_periodic_monitoring_status.setText(
-                "Select at least one Monitoring parameter."
-            )
             return
 
         if self._monitoring_next_parameter_index >= len(parameter_ids):
@@ -1761,10 +2231,6 @@ class DeviceSettingMainWindow(QMainWindow):
             arguments.extend(["--slave-id", str(self._selected_slave_id)])
 
         self._monitoring_read_in_flight = True
-        self.label_periodic_monitoring_status.setText(
-            f"Reading selected parameters {batch_start_index + 1}–"
-            f"{batch_end_index} of {len(parameter_ids)}..."
-        )
 
         def after_read(payload, exit_code: int) -> None:
             self._monitoring_read_in_flight = False
@@ -1774,9 +2240,7 @@ class DeviceSettingMainWindow(QMainWindow):
                     if isinstance(payload, dict)
                     else "No response from read-monitoring."
                 )
-                self.label_periodic_monitoring_status.setText(
-                    f"Monitoring read failed: {error}"
-                )
+                self._append_log(f"Monitoring read failed: {error}", success=False)
             self._schedule_next_monitoring_read()
 
         if not self._execute(
@@ -1820,9 +2284,11 @@ class DeviceSettingMainWindow(QMainWindow):
         finally:
             tree.blockSignals(signals_were_blocked)
 
-        self.label_periodic_monitoring_status.setText(
-            f"Last batch: {success_count} read, {error_count} failed."
-        )
+        if error_count:
+            self._append_log(
+                f"Monitoring batch: {success_count} read, {error_count} failed.",
+                success=False,
+            )
         self._refresh_monitoring_row_visuals()
 
     def _on_monitoring_visual_timer(self) -> None:
@@ -1845,17 +2311,16 @@ class DeviceSettingMainWindow(QMainWindow):
                     else None
                 )
                 stale = (
-                    age_seconds is None
-                    or age_seconds > _MONITORING_STALE_AFTER_SECONDS
+                    age_seconds is None or age_seconds > _MONITORING_STALE_AFTER_SECONDS
                 )
                 highlight_until = item.data(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL)
-                highlighted = (
-                    highlight_until is not None and now < float(highlight_until)
+                highlighted = highlight_until is not None and now < float(
+                    highlight_until
                 )
                 if highlight_until is not None and not highlighted:
                     item.setData(0, _ROLE_CHANGE_HIGHLIGHT_UNTIL, None)
 
-                visual_state = (stale, highlighted)
+                visual_state = (selected, stale, highlighted)
                 if item.data(0, _ROLE_MONITORING_VISUAL_STATE) != visual_state:
                     item.setData(0, _ROLE_MONITORING_VISUAL_STATE, visual_state)
                     if stale:
@@ -1867,9 +2332,12 @@ class DeviceSettingMainWindow(QMainWindow):
                         foreground = QBrush(QColor("#12351f"))
                         background = QBrush(QColor("#a9dfb2"))
                     else:
-                        foreground = QBrush()
+                        foreground = QBrush(QColor("#24313d"))
                         background = QBrush()
+                    font = item.font(0)
+                    font.setBold(selected)
                     for column in range(tree.columnCount()):
+                        item.setFont(column, font)
                         item.setForeground(column, foreground)
                         item.setBackground(column, background)
         finally:
@@ -1900,7 +2368,9 @@ class DeviceSettingMainWindow(QMainWindow):
         if path:
             self.line_edit_profile_csv_path.setText(path)
 
-    def _run_profile(self, command_name: str) -> None:
+    def _run_profile(
+        self, command_name: str, confirmation_flags: list[str] | None = None
+    ) -> None:
         path = self.line_edit_profile_csv_path.text().strip()
         if not path:
             QMessageBox.warning(self, "Profile", "Choose a profile CSV file.")
@@ -1908,9 +2378,92 @@ class DeviceSettingMainWindow(QMainWindow):
         arguments = ["--file", path, "--verbose"]
         if self.check_box_apply_profile_to_all_similar_device_ids.isChecked():
             arguments.append("--all-same-device-id")
-        self._execute(command_name, arguments)
+        arguments.extend(confirmation_flags or [])
+
+        def after_profile(payload, exit_code: int) -> None:
+            data = (
+                payload.get("data")
+                if isinstance(payload, dict) and isinstance(payload.get("data"), dict)
+                else {}
+            )
+            if not data.get("requires_confirmation"):
+                return
+
+            issues = [
+                issue
+                for issue in data.get("parse_issues", [])
+                if isinstance(issue, dict)
+            ]
+            incompatible = [
+                target
+                for target in data.get("incompatible_targets", [])
+                if isinstance(target, dict)
+            ]
+            lines = []
+            for issue in issues[:8]:
+                lines.append(f"Line {issue.get('line')}: {issue.get('message')}")
+                self._append_profile_log(lines[-1], success=False)
+            for target in incompatible[:8]:
+                lines.append(
+                    f"SlaveId={target.get('slave_id')} {target.get('name')}: "
+                    f"{target.get('reason')}"
+                )
+                self._append_profile_log(lines[-1], success=False)
+            omitted = len(issues) + len(incompatible) - len(lines)
+            if omitted > 0:
+                lines.append(f"... and {omitted} more issue(s); see Profile log.")
+            lines.append("")
+            lines.append("Continue with valid rows and compatible devices only?")
+            answer = QMessageBox.question(
+                self,
+                "Profile validation warning",
+                "\n".join(lines),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                self._append_profile_log(
+                    "Profile operation cancelled before writing.", success=False
+                )
+                return
+            flags: list[str] = []
+            if issues:
+                flags.append("--allow-partial")
+            if incompatible:
+                flags.append("--skip-incompatible")
+            # Let the watcher for the validation response consume its
+            # command_finished event before starting the confirmed run.
+            QTimer.singleShot(0, lambda: self._run_profile(command_name, flags))
+
+        self._profile_operation_running = True
+        self._operation_cancel_requested = False
+        self._update_action_states()
+        operation_label = (
+            "Verifying profile..."
+            if command_name == "verify-profile"
+            else "Applying profile..."
+        )
+        if not self._execute_with_live_progress(
+            command_name,
+            arguments,
+            after_profile,
+            operation_label=operation_label,
+        ):
+            self._profile_operation_running = False
+            self._operation_cancel_requested = False
+            self._update_action_states()
 
     def _save_profile(self) -> None:
+        selected_tag_1 = self._choose_profile_tag1_categories()
+        if selected_tag_1 is None:
+            return
+        if not selected_tag_1:
+            QMessageBox.warning(
+                self,
+                "Save profile",
+                "Select at least one Tag1 category to save.",
+            )
+            return
         path, _ = QFileDialog.getSaveFileName(
             self,
             "Save parameters as profile CSV",
@@ -1918,7 +2471,77 @@ class DeviceSettingMainWindow(QMainWindow):
             "CSV files (*.csv);;All files (*.*)",
         )
         if path:
-            self._execute("save-profile", ["--file", path])
+            arguments = ["--file", path]
+            for tag_1 in selected_tag_1:
+                arguments.extend(["--tag1", tag_1])
+            self._profile_operation_running = True
+            self._operation_cancel_requested = False
+            self._update_action_states()
+            if not self._execute_with_live_progress(
+                "save-profile",
+                arguments,
+                operation_label="Saving profile...",
+            ):
+                self._profile_operation_running = False
+                self._update_action_states()
+
+    def _choose_profile_tag1_categories(self) -> list[str] | None:
+        """Let the operator select the Tag1 groups written to a CSV profile."""
+        categories = self._loaded_profile_tag1_categories
+        if not categories:
+            QMessageBox.warning(
+                self,
+                "Save profile",
+                "Load this device's settings before saving a grouped profile.",
+            )
+            return None
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Profile categories")
+        dialog.setMinimumWidth(420)
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel("Choose Tag1 categories to include in the CSV:"))
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        list_widget = QWidget()
+        list_layout = QVBoxLayout(list_widget)
+        checkboxes: list[tuple[str, QCheckBox]] = []
+        for tag_1 in categories:
+            display_name = tag_1 or "(No Tag1)"
+            checkbox = QCheckBox(display_name)
+            checkbox.setChecked(True)
+            list_layout.addWidget(checkbox)
+            checkboxes.append((tag_1, checkbox))
+        list_layout.addStretch(1)
+        scroll_area.setWidget(list_widget)
+        layout.addWidget(scroll_area)
+
+        select_buttons = QHBoxLayout()
+        select_all_button = QPushButton("Select All")
+        clear_all_button = QPushButton("Clear All")
+        select_all_button.clicked.connect(
+            lambda: [checkbox.setChecked(True) for _, checkbox in checkboxes]
+        )
+        clear_all_button.clicked.connect(
+            lambda: [checkbox.setChecked(False) for _, checkbox in checkboxes]
+        )
+        select_buttons.addWidget(select_all_button)
+        select_buttons.addWidget(clear_all_button)
+        select_buttons.addStretch(1)
+        layout.addLayout(select_buttons)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return None
+        return [tag_1 for tag_1, checkbox in checkboxes if checkbox.isChecked()]
 
     def _render_profile_result(
         self,
@@ -1937,6 +2560,13 @@ class DeviceSettingMainWindow(QMainWindow):
             if isinstance(issue, dict):
                 self._append_profile_log(
                     f"line {issue.get('line')}: {issue.get('message')}", success=False
+                )
+        for target in data.get("incompatible_targets", []):
+            if isinstance(target, dict):
+                self._append_profile_log(
+                    f"Skipped Device={target.get('name')} "
+                    f"(SlaveId={target.get('slave_id')}): {target.get('reason')}",
+                    success=False,
                 )
         target_names = {
             _optional_int(target.get("slave_id")): str(target.get("name") or "")
@@ -1973,9 +2603,31 @@ class DeviceSettingMainWindow(QMainWindow):
             item.setData(0, _ROLE_NAME, command.get("name"))
             self.commands_tree_widget.addTopLevelItem(item)
         self.commands_tree_widget.resizeColumnToContents(0)
+        self._on_selected_device_command_changed(
+            self.commands_tree_widget.currentItem(), None
+        )
         self._update_action_states()
 
-    def _execute_selected_device_command(self) -> None:
+    def _on_selected_device_command_changed(
+        self,
+        current: QTreeWidgetItem | None,
+        _previous: QTreeWidgetItem | None,
+    ) -> None:
+        name = (
+            str(current.data(0, _ROLE_NAME) or "").strip()
+            if current is not None
+            else ""
+        )
+        self.push_button_execute_selected_command.setText(
+            f"Execute: {name}" if name else "Execute selected command"
+        )
+        self.push_button_execute_selected_command.setToolTip(
+            f"Execute COMMAND parameter {name}" if name else "Select a command first."
+        )
+
+    def _execute_selected_device_command(
+        self, *, skip_incompatible: bool = False
+    ) -> None:
         item = self.commands_tree_widget.currentItem()
         if item is None:
             QMessageBox.warning(self, "Device command", "Select a command first.")
@@ -1985,7 +2637,61 @@ class DeviceSettingMainWindow(QMainWindow):
             arguments = ["--name", name]
             if self.check_box_execute_command_on_all_similar_device_ids.isChecked():
                 arguments.append("--all-same-device-id")
-            self._execute("execute-command", arguments)
+            if skip_incompatible:
+                arguments.append("--skip-incompatible")
+
+            def after_command(payload, _exit_code: int) -> None:
+                data = (
+                    payload.get("data")
+                    if isinstance(payload, dict)
+                    and isinstance(payload.get("data"), dict)
+                    else {}
+                )
+                if not data.get("requires_confirmation"):
+                    return
+                incompatible = [
+                    target
+                    for target in data.get("incompatible_targets", [])
+                    if isinstance(target, dict)
+                ]
+                lines = [
+                    (
+                        f"SlaveId={target.get('slave_id')} {target.get('name')}: "
+                        f"{target.get('reason')}"
+                    )
+                    for target in incompatible[:10]
+                ]
+                omitted = len(incompatible) - len(lines)
+                if omitted > 0:
+                    lines.append(f"... and {omitted} more incompatible device(s).")
+                lines.extend(
+                    (
+                        "",
+                        f"Continue on {data.get('compatible_target_count', 0)} "
+                        "compatible device(s)?",
+                    )
+                )
+                answer = QMessageBox.question(
+                    self,
+                    "Command compatibility warning",
+                    "\n".join(lines),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if answer == QMessageBox.StandardButton.Yes:
+                    QTimer.singleShot(
+                        0,
+                        lambda: self._execute_selected_device_command(
+                            skip_incompatible=True
+                        ),
+                    )
+
+            self._execute_with_live_progress(
+                "execute-command",
+                arguments,
+                after_command,
+                operation_label=f"Executing {name}...",
+            )
 
     # ----- log helpers and shutdown -----
 
@@ -2000,18 +2706,14 @@ class DeviceSettingMainWindow(QMainWindow):
             f'<span style="color:{color}">{text}</span>' if color else text
         )
 
-    def _append_profile_log(
-        self, message: str, *, success: bool | None = None
-    ) -> None:
+    def _append_profile_log(self, message: str, *, success: bool | None = None) -> None:
         color = "#1b7a1b" if success is True else "#b00020" if success is False else ""
         text = html.escape(message)
         self.profile_log_text_edit.append(
             f'<span style="color:{color}">{text}</span>' if color else text
         )
 
-    def _append_command_log(
-        self, message: str, *, success: bool | None = None
-    ) -> None:
+    def _append_command_log(self, message: str, *, success: bool | None = None) -> None:
         color = "#1b7a1b" if success is True else "#b00020" if success is False else ""
         text = html.escape(message)
         self.commands_log_text_edit.append(
