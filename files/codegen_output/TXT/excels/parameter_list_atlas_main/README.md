@@ -35,7 +35,6 @@ The application generates the following files:
 | parameter_list_atlas_main - s3d.txt | - |
 | parameter_list_atlas_main - s3dI32.txt | - |
 | parameter_list_atlas_main - eFogType.txt | - |
-| parameter_list_atlas_main - eAccType.txt | - |
 | parameter_list_atlas_main - s3dI16.txt | - |
 | parameter_list_atlas_main - eSnjBoardVersion.txt | - |
 | parameter_list_atlas_main - eSnjThermometerType.txt | - |
@@ -44,10 +43,13 @@ The application generates the following files:
 | parameter_list_atlas_main - sInternalImuData.txt | - |
 | parameter_list_atlas_main - sInternalImuSetting.txt | - |
 | parameter_list_atlas_main - eInternalImuSerialPort.txt | - |
+| parameter_list_atlas_main - eFilterType.txt | - |
+| parameter_list_atlas_main - eLoadMemoryResult.txt | - |
+| parameter_list_atlas_main - eBaudrate.txt | - |
 ## Notes
 
 - The outputs are generated based on the version **3.0.11** of this software.  
 
 ---
 
-*Generated on: 2026-08-29 - 16:10:54*  
+*Generated on: 2026-09-20 - 14:49:17*  

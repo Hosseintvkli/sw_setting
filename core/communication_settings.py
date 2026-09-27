@@ -23,7 +23,7 @@ class SerialPortCommunicationSettings:
 
     serial_port_name: str = "COM1"
     baud_rate_bits_per_second: int = 115200
-    read_timeout_milliseconds: int = 100
+    read_timeout_milliseconds: int = 200
     write_timeout_milliseconds: int = 100
     # Common RTU defaults; exposed later if devices need other values
     data_bits: int = 8
@@ -42,7 +42,7 @@ class EthernetTcpCommunicationSettings:
     device_ip_address: str = "192.168.1.110"
     modbus_tcp_port_number: int = 502
     connect_timeout_milliseconds: int = 100
-    read_timeout_milliseconds: int = 100
+    read_timeout_milliseconds: int = 200
     write_timeout_milliseconds: int = 100
 
 

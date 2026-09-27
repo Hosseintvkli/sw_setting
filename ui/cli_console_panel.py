@@ -213,6 +213,18 @@ def script_command_lines(script_text: str) -> list[str]:
     return commands
 
 
+def command_history_to_script(commands: list[str]) -> str:
+    """Keep command order; comment out long-running helpers that cannot replay."""
+    lines = ["# Exported CLI command history. Review before running again."]
+    for command in commands:
+        parsed = parse_cli_invocation(command)
+        if parsed.command_name in ("serve-http", "watch-events"):
+            lines.append(f"# Long-running helper (not replayed): {command}")
+        else:
+            lines.append(command)
+    return "\n".join(lines) + "\n"
+
+
 CompletionCallback = Callable[[dict[str, Any] | None, int], None]
 
 
@@ -283,6 +295,7 @@ class CliConsolePanel(QWidget):
         self._active_callback: CompletionCallback | None = None
         self._script_queue: deque[str] = deque()
         self._script_stop_on_error = True
+        self._executed_commands: list[str] = []
         self._server_ready_callbacks: list[Callable[[], None]] = []
         self._server_health_attempts = 0
         self._owned_session_names: set[str] = set()
@@ -334,10 +347,12 @@ class CliConsolePanel(QWidget):
             f"# One copyable command per line\n{example_status_command}"
         )
         self.load_script_button = QPushButton("Load script...")
+        self.export_history_button = QPushButton("Export history to script")
         self.save_script_button = QPushButton("Save script...")
         self.run_script_button = QPushButton("Run script")
         self.stop_script_button = QPushButton("Stop after current command")
         script_buttons = QHBoxLayout()
+        script_buttons.addWidget(self.export_history_button)
         script_buttons.addWidget(self.load_script_button)
         script_buttons.addWidget(self.save_script_button)
         script_buttons.addWidget(self.run_script_button)
@@ -380,6 +395,7 @@ class CliConsolePanel(QWidget):
         self.command_line_edit.returnPressed.connect(self.run_command_from_input)
         self.copy_button.clicked.connect(self.copy_current_command)
         self.load_script_button.clicked.connect(self.load_script)
+        self.export_history_button.clicked.connect(self.export_history_to_script)
         self.save_script_button.clicked.connect(self.save_script)
         self.run_script_button.clicked.connect(self.run_script)
         self.stop_script_button.clicked.connect(self.stop_script)
@@ -428,6 +444,7 @@ class CliConsolePanel(QWidget):
             return False
 
         history_item = QTreeWidgetItem(["Running", command, ""])
+        self._executed_commands.append(command)
         self.command_history_tree.addTopLevelItem(history_item)
         self.command_history_tree.scrollToItem(history_item)
         self._append_output(f"> {command}\n")
@@ -509,6 +526,7 @@ class CliConsolePanel(QWidget):
         self._event_watcher_history_item = QTreeWidgetItem(
             ["Watching", command, ""]
         )
+        self._executed_commands.append(command)
         self.command_history_tree.addTopLevelItem(
             self._event_watcher_history_item
         )
@@ -640,6 +658,7 @@ class CliConsolePanel(QWidget):
         parsed = parse_cli_invocation(command)
         self._append_output(f"> {command}\n")
         self._server_history_item = QTreeWidgetItem(["Starting", command, ""])
+        self._executed_commands.append(command)
         self.command_history_tree.addTopLevelItem(self._server_history_item)
 
         process = QProcess(self)
@@ -837,6 +856,7 @@ class CliConsolePanel(QWidget):
         self._active_history_item = QTreeWidgetItem(
             ["Running", parsed.original_text, ""]
         )
+        self._executed_commands.append(parsed.original_text)
         self.command_history_tree.addTopLevelItem(self._active_history_item)
         while self.command_history_tree.topLevelItemCount() > 500:
             self.command_history_tree.takeTopLevelItem(0)
@@ -950,6 +970,23 @@ class CliConsolePanel(QWidget):
         command = item.text(1)
         self.command_line_edit.setText(command)
         QGuiApplication.clipboard().setText(command)
+
+    def export_history_to_script(self) -> None:
+        if not self._executed_commands:
+            QMessageBox.information(self, "Export history", "No commands have run yet.")
+            return
+        script = command_history_to_script(self._executed_commands)
+        if self.script_editor.toPlainText().strip():
+            answer = QMessageBox.question(
+                self,
+                "Replace script?",
+                "Replace the current script text with the command history?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        self.script_editor.setPlainText(script)
 
     def load_script(self) -> None:
         path, _ = QFileDialog.getOpenFileName(

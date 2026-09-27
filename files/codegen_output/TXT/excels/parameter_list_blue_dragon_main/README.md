@@ -16,6 +16,8 @@ The application generates the following files:
 | parameter_list_blue_dragon_main - Info.txt | - |
 | parameter_list_blue_dragon_main - DefaultUnit.txt | - |
 | parameter_list_blue_dragon_main - ParameterList.txt | - |
+| parameter_list_blue_dragon_main - eBaudrate.txt | - |
+| parameter_list_blue_dragon_main - eLoadMemoryResult.txt | - |
 | parameter_list_blue_dragon_main - eTag1_SettingGroup.txt | - |
 | parameter_list_blue_dragon_main - sProfilerData.txt | - |
 | parameter_list_blue_dragon_main - sProfilerSetting.txt | - |
@@ -59,4 +61,4 @@ The application generates the following files:
 
 ---
 
-*Generated on: 2026-07-18 - 20:17:29*  
+*Generated on: 2026-09-16 - 09:44:56*  

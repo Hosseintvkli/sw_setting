@@ -13,14 +13,26 @@ Example U32 at address N:
 from __future__ import annotations
 
 import struct
+import re
 
 
 class ModbusRegisterValueCodecError(Exception):
     pass
 
 
+_CODEGEN_ENUM_NAME = re.compile(r"^[A-Za-z_][A-Za-z_0-9]*\+e[A-Za-z_][A-Za-z_0-9]*$")
+
+
+def effective_data_type_name(data_type_name: str) -> str:
+    """CodeGen enum references currently occupy one unsigned 16-bit register."""
+    name = (data_type_name or "").strip()
+    if _CODEGEN_ENUM_NAME.fullmatch(name):
+        return "U16"
+    return name.upper()
+
+
 def register_count_for_data_type_name(data_type_name: str) -> int:
-    normalized = data_type_name.strip().upper()
+    normalized = effective_data_type_name(data_type_name)
     mapping = {
         "U8": 1,
         "I8": 1,
@@ -52,7 +64,7 @@ def decode_parameter_value_from_holding_registers(
     data_type_name: str, register_values_u16: list[int]
 ) -> int | float:
     """Decode raw holding registers into a Python int or float (little-endian)."""
-    normalized = data_type_name.strip().upper()
+    normalized = effective_data_type_name(data_type_name)
     expected = register_count_for_data_type_name(normalized)
     if len(register_values_u16) != expected:
         raise ModbusRegisterValueCodecError(
@@ -90,7 +102,7 @@ def encode_parameter_value_to_holding_registers(
     data_type_name: str, value: int | float
 ) -> list[int]:
     """Encode a Python value to holding-register words (little-endian, for writes later)."""
-    normalized = data_type_name.strip().upper()
+    normalized = effective_data_type_name(data_type_name)
     count = register_count_for_data_type_name(normalized)
 
     if normalized == "U16":
@@ -123,7 +135,7 @@ def encode_parameter_value_to_holding_registers(
 def format_decoded_parameter_value_for_display(
     data_type_name: str, value: int | float
 ) -> str:
-    normalized = data_type_name.strip().upper()
+    normalized = effective_data_type_name(data_type_name)
     if normalized in ("F32", "F64"):
         return repr(float(value))
     return str(int(value))

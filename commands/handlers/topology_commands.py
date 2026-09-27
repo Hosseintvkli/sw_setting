@@ -237,6 +237,7 @@ def node_to_dict(node: IdentifiedDeviceNode) -> dict[str, Any]:
         "device_id": node.device_id,
         "parameter_list_version": node.parameter_list_version,
         "slave_id": node.permanent_modbus_slave_id,
+        "serial_number": node.serial_number,
         "downstream_qty": node.downstream_port_quantity,
         "parameter_list_available": node.parameter_list_available,
         "parameter_list_error": node.parameter_list_error,

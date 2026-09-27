@@ -21,6 +21,7 @@ class IdentifiedDeviceNode:
     parameter_list_package: CodeGenParameterListPackage | None = field(
         repr=False, compare=False
     )
+    serial_number: int | None = None
     parameter_list_error: str | None = None
     parent_node: IdentifiedDeviceNode | None = None
     port_index_on_parent: int | None = None

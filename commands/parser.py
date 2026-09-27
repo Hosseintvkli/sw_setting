@@ -42,7 +42,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
         default="192.168.1.120",
         help="Local NIC IPv4 (default: 192.168.1.120)",
     )
-    p.add_argument("--read-timeout-ms", type=int, default=100)
+    p.add_argument("--read-timeout-ms", type=int, default=200)
     p.add_argument("--write-timeout-ms", type=int, default=100)
     p.add_argument("--connect-timeout-ms", type=int, default=100)
     p.add_argument("--command-timeout-ms", type=int, default=10_000)

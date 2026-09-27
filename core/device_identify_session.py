@@ -33,14 +33,6 @@ TEMPORARY_DISCOVERY_MODBUS_UNIT_IDENTIFIER = 1
 FIRST_PERMANENT_MODBUS_SLAVE_ID = 247
 LAST_PERMANENT_MODBUS_SLAVE_ID = 2
 
-# A routing write is acknowledged by the hub before its downstream path is
-# necessarily ready to forward the temporary discovery SlaveId.  Keep this
-# independent from the user-facing Modbus read/write timeout (which may be as
-# low as 100 ms for normal commands).
-DISCOVERY_ROUTING_SETTLE_SECONDS = 0.5
-DISCOVERY_PORT_PROBE_ATTEMPTS = 3
-DISCOVERY_PORT_PROBE_RETRY_DELAY_SECONDS = 0.25
-
 LogCallback = Callable[[str], None]
 ProgressCallback = Callable[[str, str, dict[str, Any]], None]
 
@@ -129,7 +121,7 @@ class DeviceIdentifySession:
                 f"STEP probe root: READ unit={TEMPORARY_DISCOVERY_MODBUS_UNIT_IDENTIFIER} "
                 f"addr {HOLDING_ADDRESS_DEVICE_ID} and {HOLDING_ADDRESS_PARAMETER_LIST_VERSION}"
             )
-            root = self._discover_node_on_temporary_slave_one(
+            root = self._probe_node_with_three_attempts(
                 parent_node=None, port_index_on_parent=None
             )
             if root is None:
@@ -223,9 +215,15 @@ class DeviceIdentifySession:
         )
         self._log(f"Probe ({parent_info}) unit={unit}")
         try:
-            device_id = self._read_u16(HOLDING_ADDRESS_DEVICE_ID, unit)
-            parameter_list_version = self._read_u16(
-                HOLDING_ADDRESS_PARAMETER_LIST_VERSION, unit
+            device_id = self._device_modbus_link.read_holding_register_u16(
+                HOLDING_ADDRESS_DEVICE_ID,
+                modbus_unit_identifier=unit,
+                total_attempt_count_override=1,
+            )
+            parameter_list_version = self._device_modbus_link.read_holding_register_u16(
+                HOLDING_ADDRESS_PARAMETER_LIST_VERSION,
+                modbus_unit_identifier=unit,
+                total_attempt_count_override=1,
             )
             self._log(
                 f"  Found DeviceId={device_id} Version={parameter_list_version}"
@@ -314,6 +312,15 @@ class DeviceIdentifySession:
             ) from exc
 
         node.downstream_port_quantity = downstream_quantity
+        try:
+            serial_words = self._device_modbus_link.read_holding_registers_u16(
+                7, 2, modbus_unit_identifier=permanent_slave_id
+            )
+            node.serial_number = (int(serial_words[0]) & 0xFFFF) | (
+                (int(serial_words[1]) & 0xFFFF) << 16
+            )
+        except DeviceModbusLinkError as exc:
+            self._log(f"  SerialNo unavailable on SlaveId={permanent_slave_id}: {exc}")
         self._log(
             f"  Node ready: {node.device_name!r} permanent SlaveId={permanent_slave_id} "
             f"DownStreamQty={downstream_quantity}"
@@ -336,6 +343,7 @@ class DeviceIdentifySession:
                 "device_id": node.device_id,
                 "parameter_list_version": node.parameter_list_version,
                 "slave_id": node.permanent_modbus_slave_id,
+                "serial_number": node.serial_number,
                 "downstream_qty": node.downstream_port_quantity,
                 "parameter_list_available": parameter_list_available,
                 "parameter_list_error": node.parameter_list_error,
@@ -348,6 +356,25 @@ class DeviceIdentifySession:
             },
         )
         return node
+
+    def _probe_node_with_three_attempts(
+        self,
+        parent_node: IdentifiedDeviceNode | None,
+        port_index_on_parent: int | None,
+    ) -> IdentifiedDeviceNode | None:
+        """Three explicit one-shot probes, each preceded by one read timeout."""
+        for attempt in range(1, 4):
+            self._wait_for_device_state_to_settle(
+                self._device_modbus_link.get_active_read_timeout_seconds(),
+                f"discovery probe {attempt}/3",
+            )
+            node = self._discover_node_on_temporary_slave_one(
+                parent_node=parent_node,
+                port_index_on_parent=port_index_on_parent,
+            )
+            if node is not None:
+                return node
+        return None
 
     def _scan_downstream_ports_recursively(self, hub_node: IdentifiedDeviceNode) -> None:
         if hub_node.downstream_port_quantity <= 0:
@@ -410,15 +437,7 @@ class DeviceIdentifySession:
                 self._configure_hub_ports_for_discovery_scan(
                     hub_node, package, port_index
                 )
-                self._wait_for_device_state_to_settle(
-                    DISCOVERY_ROUTING_SETTLE_SECONDS,
-                    (
-                        f"routing on hub SlaveId="
-                        f"{hub_node.permanent_modbus_slave_id} port[{port_index}]"
-                    ),
-                )
-
-                child = self._probe_downstream_port_with_retry(
+                child = self._probe_node_with_three_attempts(
                     parent_node=hub_node, port_index_on_parent=port_index
                 )
                 if child is None:
@@ -438,6 +457,7 @@ class DeviceIdentifySession:
                         self._write_port_min_max(hub_node, package, port_index, 0, 0)
                     except Exception as close_exc:
                         self._log(f"Port[{port_index}] close failed: {close_exc}")
+                        raise
                     hub_node.downstream_port_slave_id_min[port_index] = 0
                     hub_node.downstream_port_slave_id_max[port_index] = 0
                     continue
@@ -494,31 +514,6 @@ class DeviceIdentifySession:
                 )
                 wrapped.routing_restored = True
                 raise wrapped from port_exc
-
-    def _probe_downstream_port_with_retry(
-        self,
-        parent_node: IdentifiedDeviceNode,
-        port_index_on_parent: int,
-    ) -> IdentifiedDeviceNode | None:
-        """Probe a newly-opened downstream route before declaring it empty."""
-        for attempt in range(1, DISCOVERY_PORT_PROBE_ATTEMPTS + 1):
-            child = self._discover_node_on_temporary_slave_one(
-                parent_node=parent_node, port_index_on_parent=port_index
-            )
-            if child is not None:
-                return child
-            if attempt >= DISCOVERY_PORT_PROBE_ATTEMPTS:
-                break
-            self._log(
-                f"  No response on port[{port_index}]; retry "
-                f"{attempt + 1}/{DISCOVERY_PORT_PROBE_ATTEMPTS} after "
-                f"{DISCOVERY_PORT_PROBE_RETRY_DELAY_SECONDS * 1000:.0f} ms"
-            )
-            self._wait_for_device_state_to_settle(
-                DISCOVERY_PORT_PROBE_RETRY_DELAY_SECONDS,
-                f"retry probe on port[{port_index}]",
-            )
-        return None
 
     def _restore_hub_port_routing_after_failure(
         self,
@@ -584,9 +579,7 @@ class DeviceIdentifySession:
                     f"  hub {hub_node.permanent_modbus_slave_id} "
                     f"port[{port_index}] → 1..1 (discovery open)"
                 )
-                self._write_port_min_max(hub_node, package, port_index, 1, 1)
-                hub_node.downstream_port_slave_id_min[port_index] = 1
-                hub_node.downstream_port_slave_id_max[port_index] = 1
+                self._set_port_routing_if_changed(hub_node, package, port_index, 1, 1)
             elif port_index in hub_node.children_by_port_index:
                 min_id, max_id = self._permanent_slave_id_range_for_port(
                     hub_node, port_index
@@ -596,19 +589,36 @@ class DeviceIdentifySession:
                     f"port[{port_index}] permanent-only {min_id}..{max_id} "
                     f"(exclude temp id 1)"
                 )
-                self._write_port_min_max(hub_node, package, port_index, min_id, max_id)
-                hub_node.downstream_port_slave_id_min[port_index] = min_id
-                hub_node.downstream_port_slave_id_max[port_index] = max_id
+                self._set_port_routing_if_changed(
+                    hub_node, package, port_index, min_id, max_id
+                )
             else:
                 self._log(
                     f"  hub {hub_node.permanent_modbus_slave_id} "
                     f"port[{port_index}] → 0..0 (closed)"
                 )
-                self._write_port_min_max(hub_node, package, port_index, 0, 0)
-                hub_node.downstream_port_slave_id_min[port_index] = 0
-                hub_node.downstream_port_slave_id_max[port_index] = 0
+                self._set_port_routing_if_changed(hub_node, package, port_index, 0, 0)
 
         self._ensure_ancestors_forward_temporary_slave_one(hub_node)
+
+    def _set_port_routing_if_changed(
+        self,
+        hub_node: IdentifiedDeviceNode,
+        package: CodeGenParameterListPackage,
+        port_index: int,
+        slave_id_min: int,
+        slave_id_max: int,
+    ) -> None:
+        if (
+            hub_node.downstream_port_slave_id_min.get(port_index) == slave_id_min
+            and hub_node.downstream_port_slave_id_max.get(port_index) == slave_id_max
+        ):
+            return
+        self._write_port_min_max(
+            hub_node, package, port_index, slave_id_min, slave_id_max
+        )
+        hub_node.downstream_port_slave_id_min[port_index] = slave_id_min
+        hub_node.downstream_port_slave_id_max[port_index] = slave_id_max
 
     def _ensure_ancestors_forward_temporary_slave_one(
         self, hub_node: IdentifiedDeviceNode
@@ -687,8 +697,39 @@ class DeviceIdentifySession:
         min_addr = _find_parameter_modbus_address(package, min_name)
         max_addr = _find_parameter_modbus_address(package, max_name)
         unit = hub_node.permanent_modbus_slave_id
-        self._write_u16(min_addr, slave_id_min, unit)
-        self._write_u16(max_addr, slave_id_max, unit)
+        for address, value, name in (
+            (min_addr, slave_id_min, min_name),
+            (max_addr, slave_id_max, max_name),
+        ):
+            for attempt in range(2):
+                try:
+                    self._write_u16(address, value, unit)
+                    break
+                except DeviceModbusLinkError as exc:
+                    if not any(
+                        marker in str(exc).lower()
+                        for marker in ("no response", "timeout", "timed out")
+                    ):
+                        raise
+                    try:
+                        actual = self._read_u16(address, unit)
+                    except DeviceModbusLinkError:
+                        actual = None
+                    if actual == value:
+                        self._log(
+                            f"  {name} write response missing; readback confirms {value}"
+                        )
+                        break
+                    if attempt == 1:
+                        raise DeviceModbusLinkError(
+                            f"Cannot confirm routing write {name}={value} "
+                            f"on SlaveId={unit}: {exc}"
+                        ) from exc
+                    self._log(f"  Retry routing write {name}={value} on SlaveId={unit}")
+                    self._wait_for_device_state_to_settle(
+                        self._device_modbus_link.get_active_write_timeout_seconds(),
+                        f"routing write retry on SlaveId={unit}",
+                    )
 
     def _allocate_permanent_slave_id(self) -> int:
         if self._next_permanent_slave_id < LAST_PERMANENT_MODBUS_SLAVE_ID:

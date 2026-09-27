@@ -42,6 +42,8 @@ The application generates the following files:
 | parameter_list_matchbox - s3dI16.txt | - |
 | parameter_list_matchbox - sFilterSetting.txt | - |
 | parameter_list_matchbox - eFilterType.txt | - |
+| parameter_list_matchbox - eLoadMemoryResult.txt | - |
+| parameter_list_matchbox - eBaudrate.txt | - |
 | parameter_list_matchbox - eAccChipSource.txt | - |
 | parameter_list_matchbox - eSyncMode.txt | - |
 | parameter_list_matchbox - ePinSelection.txt | - |
@@ -54,4 +56,4 @@ The application generates the following files:
 
 ---
 
-*Generated on: 2026-07-18 - 20:17:29*  
+*Generated on: 2026-09-20 - 11:09:02*  

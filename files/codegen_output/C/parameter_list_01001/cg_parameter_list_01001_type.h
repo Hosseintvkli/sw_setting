@@ -13,6 +13,8 @@ extern "C" {
 /* Exported constants --------------------------------------------------------*/
 /* Exported defines ----------------------------------------------------------*/
 #define eTag1_SettingGroup_MEMBER_QTY        7
+#define eBaudrate_MEMBER_QTY                 33
+#define eLoadMemoryResult_MEMBER_QTY         7
 #define eXrmgType_MEMBER_QTY                 4
 #define eFilterType_MEMBER_QTY               5
 #define eSyncMode_MEMBER_QTY                 2
@@ -22,6 +24,7 @@ extern "C" {
 #define eMode_MEMBER_QTY                     2
 #define eConnectedDeviceHostMode_MEMBER_QTY  2
 
+#define sPrtlOmidFaza_MODBUS_SIZE             9
 #define sProfilerData_MODBUS_SIZE             17
 #define sProfilerSetting_MODBUS_SIZE          4
 #define sBoardStartupReportItem_MODBUS_SIZE   8
@@ -7572,6 +7575,9 @@ typedef uint16_t eParameterId_t;
 #define PARAMETER_ID_OUTPUT_BOOT_TIME_MS                                                  ((eParameterId_t)7511)
 #define PARAMETER_ID_CHIP_STABILIZATION_CYCLE_QTY                                         ((eParameterId_t)7512)
 #define PARAMETER_ID_OUTPUT_STABILIZATION_CYCLE_QTY                                       ((eParameterId_t)7513)
+#define PARAMETER_ID_PRTL_OMID_FAZA_SEND_FRAME_ENABLE                                     ((eParameterId_t)7514)
+#define PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT                                      ((eParameterId_t)7515)
+#define PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT                                 ((eParameterId_t)7516)
 /* \/ eVirtualParameterId \/ */
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_RASTA_NORMAL_FRAME                            ((eParameterId_t)64000)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_DRAGON_NORMAL_FRAME                           ((eParameterId_t)64001)
@@ -7581,6 +7587,7 @@ typedef uint16_t eParameterId_t;
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_SC_MNORMAL_FRAME                              ((eParameterId_t)64005)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_BLUE_DRAGON_NORMAL_FRAME                      ((eParameterId_t)64006)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_MATCHBOX_FRAME1                               ((eParameterId_t)64007)
+#define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_DRAGON_OMID_FAZA                              ((eParameterId_t)64008)
 
 /**
 * @brief
@@ -7595,6 +7602,60 @@ typedef uint16_t eTag1_SettingGroup_t;
 #define eSETTING_SENSOR_CALIB_COEF  ((eTag1_SettingGroup_t)5)
 #define eSETTING_OUTPUT_CALIB_COEF  ((eTag1_SettingGroup_t)6)
 #define eSETTING_OUTPUT_ROTATION    ((eTag1_SettingGroup_t)7)
+
+/**
+* @brief
+* 
+*/
+typedef uint16_t eBaudrate_t;
+
+#define eBAUD_RATE_4800      ((eBaudrate_t)0)
+#define eBAUD_RATE_9600      ((eBaudrate_t)1)
+#define eBAUD_RATE_14400     ((eBaudrate_t)2)
+#define eBAUD_RATE_19200     ((eBaudrate_t)3)
+#define eBAUD_RATE_28800     ((eBaudrate_t)4)
+#define eBAUD_RATE_38400     ((eBaudrate_t)5)
+#define eBAUD_RATE_56000     ((eBaudrate_t)6)
+#define eBAUD_RATE_57600     ((eBaudrate_t)7)
+#define eBAUD_RATE_115200    ((eBaudrate_t)8)
+#define eBAUD_RATE_128000    ((eBaudrate_t)9)
+#define eBAUD_RATE_256000    ((eBaudrate_t)10)
+#define eBAUD_RATE_460800    ((eBaudrate_t)11)
+#define eBAUD_RATE_921600    ((eBaudrate_t)12)
+#define eBAUD_RATE_1000000   ((eBaudrate_t)13)
+#define eBAUD_RATE_1500000   ((eBaudrate_t)14)
+#define eBAUD_RATE_2000000   ((eBaudrate_t)15)
+#define eBAUD_RATE_2500000   ((eBaudrate_t)16)
+#define eBAUD_RATE_3000000   ((eBaudrate_t)17)
+#define eBAUD_RATE_3500000   ((eBaudrate_t)18)
+#define eBAUD_RATE_4000000   ((eBaudrate_t)19)
+#define eBAUD_RATE_4500000   ((eBaudrate_t)20)
+#define eBAUD_RATE_5000000   ((eBaudrate_t)21)
+#define eBAUD_RATE_5500000   ((eBaudrate_t)22)
+#define eBAUD_RATE_6000000   ((eBaudrate_t)23)
+#define eBAUD_RATE_6500000   ((eBaudrate_t)24)
+#define eBAUD_RATE_7000000   ((eBaudrate_t)25)
+#define eBAUD_RATE_7500000   ((eBaudrate_t)26)
+#define eBAUD_RATE_8000000   ((eBaudrate_t)27)
+#define eBAUD_RATE_8500000   ((eBaudrate_t)28)
+#define eBAUD_RATE_9000000   ((eBaudrate_t)29)
+#define eBAUD_RATE_9500000   ((eBaudrate_t)30)
+#define eBAUD_RATE_10000000  ((eBaudrate_t)31)
+#define eBAUD_RATE_CUSTOM    ((eBaudrate_t)65535)
+
+/**
+* @brief
+* 
+*/
+typedef uint16_t eLoadMemoryResult_t;
+
+#define eLOAD_MEMORY_RESULT_OK                           ((eLoadMemoryResult_t)0)
+#define eLOAD_MEMORY_RESULT_OK_WITH_FORCE                ((eLoadMemoryResult_t)1)
+#define eLOAD_MEMORY_RESULT_ERROR_CRC                    ((eLoadMemoryResult_t)2)
+#define eLOAD_MEMORY_RESULT_ERROR_READ                   ((eLoadMemoryResult_t)3)
+#define eLOAD_MEMORY_RESULT_ERROR_MISMATCH_VERSION       ((eLoadMemoryResult_t)4)
+#define eLOAD_MEMORY_RESULT_ERROR_BAD_SECTOR             ((eLoadMemoryResult_t)5)
+#define eLOAD_MEMORY_RESULT_ERROR_NO_PARAMETER_SELECTED  ((eLoadMemoryResult_t)6)
 
 /**
 * @brief
@@ -7675,6 +7736,12 @@ typedef uint16_t eConnectedDeviceHostMode_t;
 
 #define eHOST_MODE_NORMAL   ((eConnectedDeviceHostMode_t)0)
 #define eHOST_MODE_GATEWAY  ((eConnectedDeviceHostMode_t)1)
+
+typedef_struct_(sPrtlOmidFaza) {
+  sm_(uint16_t, SendFrameEnable);
+  sm_(float64_t, TempScaleLimit);
+  sm_(float64_t, TempSaturationLimit);
+}typedef_struct_end_(sPrtlOmidFaza);
 
 typedef_struct_(sProfilerData) {
   sm_(uint32_t, IntervalTimeUs);
@@ -8225,6 +8292,14 @@ typedef_struct_(sParametersValue_RappMain) {
   sm_(sParametersValue_RappMain_Setting, Setting);
 }typedef_struct_end_(sParametersValue_RappMain);
 
+typedef_struct_(sParametersValue_RappPrtlOmidFaza_Setting) {
+  sm_(sPrtlOmidFaza, PrtlOmidFaza);
+}typedef_struct_end_(sParametersValue_RappPrtlOmidFaza_Setting);
+
+typedef_struct_(sParametersValue_RappPrtlOmidFaza) {
+  sm_(sParametersValue_RappPrtlOmidFaza_Setting, Setting);
+}typedef_struct_end_(sParametersValue_RappPrtlOmidFaza);
+
 typedef_struct_(sParametersValue) {
   sm_(sParametersValue_Info, Info);
   sm_(sParametersValue_RappBaseParameterList, RappBaseParameterList);
@@ -8236,6 +8311,7 @@ typedef_struct_(sParametersValue) {
   sm_(sParametersValue_RappBaseBoardStartup, RappBaseBoardStartup);
   sm_(sParametersValue_RappSpiSlave, RappSpiSlave);
   sm_(sParametersValue_RappMain, RappMain);
+  sm_(sParametersValue_RappPrtlOmidFaza, RappPrtlOmidFaza);
 }typedef_struct_end_(sParametersValue);
 
 /* Exported functions prototypes ---------------------------------------------*/

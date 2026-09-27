@@ -50563,6 +50563,27 @@ const sParameterSpec ParametersSpec[] = {
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappMain.Setting.OutputStabilizationCycleQty),
     .ModbusAddr = 23404
+    },
+  { /* PrtlOmidFaza.SendFrameEnable */
+    .Type = PARAMETER_TYPE_SETTING,
+    .Tag1 = eSETTING_FUNCTIONAL,
+    .ValueSize = 2,
+    .pValue = &(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.SendFrameEnable),
+    .ModbusAddr = 23405
+    },
+  { /* PrtlOmidFaza.TempScaleLimit */
+    .Type = PARAMETER_TYPE_SETTING,
+    .Tag1 = eSETTING_FUNCTIONAL,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempScaleLimit),
+    .ModbusAddr = 23406
+    },
+  { /* PrtlOmidFaza.TempSaturationLimit */
+    .Type = PARAMETER_TYPE_SETTING,
+    .Tag1 = eSETTING_FUNCTIONAL,
+    .ValueSize = 8,
+    .pValue = &(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempSaturationLimit),
+    .ModbusAddr = 23410
     }
 };
 
@@ -73971,7 +73992,16 @@ const sModbusSlaveMemoryMapItem ParametersModbusSlaveMemoryMap[MODBUS_SLAVE_MEMO
   /* 23401  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.SensorCalibCoefBank[3999]))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SENSOR_CALIB_COEF_BANK_3999 },
   /* 23402  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Monitoring.OutputBootTimeMs))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_OUTPUT_BOOT_TIME_MS },
   /* 23403  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.ChipStabilizationCycleQty))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_CHIP_STABILIZATION_CYCLE_QTY },
-  /* 23404  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.OutputStabilizationCycleQty))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_OUTPUT_STABILIZATION_CYCLE_QTY }
+  /* 23404  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappMain.Setting.OutputStabilizationCycleQty))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_OUTPUT_STABILIZATION_CYCLE_QTY },
+  /* 23405  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.SendFrameEnable))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_SEND_FRAME_ENABLE },
+  /* 23406  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempScaleLimit))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT },
+  /* 23407  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempScaleLimit))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT },
+  /* 23408  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempScaleLimit))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT },
+  /* 23409  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempScaleLimit))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT },
+  /* 23410  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempSaturationLimit))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT },
+  /* 23411  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempSaturationLimit))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT },
+  /* 23412  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempSaturationLimit))[2]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT },
+  /* 23413  */ { .pValue = &(((uint16_t*)&(ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempSaturationLimit))[3]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT }
 };
 
 /*
@@ -74547,6 +74577,9 @@ uint8_t fCgParameterList_RestoreDefaultValue(void) {
 
   ParametersValue.RappMain.Setting.ChipStabilizationCycleQty = 100;
   ParametersValue.RappMain.Setting.OutputStabilizationCycleQty = 200;
+  ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.SendFrameEnable = 0;
+  ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempScaleLimit = 100;
+  ParametersValue.RappPrtlOmidFaza.Setting.PrtlOmidFaza.TempSaturationLimit = 100;
 
   return 0;
 }

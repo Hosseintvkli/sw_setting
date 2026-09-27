@@ -38,6 +38,11 @@ _STANDARD_BAUD_RATES = (
 )
 _CUSTOM_BAUD_LABEL = "Custom..."
 _REQUIRED_LOCAL_IPV4_ADDRESS = "192.168.1.120"
+_CONNECT_TIMEOUT_MS = 100
+_READ_TIMEOUT_MS = 200
+_WRITE_TIMEOUT_MS = 100
+_COMMAND_TIMEOUT_MS = 10_000
+_MODBUS_ATTEMPTS = 3
 
 
 class CommunicationSettingsPanel(QWidget):
@@ -98,17 +103,9 @@ class CommunicationSettingsPanel(QWidget):
         baud_row.addWidget(QLabel("Custom:"))
         baud_row.addWidget(self.spin_box_custom_baud_rate_bits_per_second)
 
-        self.spin_box_serial_read_timeout_milliseconds = self._timeout_spin(100)
-        self.spin_box_serial_write_timeout_milliseconds = self._timeout_spin(100)
         serial_form = QFormLayout(self.serial_settings_group_box)
         serial_form.addRow("COM port:", serial_port_controls)
         serial_form.addRow("Baud rate:", baud_row)
-        serial_form.addRow(
-            "Read timeout:", self.spin_box_serial_read_timeout_milliseconds
-        )
-        serial_form.addRow(
-            "Write timeout:", self.spin_box_serial_write_timeout_milliseconds
-        )
 
         self.ethernet_settings_group_box = QGroupBox(
             "PC Ethernet Connection Details"
@@ -164,39 +161,9 @@ class CommunicationSettingsPanel(QWidget):
         self.spin_box_modbus_tcp_port_number.setRange(1, 65535)
         self.spin_box_modbus_tcp_port_number.setValue(502)
         self._remove_spin_buttons(self.spin_box_modbus_tcp_port_number)
-        self.spin_box_ethernet_connect_timeout_milliseconds = self._timeout_spin(100)
-        self.spin_box_ethernet_read_timeout_milliseconds = self._timeout_spin(100)
-        self.spin_box_ethernet_write_timeout_milliseconds = self._timeout_spin(100)
         ethernet_form = QFormLayout(self.modbus_tcp_settings_group_box)
         ethernet_form.addRow("Device IP:", self.line_edit_device_ip_address)
         ethernet_form.addRow("TCP port:", self.spin_box_modbus_tcp_port_number)
-        ethernet_form.addRow(
-            "Connect timeout:", self.spin_box_ethernet_connect_timeout_milliseconds
-        )
-        ethernet_form.addRow(
-            "Read timeout:", self.spin_box_ethernet_read_timeout_milliseconds
-        )
-        ethernet_form.addRow(
-            "Write timeout:", self.spin_box_ethernet_write_timeout_milliseconds
-        )
-
-        self.spin_box_modbus_transaction_retry_count = QSpinBox()
-        self.spin_box_modbus_transaction_retry_count.setRange(1, 20)
-        self.spin_box_modbus_transaction_retry_count.setValue(3)
-        self._remove_spin_buttons(self.spin_box_modbus_transaction_retry_count)
-        self.spin_box_command_execution_timeout_milliseconds = self._timeout_spin(
-            10_000
-        )
-        self.common_settings_group_box = QGroupBox("Communication Options")
-        common_form = QFormLayout(self.common_settings_group_box)
-        common_form.addRow(
-            "Command timeout:",
-            self.spin_box_command_execution_timeout_milliseconds,
-        )
-        common_form.addRow(
-            "Retries (per transaction):",
-            self.spin_box_modbus_transaction_retry_count,
-        )
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
@@ -205,7 +172,6 @@ class CommunicationSettingsPanel(QWidget):
         layout.addWidget(self.serial_settings_group_box)
         layout.addWidget(self.ethernet_settings_group_box)
         layout.addWidget(self.modbus_tcp_settings_group_box)
-        layout.addWidget(self.common_settings_group_box)
         layout.addStretch(1)
 
         self.push_button_refresh_serial_port_list.setObjectName(
@@ -217,7 +183,7 @@ class CommunicationSettingsPanel(QWidget):
         self.push_button_open_windows_network_connections.setObjectName(
             "secondaryActionButton"
         )
-        for form in (serial_form, ethernet_local_form, ethernet_form, common_form):
+        for form in (serial_form, ethernet_local_form, ethernet_form):
             form.setHorizontalSpacing(7)
             form.setVerticalSpacing(4)
 
@@ -237,15 +203,6 @@ class CommunicationSettingsPanel(QWidget):
         self._update_custom_baud_enabled()
         self._update_local_network_validation()
         self._update_network_combo_tooltip()
-
-    @staticmethod
-    def _timeout_spin(default: int) -> QSpinBox:
-        spin = QSpinBox()
-        spin.setRange(10, 60_000)
-        spin.setValue(default)
-        spin.setSuffix(" ms")
-        CommunicationSettingsPanel._remove_spin_buttons(spin)
-        return spin
 
     @staticmethod
     def _remove_spin_buttons(spin: QSpinBox) -> None:
@@ -416,10 +373,6 @@ class CommunicationSettingsPanel(QWidget):
             )
 
     def connect_cli_arguments(self) -> list[str]:
-        retries = str(self.spin_box_modbus_transaction_retry_count.value())
-        command_timeout = str(
-            self.spin_box_command_execution_timeout_milliseconds.value()
-        )
         if self.radio_button_serial_rtu.isChecked():
             port = str(self.combo_box_serial_port_name.currentData() or "").strip()
             if not port:
@@ -434,11 +387,11 @@ class CommunicationSettingsPanel(QWidget):
                 "--port", port,
                 "--baud", str(baud),
                 "--read-timeout-ms",
-                str(self.spin_box_serial_read_timeout_milliseconds.value()),
+                str(_READ_TIMEOUT_MS),
                 "--write-timeout-ms",
-                str(self.spin_box_serial_write_timeout_milliseconds.value()),
-                "--command-timeout-ms", command_timeout,
-                "--retries", retries,
+                str(_WRITE_TIMEOUT_MS),
+                "--command-timeout-ms", str(_COMMAND_TIMEOUT_MS),
+                "--retries", str(_MODBUS_ATTEMPTS),
             ]
 
         device_ip = self.line_edit_device_ip_address.text().strip()
@@ -453,13 +406,13 @@ class CommunicationSettingsPanel(QWidget):
             "--device-ip", device_ip,
             "--tcp-port", str(self.spin_box_modbus_tcp_port_number.value()),
             "--connect-timeout-ms",
-            str(self.spin_box_ethernet_connect_timeout_milliseconds.value()),
+            str(_CONNECT_TIMEOUT_MS),
             "--read-timeout-ms",
-            str(self.spin_box_ethernet_read_timeout_milliseconds.value()),
+            str(_READ_TIMEOUT_MS),
             "--write-timeout-ms",
-            str(self.spin_box_ethernet_write_timeout_milliseconds.value()),
-            "--command-timeout-ms", command_timeout,
-            "--retries", retries,
+            str(_WRITE_TIMEOUT_MS),
+            "--command-timeout-ms", str(_COMMAND_TIMEOUT_MS),
+            "--retries", str(_MODBUS_ATTEMPTS),
         ]
         if local_name:
             arguments.extend(["--local-interface", local_name])

@@ -36,6 +36,20 @@ class FakeLink:
 
 
 class GroupDeviceCommandTests(unittest.TestCase):
+    def test_cancel_stops_writing_to_remaining_devices(self):
+        link = FakeLink({244: [0], 245: [0]})
+        cancel_check = lambda: any(op[0] == "write" for op in link.operations)
+
+        results = DeviceCommandExecutor(
+            link, cancel_check=cancel_check
+        ).execute_command_for_units(100, [244, 245])
+
+        self.assertEqual(link.operations, [("write", 244, 100, 0xFFFF)])
+        self.assertFalse(results[244].success)
+        self.assertFalse(results[245].success)
+        self.assertIn("already sent", results[244].message)
+        self.assertIn("before write", results[245].message)
+
     def test_all_writes_precede_reads_and_pending_is_polled(self):
         link = FakeLink({244: [0xFFFF, 0], 245: [0]})
 

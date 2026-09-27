@@ -5,6 +5,8 @@ Used by tree edits and CSV profile Apply/Verify.
 
 from __future__ import annotations
 
+from core.modbus_register_value_codec import effective_data_type_name
+
 
 class ParameterValueValidationError(Exception):
     pass
@@ -17,7 +19,7 @@ def parse_and_validate_parameter_value_text(
     Parse text into int/float and enforce integer vs float and numeric range.
     Raises ParameterValueValidationError on failure.
     """
-    normalized = (data_type_name or "").strip().upper()
+    normalized = effective_data_type_name(data_type_name)
     cleaned = (value_text or "").strip().replace(" ", "")
     if cleaned == "":
         raise ParameterValueValidationError("Value is empty.")

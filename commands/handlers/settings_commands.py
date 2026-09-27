@@ -430,11 +430,8 @@ def handle_get_monitoring_header(context: CommandSessionContext, args) -> Comman
         )
 
     try:
-        device_id = context.device_modbus_link.read_holding_register_u16(
-            0, modbus_unit_identifier=slave_id
-        )
-        version = context.device_modbus_link.read_holding_register_u16(
-            1, modbus_unit_identifier=slave_id
+        fixed = context.device_modbus_link.read_holding_registers_u16(
+            0, 17, modbus_unit_identifier=slave_id
         )
     except DeviceModbusLinkError as exc:
         return failure("get-monitoring-header", str(exc))
@@ -443,7 +440,10 @@ def handle_get_monitoring_header(context: CommandSessionContext, args) -> Comman
         "get-monitoring-header",
         {
             "slave_id": slave_id,
-            "device_id": device_id,
-            "parameter_list_version": version,
+            "device_id": fixed[0],
+            "parameter_list_version": fixed[1],
+            "firmware_version": f"{fixed[2]}.{fixed[3]}.{fixed[4]}.{(fixed[5] | fixed[6] << 16)}",
+            "hardware_version": f"{fixed[9]}.{fixed[10]}",
+            "serial_number": fixed[7] | (fixed[8] << 16),
         },
     )

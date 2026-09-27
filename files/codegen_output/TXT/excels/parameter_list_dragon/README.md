@@ -16,6 +16,7 @@ The application generates the following files:
 | parameter_list_dragon - Info.txt | - |
 | parameter_list_dragon - DefaultUnit.txt | - |
 | parameter_list_dragon - ParameterList.txt | - |
+| parameter_list_dragon - sPrtlOmidFaza.txt | - |
 | parameter_list_dragon - eTag1_SettingGroup.txt | - |
 | parameter_list_dragon - sProfilerData.txt | - |
 | parameter_list_dragon - sProfilerSetting.txt | - |
@@ -28,6 +29,8 @@ The application generates the following files:
 | parameter_list_dragon - sSensorAccBmi088Data.txt | - |
 | parameter_list_dragon - sSensorAccBmi088Setting.txt | - |
 | parameter_list_dragon - sSensorGyroXrmgData.txt | - |
+| parameter_list_dragon - eBaudrate.txt | - |
+| parameter_list_dragon - eLoadMemoryResult.txt | - |
 | parameter_list_dragon - sSensorGyroXrmgSetting.txt | - |
 | parameter_list_dragon - eXrmgType.txt | - |
 | parameter_list_dragon - sSensorAccAdxl357Data.txt | - |
@@ -58,4 +61,4 @@ The application generates the following files:
 
 ---
 
-*Generated on: 2026-07-18 - 20:17:29*  
+*Generated on: 2026-09-16 - 09:44:56*  

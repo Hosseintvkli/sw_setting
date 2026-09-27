@@ -20,20 +20,20 @@ extern "C" {
 * @brief 
 * 
 */
-#define PARAMETER_LIST_VERSION      10
-#define PARAMETER_LIST_VERSION_STR  "00010"
+#define PARAMETER_LIST_VERSION      11
+#define PARAMETER_LIST_VERSION_STR  "00011"
 
 /**
 * @brief 
 * 
 */
-#define MODBUS_SLAVE_MEMORY_MAP_HOLDING_REGISTER_QTY  23405
+#define MODBUS_SLAVE_MEMORY_MAP_HOLDING_REGISTER_QTY  23414
 
 /**
 * @brief 
 * 
 */
-#define PARAMETERS_QTY  7514
+#define PARAMETERS_QTY  7517
 
 /**
 * @brief 
@@ -21525,6 +21525,15 @@ typedef uint16_t parameter_mb_addr_t;
 #define PARAMETER_MB_ADDR_OUTPUT_BOOT_TIME_MS                                                    ((parameter_mb_addr_t)23402)
 #define PARAMETER_MB_ADDR_CHIP_STABILIZATION_CYCLE_QTY                                           ((parameter_mb_addr_t)23403)
 #define PARAMETER_MB_ADDR_OUTPUT_STABILIZATION_CYCLE_QTY                                         ((parameter_mb_addr_t)23404)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_SEND_FRAME_ENABLE                                       ((parameter_mb_addr_t)23405)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT_0                                      ((parameter_mb_addr_t)23406)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT_1                                      ((parameter_mb_addr_t)23407)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT_2                                      ((parameter_mb_addr_t)23408)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT_3                                      ((parameter_mb_addr_t)23409)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT_0                                 ((parameter_mb_addr_t)23410)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT_1                                 ((parameter_mb_addr_t)23411)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT_2                                 ((parameter_mb_addr_t)23412)
+#define PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT_3                                 ((parameter_mb_addr_t)23413)
 
 /* Exported macro ------------------------------------------------------------*/
 /* Exported types (enum, struct, union,...)-----------------------------------*/

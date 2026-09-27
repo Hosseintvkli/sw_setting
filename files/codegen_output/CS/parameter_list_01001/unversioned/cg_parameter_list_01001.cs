@@ -91,6 +91,7 @@ namespace ACCUNAV_IMU_Setting
         public Double[] sensorCalibCoefBank;
         public UInt16 chipStabilizationCycleQty;
         public UInt16 outputStabilizationCycleQty;
+        public sPrtlOmidFaza prtlOmidFaza;
 
         public Parameters_DeviceID_01001()
         {
@@ -219,6 +220,7 @@ namespace ACCUNAV_IMU_Setting
             sensorCalibCoefBank = new Double[4000];
             chipStabilizationCycleQty = 100;
             outputStabilizationCycleQty = 200;
+            prtlOmidFaza = new sPrtlOmidFaza((UInt16)(23405));
         }
 
         [Category("Info"), ReadOnly(false), DefaultValue(0), Description("")]
@@ -1015,6 +1017,19 @@ namespace ACCUNAV_IMU_Setting
             }
         }
 
+        [Category("RappPrtlOmidFaza"), ReadOnly(false), Description("")]
+        public sPrtlOmidFaza PrtlOmidFaza
+        {
+            get { return prtlOmidFaza; }
+            set
+            {
+                if(MainForm.modbusExt.ModbusWrite(23405, 0, value, typeof(sPrtlOmidFaza), 1))
+                {
+                    prtlOmidFaza = value;
+                }
+            }
+        }
+
         public bool ModbusWriteAll()
         {
             bool _status = true;
@@ -1123,6 +1138,7 @@ namespace ACCUNAV_IMU_Setting
             _status &= MainForm.modbusExt.ModbusWrite(7402, 0, sensorCalibCoefBank, typeof(Double), 4000);
             _status &= MainForm.modbusExt.ModbusWrite(23403, 0, chipStabilizationCycleQty, typeof(UInt16), 1);
             _status &= MainForm.modbusExt.ModbusWrite(23404, 0, outputStabilizationCycleQty, typeof(UInt16), 1);
+            _status &= prtlOmidFaza.ModbusWriteAll();
             
             if (!_status)
             {
@@ -1248,6 +1264,7 @@ namespace ACCUNAV_IMU_Setting
                 sensorCalibCoefBank = MainForm.modbusExt.ModbusRead(7402, 0, typeof(Double), 4000);
                 chipStabilizationCycleQty = MainForm.modbusExt.ModbusRead(23403, 0, typeof(UInt16), 1);
                 outputStabilizationCycleQty = MainForm.modbusExt.ModbusRead(23404, 0, typeof(UInt16), 1);
+                prtlOmidFaza.ModbusReadAll();
             
                 readedOnce = true;
             }
@@ -2420,6 +2437,85 @@ namespace ACCUNAV_IMU_Setting
                 }
             }
             MainForm.modbusExt.SetWaitCursor(false);
+        }
+
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public class sPrtlOmidFaza
+        {
+            public UInt16 sendFrameEnable;
+            public Double tempScaleLimit;
+            public Double tempSaturationLimit;
+
+            private UInt16 ModbusBaseAddr;
+
+            public static UInt16 ModbusSize = 9; // VarTypeSize in excel
+            
+            public sPrtlOmidFaza(UInt16 ObjectModbusBaseAddr)
+            {
+                ModbusBaseAddr = ObjectModbusBaseAddr;
+
+                sendFrameEnable = 0;
+                tempScaleLimit = 0;
+                tempSaturationLimit = 0;
+            }
+
+            public UInt16 SendFrameEnable
+            {
+                get { return sendFrameEnable; }
+                set
+                {
+                    if(MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 0, value, typeof(UInt16), 1))
+                    {
+                        sendFrameEnable = value;
+                    }
+                }
+            }
+
+            public Double TempScaleLimit
+            {
+                get { return tempScaleLimit; }
+                set
+                {
+                    if(MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 1, value, typeof(Double), 1))
+                    {
+                        tempScaleLimit = value;
+                    }
+                }
+            }
+
+            public Double TempSaturationLimit
+            {
+                get { return tempSaturationLimit; }
+                set
+                {
+                    if(MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 5, value, typeof(Double), 1))
+                    {
+                        tempSaturationLimit = value;
+                    }
+                }
+            }
+
+            public bool ModbusWriteAll()
+            {
+                bool _status = true;
+            
+                _status &=  MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 0, sendFrameEnable, typeof(UInt16), 1);
+                _status &=  MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 1, tempScaleLimit, typeof(Double), 1);
+                _status &=  MainForm.modbusExt.ModbusWrite(ModbusBaseAddr, 5, tempSaturationLimit, typeof(Double), 1);
+                
+                if (!_status)
+                {
+                    MessageBox.Show("Writing all parameters failed!", "Modbus error ...", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                return _status;
+            }
+
+            public void ModbusReadAll()
+            {
+                sendFrameEnable = MainForm.modbusExt.ModbusRead(ModbusBaseAddr, 0, typeof(UInt16), 1);
+                tempScaleLimit = MainForm.modbusExt.ModbusRead(ModbusBaseAddr, 1, typeof(Double), 1);
+                tempSaturationLimit = MainForm.modbusExt.ModbusRead(ModbusBaseAddr, 5, typeof(Double), 1);
+            }
         }
 
         [TypeConverter(typeof(ExpandableObjectConverter))]
@@ -6402,6 +6498,54 @@ namespace ACCUNAV_IMU_Setting
             eSETTING_SENSOR_CALIB_COEF = 5,
             eSETTING_OUTPUT_CALIB_COEF = 6,
             eSETTING_OUTPUT_ROTATION = 7
+        }
+
+        public enum eBaudrate : ushort
+        {
+            eBAUD_RATE_4800 = 0,
+            eBAUD_RATE_9600 = 1,
+            eBAUD_RATE_14400 = 2,
+            eBAUD_RATE_19200 = 3,
+            eBAUD_RATE_28800 = 4,
+            eBAUD_RATE_38400 = 5,
+            eBAUD_RATE_56000 = 6,
+            eBAUD_RATE_57600 = 7,
+            eBAUD_RATE_115200 = 8,
+            eBAUD_RATE_128000 = 9,
+            eBAUD_RATE_256000 = 10,
+            eBAUD_RATE_460800 = 11,
+            eBAUD_RATE_921600 = 12,
+            eBAUD_RATE_1000000 = 13,
+            eBAUD_RATE_1500000 = 14,
+            eBAUD_RATE_2000000 = 15,
+            eBAUD_RATE_2500000 = 16,
+            eBAUD_RATE_3000000 = 17,
+            eBAUD_RATE_3500000 = 18,
+            eBAUD_RATE_4000000 = 19,
+            eBAUD_RATE_4500000 = 20,
+            eBAUD_RATE_5000000 = 21,
+            eBAUD_RATE_5500000 = 22,
+            eBAUD_RATE_6000000 = 23,
+            eBAUD_RATE_6500000 = 24,
+            eBAUD_RATE_7000000 = 25,
+            eBAUD_RATE_7500000 = 26,
+            eBAUD_RATE_8000000 = 27,
+            eBAUD_RATE_8500000 = 28,
+            eBAUD_RATE_9000000 = 29,
+            eBAUD_RATE_9500000 = 30,
+            eBAUD_RATE_10000000 = 31,
+            eBAUD_RATE_CUSTOM = 65535
+        }
+
+        public enum eLoadMemoryResult : ushort
+        {
+            eLOAD_MEMORY_RESULT_OK = 0,
+            eLOAD_MEMORY_RESULT_OK_WITH_FORCE = 1,
+            eLOAD_MEMORY_RESULT_ERROR_CRC = 2,
+            eLOAD_MEMORY_RESULT_ERROR_READ = 3,
+            eLOAD_MEMORY_RESULT_ERROR_MISMATCH_VERSION = 4,
+            eLOAD_MEMORY_RESULT_ERROR_BAD_SECTOR = 5,
+            eLOAD_MEMORY_RESULT_ERROR_NO_PARAMETER_SELECTED = 6
         }
 
         public enum eXrmgType : ushort
@@ -13976,6 +14120,9 @@ namespace ACCUNAV_IMU_Setting
             OUTPUT_BOOT_TIME_MS = 7511,
             CHIP_STABILIZATION_CYCLE_QTY = 7512,
             OUTPUT_STABILIZATION_CYCLE_QTY = 7513,
+            PRTL_OMID_FAZA_SEND_FRAME_ENABLE = 7514,
+            PRTL_OMID_FAZA_TEMP_SCALE_LIMIT = 7515,
+            PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT = 7516,
             NONE = 65535
         }
 
@@ -37385,7 +37532,16 @@ namespace ACCUNAV_IMU_Setting
             PARAMETER_MB_ADDR_SENSOR_CALIB_COEF_BANK_3999_3 = 23401,
             PARAMETER_MB_ADDR_OUTPUT_BOOT_TIME_MS = 23402,
             PARAMETER_MB_ADDR_CHIP_STABILIZATION_CYCLE_QTY = 23403,
-            PARAMETER_MB_ADDR_OUTPUT_STABILIZATION_CYCLE_QTY = 23404
+            PARAMETER_MB_ADDR_OUTPUT_STABILIZATION_CYCLE_QTY = 23404,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_SEND_FRAME_ENABLE = 23405,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT_0 = 23406,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT_1 = 23407,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT_2 = 23408,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SCALE_LIMIT_3 = 23409,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT_0 = 23410,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT_1 = 23411,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT_2 = 23412,
+            PARAMETER_MB_ADDR_PRTL_OMID_FAZA_TEMP_SATURATION_LIMIT_3 = 23413
         }
     }
 }

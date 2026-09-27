@@ -29,10 +29,12 @@ The application generates the following files:
 | parameter_list_atlas_alg - sExternalImuSetting.txt | - |
 | parameter_list_atlas_alg - sMainMcuData.txt | - |
 | parameter_list_atlas_alg - sTransferAlignmentData.txt | - |
+| parameter_list_atlas_alg - eLoadMemoryResult.txt | - |
+| parameter_list_atlas_alg - eBaudrate.txt | - |
 ## Notes
 
 - The outputs are generated based on the version **3.0.11** of this software.  
 
 ---
 
-*Generated on: 2026-08-29 - 16:10:54*  
+*Generated on: 2026-09-16 - 09:44:56*  

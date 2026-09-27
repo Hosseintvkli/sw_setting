@@ -8130,6 +8130,7 @@ typedef uint16_t eParameterId_t;
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_SC_MNORMAL_FRAME                              ((eParameterId_t)64005)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_BLUE_DRAGON_NORMAL_FRAME                      ((eParameterId_t)64006)
 #define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_MATCHBOX_FRAME1                               ((eParameterId_t)64007)
+#define PARAMETER_ID_E_VIRTUAL_PARAMETER_ID_DRAGON_OMID_FAZA                              ((eParameterId_t)64008)
 
 /**
 * @brief

@@ -54,6 +54,10 @@ class DeviceCommandExecutor:
         self, modbus_address: int, modbus_unit_identifier: int | None = None
     ) -> DeviceCommandExecutionResult | None:
         """Send 0xFFFF; a normal Modbus write response confirms acceptance only."""
+        if self._cancel_check is not None and self._cancel_check():
+            return DeviceCommandExecutionResult(
+                success=False, message="Command cancelled before write."
+            )
         try:
             self._device_modbus_link.write_holding_register_u16(
                 modbus_address,
@@ -136,6 +140,14 @@ class DeviceCommandExecutor:
         total = max(1, len(unique_unit_ids))
         completed = 0
         for unit_id in unique_unit_ids:
+            if self._cancel_check is not None and self._cancel_check():
+                results[unit_id] = DeviceCommandExecutionResult(
+                    success=False, message="Command cancelled before write."
+                )
+                completed += 1
+                if progress_callback is not None:
+                    progress_callback(completed, total, f"SlaveId={unit_id} cancelled")
+                continue
             if unit_id == 0:
                 results[unit_id] = DeviceCommandExecutionResult(
                     success=False,
@@ -156,7 +168,15 @@ class DeviceCommandExecutor:
             else:
                 acknowledged.append(unit_id)
         for unit_id in acknowledged:
-            results[unit_id] = self.wait_for_command_completion(modbus_address, unit_id)
+            if self._cancel_check is not None and self._cancel_check():
+                results[unit_id] = DeviceCommandExecutionResult(
+                    success=False,
+                    message="Command wait cancelled by user; write was already sent.",
+                )
+            else:
+                results[unit_id] = self.wait_for_command_completion(
+                    modbus_address, unit_id
+                )
             completed += 1
             if progress_callback is not None:
                 progress_callback(

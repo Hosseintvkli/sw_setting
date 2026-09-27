@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -81,6 +82,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._identify_cancel_requested = False
         self._settings_load_running = False
         self._profile_operation_running = False
+        self._command_operation_running = False
         self._operation_cancel_requested = False
         self._live_identify_items: dict[int, QTreeWidgetItem] = {}
         self._live_identify_port_items: dict[tuple[int, int], QTreeWidgetItem] = {}
@@ -143,11 +145,10 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_cancel_identify.hide()
         identify_buttons = QHBoxLayout()
         identify_buttons.addWidget(self.push_button_run_identify)
-        identify_buttons.addWidget(self.push_button_cancel_identify)
         identify_buttons.addStretch(1)
         self.devices_topology_tree_widget = QTreeWidget()
         self.devices_topology_tree_widget.setHeaderLabels(
-            ["Device", "SlaveId", "DeviceId", "Version", "Ports"]
+            ["Device", "SerialNo"]
         )
         self.devices_topology_tree_widget.setUniformRowHeights(True)
         devices_tab = QWidget()
@@ -220,14 +221,17 @@ class DeviceSettingMainWindow(QMainWindow):
 
         # ----- parameters -----
         self.settings_tree_widget = QTreeWidget()
-        self.settings_tree_widget.setColumnCount(4)
+        self.settings_tree_widget.setColumnCount(3)
         self.settings_tree_widget.setHeaderLabels(
-            ["Name", "Value", "DataType", "ModbusAddr"]
+            ["Name", "Value", "DataType"]
         )
         self.settings_tree_widget.setAlternatingRowColors(True)
         self.settings_tree_widget.setUniformRowHeights(True)
         self.settings_tree_widget.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        self.settings_tree_widget.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
         )
         self.line_edit_settings_filter = QLineEdit()
         self.line_edit_settings_filter.setPlaceholderText(
@@ -238,10 +242,6 @@ class DeviceSettingMainWindow(QMainWindow):
         settings_filter_layout = QHBoxLayout()
         settings_filter_layout.addWidget(QLabel("Search parameters:"))
         settings_filter_layout.addWidget(self.line_edit_settings_filter, stretch=1)
-        self.push_button_copy_setting_name = QPushButton("Copy Name")
-        self.push_button_copy_setting_name.setObjectName("secondaryActionButton")
-        self.push_button_copy_setting_name.setEnabled(False)
-        settings_filter_layout.addWidget(self.push_button_copy_setting_name)
         parameters_tab = QWidget()
         parameters_layout = QVBoxLayout(parameters_tab)
         parameters_layout.addWidget(
@@ -270,13 +270,16 @@ class DeviceSettingMainWindow(QMainWindow):
         monitoring_controls.addWidget(self.label_monitoring_selection_summary)
 
         self.monitoring_parameters_tree_widget = QTreeWidget()
-        self.monitoring_parameters_tree_widget.setColumnCount(5)
+        self.monitoring_parameters_tree_widget.setColumnCount(3)
         self.monitoring_parameters_tree_widget.setHeaderLabels(
-            ["Name", "Read", "Value", "DataType", "ModbusAddr"]
+            ["Name", "Read", "Value"]
         )
         self.monitoring_parameters_tree_widget.setAlternatingRowColors(True)
         self.monitoring_parameters_tree_widget.setUniformRowHeights(True)
         self.monitoring_parameters_tree_widget.setRootIsDecorated(True)
+        self.monitoring_parameters_tree_widget.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
         self.line_edit_monitoring_filter = QLineEdit()
         self.line_edit_monitoring_filter.setPlaceholderText(
             "Type part of a Monitoring parameter name..."
@@ -330,7 +333,6 @@ class DeviceSettingMainWindow(QMainWindow):
         profile_buttons.addWidget(self.push_button_profile_verify)
         profile_buttons.addWidget(self.push_button_profile_save)
         profile_buttons.addWidget(self.push_button_clear_profile_log)
-        profile_buttons.addWidget(self.push_button_cancel_profile)
         profile_buttons.addStretch(1)
         self.profile_log_text_edit = QTextEdit()
         self.profile_log_text_edit.setObjectName("profileLogText")
@@ -346,8 +348,8 @@ class DeviceSettingMainWindow(QMainWindow):
 
         # ----- device commands -----
         self.commands_tree_widget = QTreeWidget()
-        self.commands_tree_widget.setColumnCount(3)
-        self.commands_tree_widget.setHeaderLabels(["Name", "ModbusAddr", "DataType"])
+        self.commands_tree_widget.setColumnCount(1)
+        self.commands_tree_widget.setHeaderLabels(["Command"])
         self.commands_tree_widget.setUniformRowHeights(True)
         self.commands_tree_widget.setAlternatingRowColors(True)
         self.commands_tree_widget.setSelectionBehavior(
@@ -365,6 +367,9 @@ class DeviceSettingMainWindow(QMainWindow):
         )
         self.push_button_clear_command_log = QPushButton("Clear Log")
         self.push_button_clear_command_log.setObjectName("dangerActionButton")
+        self.push_button_cancel_command = QPushButton("Cancel Command")
+        self.push_button_cancel_command.setObjectName("dangerActionButton")
+        self.push_button_cancel_command.hide()
         self.commands_log_text_edit = QTextEdit()
         self.commands_log_text_edit.setObjectName("commandLogText")
         self.commands_log_text_edit.setReadOnly(True)
@@ -397,9 +402,14 @@ class DeviceSettingMainWindow(QMainWindow):
         center_layout.setContentsMargins(4, 4, 4, 4)
         center_layout.addLayout(toolbar)
         center_layout.addWidget(monitoring_box)
-        settings_load_progress_layout = QHBoxLayout()
-        settings_load_progress_layout.addWidget(self.push_button_cancel_settings_load)
-        center_layout.addLayout(settings_load_progress_layout)
+        self.label_unavailable_device_notice = QLabel()
+        self.label_unavailable_device_notice.setWordWrap(True)
+        self.label_unavailable_device_notice.setStyleSheet(
+            "QLabel { color: #a1202a; background: #fff0f0; "
+            "border: 1px solid #cf6c73; padding: 6px; font-weight: bold; }"
+        )
+        self.label_unavailable_device_notice.hide()
+        center_layout.addWidget(self.label_unavailable_device_notice)
         center_layout.addWidget(self.center_tab_widget, stretch=1)
 
         self.status_log_text_edit = QTextEdit()
@@ -469,6 +479,17 @@ class DeviceSettingMainWindow(QMainWindow):
         self.label_global_operation.hide()
         progress_layout.addWidget(self.progress_bar_global, 0, 0)
         progress_layout.addWidget(self.label_global_operation, 0, 0)
+        self.global_cancel_container = QWidget()
+        self.global_cancel_container.setFixedSize(145, 34)
+        cancel_layout = QHBoxLayout(self.global_cancel_container)
+        cancel_layout.setContentsMargins(2, 2, 2, 2)
+        for button in (
+            self.push_button_cancel_identify,
+            self.push_button_cancel_settings_load,
+            self.push_button_cancel_profile,
+            self.push_button_cancel_command,
+        ):
+            cancel_layout.addWidget(button)
         self.label_status_connection = QLabel("Modbus Connection")
         self.label_status_identification = QLabel("Identification")
         self.label_status_device_id = QLabel("File DeviceID: None")
@@ -478,6 +499,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self.label_status_device_id.setFixedWidth(145)
         self.label_status_serial_no.setFixedWidth(145)
         status.addWidget(self.global_progress_container)
+        status.addWidget(self.global_cancel_container)
         for label in (
             self.label_status_connection,
             self.label_status_identification,
@@ -543,7 +565,7 @@ class DeviceSettingMainWindow(QMainWindow):
             item.setFont(column, font)
         tooltip = (
             f"Parameter-list version {parameter_list_version} is not available. "
-            "This device cannot be opened."
+            "Only fixed Device Information can be opened."
         )
         if error:
             tooltip += f"\n{error}"
@@ -589,13 +611,13 @@ class DeviceSettingMainWindow(QMainWindow):
             self._on_setting_item_double_clicked
         )
         self.settings_tree_widget.itemChanged.connect(self._on_setting_item_changed)
-        self.settings_tree_widget.currentItemChanged.connect(
-            self._on_setting_current_item_changed
+        self.settings_tree_widget.customContextMenuRequested.connect(
+            self._show_setting_context_menu
+        )
+        self.monitoring_parameters_tree_widget.customContextMenuRequested.connect(
+            self._show_monitoring_context_menu
         )
         self.line_edit_settings_filter.textChanged.connect(self._filter_settings_tree)
-        self.push_button_copy_setting_name.clicked.connect(
-            self._copy_selected_setting_name
-        )
         self.push_button_periodic_monitoring_read.toggled.connect(
             self._on_periodic_monitoring_toggled
         )
@@ -625,6 +647,9 @@ class DeviceSettingMainWindow(QMainWindow):
         )
         self.push_button_execute_selected_command.clicked.connect(
             self._execute_selected_device_command
+        )
+        self.push_button_cancel_command.clicked.connect(
+            lambda: self._request_operation_cancel("command execution")
         )
         self.commands_tree_widget.itemDoubleClicked.connect(
             lambda _item, _column: self._execute_selected_device_command()
@@ -810,6 +835,10 @@ class DeviceSettingMainWindow(QMainWindow):
             self._update_action_states()
         elif completed_command in ("apply-profile", "verify-profile", "save-profile"):
             self._profile_operation_running = False
+            self._operation_cancel_requested = False
+            self._update_action_states()
+        elif completed_command == "execute-command":
+            self._command_operation_running = False
             self._operation_cancel_requested = False
             self._update_action_states()
 
@@ -1078,14 +1107,14 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_cancel_profile.setEnabled(
             self._profile_operation_running and not self._operation_cancel_requested
         )
+        self.push_button_cancel_command.setVisible(self._command_operation_running)
+        self.push_button_cancel_command.setEnabled(
+            self._command_operation_running
+            and self._cli_busy
+            and not self._operation_cancel_requested
+        )
         self.push_button_reload_settings_tree.setEnabled(ready and self._connected)
         self.line_edit_settings_filter.setEnabled(self._settings_loaded)
-        current_setting_item = self.settings_tree_widget.currentItem()
-        self.push_button_copy_setting_name.setEnabled(
-            self._settings_loaded
-            and current_setting_item is not None
-            and current_setting_item.data(0, _ROLE_KIND) == "setting"
-        )
         self.communication_settings_panel.setEnabled(ready and not self._connected)
         profile_ready = ready and self._connected and self._settings_loaded
         self.push_button_profile_apply.setEnabled(profile_ready)
@@ -1121,6 +1150,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._clear_monitoring_parameter_table()
         self.label_selected_device.setText("Selected device: (none)")
         self._clear_monitoring()
+        self.label_unavailable_device_notice.hide()
 
     # ----- topology -----
 
@@ -1178,6 +1208,8 @@ class DeviceSettingMainWindow(QMainWindow):
                 "save-profile",
             ):
                 self._profile_operation_running = False
+            elif command_name == "execute-command":
+                self._command_operation_running = False
             self._update_action_states()
 
     def _on_event_watcher_finished(self, command_name: str, exit_code: int) -> None:
@@ -1197,6 +1229,8 @@ class DeviceSettingMainWindow(QMainWindow):
                 "save-profile",
             ):
                 self._profile_operation_running = False
+            elif command_name == "execute-command":
+                self._command_operation_running = False
             self._update_action_states()
         if exit_code != 0:
             self._append_log(
@@ -1308,12 +1342,11 @@ class DeviceSettingMainWindow(QMainWindow):
         item = QTreeWidgetItem(
             [
                 label,
-                str(slave_id),
-                _display_or_empty(data.get("device_id")),
-                _display_or_empty(data.get("parameter_list_version")),
-                _display_or_empty(data.get("downstream_qty")),
+                _display_or_empty(data.get("serial_number")),
             ]
         )
+        item.setData(0, _ROLE_NODE, data)
+        item.setData(0, _ROLE_TOPOLOGY_BASE_LABEL, label)
         parent_item = self._live_identify_items.get(parent_slave_id)
         if parent_item is None:
             self.devices_topology_tree_widget.addTopLevelItem(item)
@@ -1443,6 +1476,11 @@ class DeviceSettingMainWindow(QMainWindow):
                 self._append_profile_log(
                     f"Cancelling {operation_label}...", success=False
                 )
+            if self._command_operation_running:
+                self._append_command_log(
+                    "Stopping command wait and remaining writes...",
+                    success=False,
+                )
             self._update_action_states()
 
     def _populate_topology(self, root: dict[str, Any]) -> None:
@@ -1460,10 +1498,7 @@ class DeviceSettingMainWindow(QMainWindow):
             item = QTreeWidgetItem(
                 [
                     display_label,
-                    str(node.get("slave_id", "")),
-                    str(node.get("device_id", "")),
-                    str(node.get("parameter_list_version", "")),
-                    str(node.get("downstream_qty", 0)),
+                    _display_or_empty(node.get("serial_number")),
                 ]
             )
             item.setData(0, _ROLE_NODE, node)
@@ -1499,7 +1534,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self.devices_topology_tree_widget.addTopLevelItem(make_device_item(root))
         self.devices_topology_tree_widget.expandAll()
         self._refresh_loaded_topology_marker()
-        for column in range(5):
+        for column in range(self.devices_topology_tree_widget.columnCount()):
             self.devices_topology_tree_widget.resizeColumnToContents(column)
 
     def _refresh_loaded_topology_marker(self) -> QTreeWidgetItem | None:
@@ -1594,17 +1629,9 @@ class DeviceSettingMainWindow(QMainWindow):
             )
             return
         if node.get("parameter_list_available") is False:
-            QMessageBox.warning(
-                self,
-                "Parameter List Unavailable",
-                (
-                    f"{node.get('device_name', 'This device')} was identified, "
-                    f"but parameter-list version "
-                    f"{node.get('parameter_list_version')} is not available.\n\n"
-                    "The device cannot be opened until the matching CodeGen "
-                    "JSON package is installed."
-                ),
-            )
+            slave_id = _optional_int(node.get("slave_id"))
+            if slave_id is not None:
+                self._show_unavailable_device_header(node, slave_id)
             return
         slave_id = _optional_int(node.get("slave_id"))
         if slave_id is None:
@@ -1619,6 +1646,42 @@ class DeviceSettingMainWindow(QMainWindow):
             return
         self._select_and_load_device(slave_id)
 
+    def _show_unavailable_device_header(
+        self, node: dict[str, Any], slave_id: int
+    ) -> None:
+        if self._cli_busy:
+            QMessageBox.warning(
+                self, "Device busy", "Wait for the current command to finish."
+            )
+            return
+        self._stop_periodic_monitoring("Monitoring stopped for device change.")
+        self._clear_loaded_device_state()
+        self._loaded_topology_slave_id = slave_id
+        self._refresh_loaded_topology_marker()
+        name = str(node.get("device_name") or f"DeviceId={node.get('device_id')}")
+        message = (
+            f"Parameter-list version {node.get('parameter_list_version')} for "
+            f"{name} is unavailable. Device information is shown, but "
+            "parameters, monitoring, profiles and commands are unavailable."
+        )
+        self.label_selected_device.setText(f"Selected device: {name}")
+        self.label_monitoring_device_name.setText(name)
+        self.label_unavailable_device_notice.setText(message)
+        self.label_unavailable_device_notice.show()
+        self._update_action_states()
+
+        def after_header(_payload: object, exit_code: int) -> None:
+            if exit_code != 0:
+                self.label_unavailable_device_notice.setText(
+                    message + " Fixed device registers could not be read."
+                )
+
+        self._execute(
+            "get-monitoring-header",
+            ["--slave-id", str(slave_id)],
+            after_header,
+        )
+
     def _select_and_load_device(self, slave_id: int) -> None:
         if not self._connected:
             QMessageBox.warning(
@@ -1627,6 +1690,8 @@ class DeviceSettingMainWindow(QMainWindow):
                 "Connect to the device network before loading this device.",
             )
             return
+
+        self.label_unavailable_device_notice.hide()
 
         def after_select(_payload, exit_code: int) -> None:
             if exit_code == 0:
@@ -1746,7 +1811,6 @@ class DeviceSettingMainWindow(QMainWindow):
                         segments[-1],
                         display,
                         str(value.get("data_type") or ""),
-                        _display_or_empty(value.get("modbus_addr")),
                     ]
                 )
                 leaf.setFlags(
@@ -1789,26 +1853,31 @@ class DeviceSettingMainWindow(QMainWindow):
         for index in range(self.settings_tree_widget.topLevelItemCount()):
             update_item_visibility(self.settings_tree_widget.topLevelItem(index))
 
-    def _on_setting_current_item_changed(
-        self,
-        current: QTreeWidgetItem | None,
-        _previous: QTreeWidgetItem | None,
-    ) -> None:
-        self.push_button_copy_setting_name.setEnabled(
-            self._settings_loaded
-            and current is not None
-            and current.data(0, _ROLE_KIND) == "setting"
+    def _show_setting_context_menu(self, position) -> None:
+        self._show_parameter_context_menu(
+            self.settings_tree_widget, position, "setting"
         )
 
-    def _copy_selected_setting_name(self) -> None:
-        item = self.settings_tree_widget.currentItem()
-        if item is None or item.data(0, _ROLE_KIND) != "setting":
+    def _show_monitoring_context_menu(self, position) -> None:
+        self._show_parameter_context_menu(
+            self.monitoring_parameters_tree_widget, position, "monitoring_parameter"
+        )
+
+    def _show_parameter_context_menu(
+        self, tree: QTreeWidget, position, expected_kind: str
+    ) -> None:
+        item = tree.itemAt(position)
+        if item is None or item.data(0, _ROLE_KIND) != expected_kind:
             return
-        name = str(item.data(0, _ROLE_NAME) or "").strip()
-        if not name:
-            return
-        QGuiApplication.clipboard().setText(name)
-        self._append_log(f"Copied parameter name: {name}", success=True)
+        tree.setCurrentItem(item)
+        menu = QMenu(tree)
+        copy_action = menu.addAction("Copy Name")
+        if menu.exec(tree.viewport().mapToGlobal(position)) == copy_action:
+            name = str(item.data(0, _ROLE_NAME) or "").strip()
+            if name:
+                QGuiApplication.clipboard().setText(name)
+                self._append_log(f"Copied parameter name: {name}", success=True)
+
 
     def _on_setting_item_double_clicked(
         self, item: QTreeWidgetItem, column: int
@@ -1877,6 +1946,14 @@ class DeviceSettingMainWindow(QMainWindow):
             str(data.get("firmware_version") or "—")
         )
         serial_number = data.get("serial_number")
+        device_id = data.get("device_id")
+        self.label_status_device_id.setText(
+            f"File DeviceID: {device_id if device_id is not None else 'None'}"
+        )
+        self._set_status_segment(
+            self.label_status_device_id,
+            _STATUS_OK_COLOR if device_id is not None else _STATUS_ERROR_COLOR,
+        )
         self.label_status_serial_no.setText(
             f"File SerialNo: {serial_number if serial_number is not None else 'None'}"
         )
@@ -1970,8 +2047,6 @@ class DeviceSettingMainWindow(QMainWindow):
                         segments[-1],
                         "",
                         "",
-                        str(parameter.get("data_type") or ""),
-                        _display_or_empty(parameter.get("modbus_addr")),
                     ]
                 )
                 item.setFlags(
@@ -2006,8 +2081,6 @@ class DeviceSettingMainWindow(QMainWindow):
         self.monitoring_parameters_tree_widget.setColumnWidth(0, 360)
         self.monitoring_parameters_tree_widget.setColumnWidth(1, 55)
         self.monitoring_parameters_tree_widget.setColumnWidth(2, 150)
-        self.monitoring_parameters_tree_widget.setColumnWidth(3, 80)
-        self.monitoring_parameters_tree_widget.setColumnWidth(4, 90)
         self._refresh_monitoring_row_visuals()
         self._refresh_monitoring_branch_visuals()
         self._filter_monitoring_tree(self.line_edit_monitoring_filter.text())
@@ -2593,13 +2666,7 @@ class DeviceSettingMainWindow(QMainWindow):
     def _populate_device_commands(self, commands: list[dict[str, Any]]) -> None:
         self.commands_tree_widget.clear()
         for command in commands:
-            item = QTreeWidgetItem(
-                [
-                    str(command.get("name") or ""),
-                    _display_or_empty(command.get("modbus_addr")),
-                    str(command.get("data_type") or ""),
-                ]
-            )
+            item = QTreeWidgetItem([str(command.get("name") or "")])
             item.setData(0, _ROLE_NAME, command.get("name"))
             self.commands_tree_widget.addTopLevelItem(item)
         self.commands_tree_widget.resizeColumnToContents(0)
@@ -2686,12 +2753,17 @@ class DeviceSettingMainWindow(QMainWindow):
                         ),
                     )
 
-            self._execute_with_live_progress(
+            self._command_operation_running = True
+            self._operation_cancel_requested = False
+            self._update_action_states()
+            if not self._execute_with_live_progress(
                 "execute-command",
                 arguments,
                 after_command,
                 operation_label=f"Executing {name}...",
-            )
+            ):
+                self._command_operation_running = False
+                self._update_action_states()
 
     # ----- log helpers and shutdown -----
 

@@ -133,12 +133,14 @@ class DeviceModbusLink:
         self,
         modbus_register_address: int,
         modbus_unit_identifier: int | None = None,
+        total_attempt_count_override: int | None = None,
     ) -> int:
         """Read one holding register (16-bit) as unsigned int."""
         registers = self.read_holding_registers_u16(
             modbus_start_address=modbus_register_address,
             register_count=1,
             modbus_unit_identifier=modbus_unit_identifier,
+            total_attempt_count_override=total_attempt_count_override,
         )
         return registers[0]
 
@@ -147,15 +149,34 @@ class DeviceModbusLink:
         modbus_start_address: int,
         register_count: int,
         modbus_unit_identifier: int | None = None,
+        total_attempt_count_override: int | None = None,
     ) -> list[int]:
         """
         Read consecutive holding registers.
 
         Pymodbus performs the configured total number of transaction attempts.
         """
-        return self._read_holding_registers_u16_once(
-            modbus_start_address, register_count, modbus_unit_identifier
+        if total_attempt_count_override is None:
+            return self._read_holding_registers_u16_once(
+                modbus_start_address, register_count, modbus_unit_identifier
+            )
+        if total_attempt_count_override < 1:
+            raise ValueError("total_attempt_count_override must be positive")
+        client, _ = self._require_connected_client_and_unit_id(
+            modbus_unit_identifier_override=modbus_unit_identifier
         )
+        settings = self._active_communication_settings
+        if settings is None:
+            raise DeviceModbusLinkError("Communication settings are unavailable.")
+        self._set_client_retry_count(client, total_attempt_count_override)
+        try:
+            return self._read_holding_registers_u16_once(
+                modbus_start_address, register_count, modbus_unit_identifier
+            )
+        finally:
+            self._set_client_retry_count(
+                client, settings.modbus_transaction_retry_count
+            )
 
     def _read_holding_registers_u16_once(
         self,

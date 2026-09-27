@@ -20,8 +20,8 @@ extern "C" {
 * @brief 
 * 
 */
-#define PARAMETER_LIST_VERSION      4
-#define PARAMETER_LIST_VERSION_STR  "00004"
+#define PARAMETER_LIST_VERSION      5
+#define PARAMETER_LIST_VERSION_STR  "00005"
 
 /**
 * @brief 
