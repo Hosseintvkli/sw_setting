@@ -145,6 +145,8 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_cancel_identify.hide()
         identify_buttons = QHBoxLayout()
         identify_buttons.addWidget(self.push_button_run_identify)
+        self.label_identify_counts = QLabel("Hubs: —    Devices: —")
+        identify_buttons.addWidget(self.label_identify_counts)
         identify_buttons.addStretch(1)
         self.devices_topology_tree_widget = QTreeWidget()
         self.devices_topology_tree_widget.setHeaderLabels(
@@ -161,6 +163,15 @@ class DeviceSettingMainWindow(QMainWindow):
             )
         )
         devices_layout.addWidget(self.devices_topology_tree_widget, stretch=1)
+        self.push_button_enable_all_streaming = QPushButton("Enable All Streaming")
+        self.push_button_disable_all_streaming = QPushButton("Disable All Streaming")
+        self.push_button_enable_all_streaming.setObjectName("secondaryActionButton")
+        self.push_button_disable_all_streaming.setObjectName("dangerActionButton")
+        streaming_buttons = QHBoxLayout()
+        streaming_buttons.addWidget(self.push_button_enable_all_streaming)
+        streaming_buttons.addWidget(self.push_button_disable_all_streaming)
+        streaming_buttons.addStretch(1)
+        devices_layout.addLayout(streaming_buttons)
 
         self.left_tab_widget = QTabWidget()
         self.left_tab_widget.addTab(communicate_tab, "Communicate")
@@ -595,6 +606,12 @@ class DeviceSettingMainWindow(QMainWindow):
             self._on_connection_toggle_clicked
         )
         self.push_button_run_identify.clicked.connect(self._on_identify_clicked)
+        self.push_button_enable_all_streaming.clicked.connect(
+            lambda: self._broadcast_streaming_command(4002, "Enable")
+        )
+        self.push_button_disable_all_streaming.clicked.connect(
+            lambda: self._broadcast_streaming_command(4003, "Disable")
+        )
         self.push_button_cancel_identify.clicked.connect(
             self._on_cancel_identify_clicked
         )
@@ -1087,6 +1104,8 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_run_identify.setEnabled(
             ready and self._connected and not self._identify_running
         )
+        self.push_button_enable_all_streaming.setEnabled(ready and self._connected)
+        self.push_button_disable_all_streaming.setEnabled(ready and self._connected)
         self.push_button_cancel_identify.setEnabled(
             self._session_ready_flag
             and self._identify_running
@@ -1154,11 +1173,46 @@ class DeviceSettingMainWindow(QMainWindow):
 
     # ----- topology -----
 
+    def _broadcast_streaming_command(self, address: int, action: str) -> None:
+        if not self._connected or self._cli_busy:
+            return
+        answer = QMessageBox.question(
+            self,
+            f"{action} streaming on all devices?",
+            f"Send the {action.lower()} streaming command to all devices "
+            "by Modbus broadcast? Individual devices will not acknowledge it.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        def after_broadcast(payload: object, exit_code: int) -> None:
+            if exit_code == 0:
+                QMessageBox.information(
+                    self,
+                    "Broadcast sent",
+                    f"{action} streaming broadcast was sent. "
+                    "Modbus broadcast has no per-device acknowledgment.",
+                )
+            else:
+                error = payload.get("error") if isinstance(payload, dict) else None
+                QMessageBox.warning(
+                    self, "Broadcast failed", str(error or "Command failed.")
+                )
+
+        self._execute(
+            "write-holding-broadcast",
+            ["--address", str(address), "--value", "65535"],
+            after_broadcast,
+        )
+
     def _on_identify_clicked(self) -> None:
         self._stop_device_discovery_animations()
         self.devices_topology_tree_widget.clear()
         self._live_identify_items.clear()
         self._live_identify_port_items.clear()
+        self.label_identify_counts.setText("Hubs: —    Devices: —")
         self._clear_loaded_device_state()
         self._set_status_segment(self.label_status_identification, _STATUS_BUSY_COLOR)
         self._identify_running = True
@@ -1488,6 +1542,10 @@ class DeviceSettingMainWindow(QMainWindow):
         self.devices_topology_tree_widget.clear()
         self._live_identify_items.clear()
         self._live_identify_port_items.clear()
+        hub_count, device_count = _count_identified_hubs_and_devices(root)
+        self.label_identify_counts.setText(
+            f"Hubs: {hub_count}    Devices: {device_count}"
+        )
 
         def make_device_item(node: dict[str, Any], label: str | None = None):
             name = str(node.get("device_name") or f"DeviceId={node.get('device_id')}")
@@ -2802,6 +2860,25 @@ def _optional_int(value: object) -> int | None:
         return int(value) if value is not None else None
     except (TypeError, ValueError):
         return None
+
+
+def _count_identified_hubs_and_devices(root: dict[str, Any]) -> tuple[int, int]:
+    """DeviceIds below 1000 are hubs; 1000 and above are devices."""
+    hubs = 0
+    devices = 0
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        device_id = _optional_int(node.get("device_id"))
+        if device_id is not None:
+            if device_id < 1000:
+                hubs += 1
+            else:
+                devices += 1
+        for port in node.get("ports", []):
+            if isinstance(port, dict) and isinstance(port.get("device"), dict):
+                stack.append(port["device"])
+    return hubs, devices
 
 
 def _parameter_name_path_segments(parameter_name: str) -> list[str]:

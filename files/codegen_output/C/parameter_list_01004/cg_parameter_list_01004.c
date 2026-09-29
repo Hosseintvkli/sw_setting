@@ -140,191 +140,119 @@ const sParameterSpec ParametersSpec[] = {
     .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadAllMemoryResult),
     .ModbusAddr = 204
     },
-  { /* LoadInfoStatus */
+  { /* LoadInfoSettingsStatus */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadInfoStatus),
+    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadInfoSettingsStatus),
     .ModbusAddr = 206
     },
-  { /* LoadModbusExtStatus */
+  { /* LoadCalibrationSettingsStatus */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadModbusExtStatus),
+    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadCalibrationSettingsStatus),
     .ModbusAddr = 207
     },
-  { /* LoadHardwareConfigurationStatus */
+  { /* LoadFactorySettingsStatus */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadHardwareConfigurationStatus),
+    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadFactorySettingsStatus),
     .ModbusAddr = 208
     },
-  { /* LoadFunctionalStatus */
+  { /* LoadUserSettingsStatus */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadFunctionalStatus),
+    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadUserSettingsStatus),
     .ModbusAddr = 209
     },
-  { /* LoadSensorCalibCoefStatus */
-    .Type = PARAMETER_TYPE_MONITORING,
+  { /* LoadInfoSettings */
+    .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadSensorCalibCoefStatus),
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadInfoSettings),
     .ModbusAddr = 210
     },
-  { /* LoadOutputCalibCoefStatus */
-    .Type = PARAMETER_TYPE_MONITORING,
+  { /* LoadCalibrationSettings */
+    .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadOutputCalibCoefStatus),
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadCalibrationSettings),
     .ModbusAddr = 211
     },
-  { /* LoadOutputRotationStatus */
-    .Type = PARAMETER_TYPE_MONITORING,
+  { /* LoadFactorySettings */
+    .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.LoadOutputRotationStatus),
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadFactorySettings),
     .ModbusAddr = 212
     },
-  { /* LoadInfo */
+  { /* LoadUserSettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadInfo),
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadUserSettings),
     .ModbusAddr = 213
-    },
-  { /* LoadModbusExt */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadModbusExt),
-    .ModbusAddr = 214
-    },
-  { /* LoadHardwareConfiguration */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadHardwareConfiguration),
-    .ModbusAddr = 215
-    },
-  { /* LoadFunctional */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadFunctional),
-    .ModbusAddr = 216
-    },
-  { /* LoadSensorCalibCoef */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadSensorCalibCoef),
-    .ModbusAddr = 217
-    },
-  { /* LoadOutputCalibCoef */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadOutputCalibCoef),
-    .ModbusAddr = 218
-    },
-  { /* LoadOutputRotation */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadOutputRotation),
-    .ModbusAddr = 219
     },
   { /* LoadWithForceAll */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceAll),
-    .ModbusAddr = 220
+    .ModbusAddr = 214
     },
-  { /* LoadWithForceInfo */
+  { /* LoadWithForceInfoSettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceInfo),
-    .ModbusAddr = 221
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceInfoSettings),
+    .ModbusAddr = 215
     },
-  { /* LoadWithForceModbusExt */
+  { /* LoadWithForceCalibrationSettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceModbusExt),
-    .ModbusAddr = 222
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceCalibrationSettings),
+    .ModbusAddr = 216
     },
-  { /* LoadWithForceHardwareConfiguration */
+  { /* LoadWithForceFactorySettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceHardwareConfiguration),
-    .ModbusAddr = 223
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceFactorySettings),
+    .ModbusAddr = 217
     },
-  { /* LoadWithForceFunctional */
+  { /* LoadWithForceUserSettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceFunctional),
-    .ModbusAddr = 224
-    },
-  { /* LoadWithForceSensorCalibCoef */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceSensorCalibCoef),
-    .ModbusAddr = 225
-    },
-  { /* LoadWithForceOutputCalibCoef */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceOutputCalibCoef),
-    .ModbusAddr = 226
-    },
-  { /* LoadWithForceOutputRotation */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceOutputRotation),
-    .ModbusAddr = 227
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.LoadWithForceUserSettings),
+    .ModbusAddr = 218
     },
   { /* SaveAll */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
     .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveAll),
-    .ModbusAddr = 228
+    .ModbusAddr = 219
     },
   { /* SaveAllMemoryResult */
     .Type = PARAMETER_TYPE_MONITORING,
     .ValueSize = 4,
     .pValue = &(ParametersValue.RappBaseParameterList.Monitoring.SaveAllMemoryResult),
-    .ModbusAddr = 229
+    .ModbusAddr = 220
     },
-  { /* SaveInfo */
+  { /* SaveInfoSettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveInfo),
-    .ModbusAddr = 231
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveInfoSettings),
+    .ModbusAddr = 222
     },
-  { /* SaveModbusExt */
+  { /* SaveCalibrationSettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveModbusExt),
-    .ModbusAddr = 232
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveCalibrationSettings),
+    .ModbusAddr = 223
     },
-  { /* SaveHardwareConfiguration */
+  { /* SaveFactorySettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveHardwareConfiguration),
-    .ModbusAddr = 233
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveFactorySettings),
+    .ModbusAddr = 224
     },
-  { /* SaveFunctional */
+  { /* SaveUserSettings */
     .Type = PARAMETER_TYPE_COMMAND,
     .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveFunctional),
-    .ModbusAddr = 234
-    },
-  { /* SaveSensorCalibCoef */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveSensorCalibCoef),
-    .ModbusAddr = 235
-    },
-  { /* SaveOutputCalibCoef */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveOutputCalibCoef),
-    .ModbusAddr = 236
-    },
-  { /* SaveOutputRotation */
-    .Type = PARAMETER_TYPE_COMMAND,
-    .ValueSize = 2,
-    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveOutputRotation),
-    .ModbusAddr = 237
+    .pValue = &(ParametersValue.RappBaseParameterList.Command.SaveUserSettings),
+    .ModbusAddr = 225
     },
   { /* WatchdogTimeMs */
     .Type = PARAMETER_TYPE_SETTING,
@@ -52227,38 +52155,38 @@ const sModbusSlaveMemoryMapItem ParametersModbusSlaveMemoryMap[MODBUS_SLAVE_MEMO
   /* 203    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadAll))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_ALL },
   /* 204    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadAllMemoryResult))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_ALL_MEMORY_RESULT },
   /* 205    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadAllMemoryResult))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_ALL_MEMORY_RESULT },
-  /* 206    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadInfoStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_INFO_STATUS },
-  /* 207    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadModbusExtStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_MODBUS_EXT_STATUS },
-  /* 208    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadHardwareConfigurationStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_HARDWARE_CONFIGURATION_STATUS },
-  /* 209    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadFunctionalStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_FUNCTIONAL_STATUS },
-  /* 210    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadSensorCalibCoefStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_SENSOR_CALIB_COEF_STATUS },
-  /* 211    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadOutputCalibCoefStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_OUTPUT_CALIB_COEF_STATUS },
-  /* 212    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadOutputRotationStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_OUTPUT_ROTATION_STATUS },
-  /* 213    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadInfo))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_INFO },
-  /* 214    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadModbusExt))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_MODBUS_EXT },
-  /* 215    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadHardwareConfiguration))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_HARDWARE_CONFIGURATION },
-  /* 216    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadFunctional))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_FUNCTIONAL },
-  /* 217    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadSensorCalibCoef))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_SENSOR_CALIB_COEF },
-  /* 218    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadOutputCalibCoef))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_OUTPUT_CALIB_COEF },
-  /* 219    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadOutputRotation))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_OUTPUT_ROTATION },
-  /* 220    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceAll))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_ALL },
-  /* 221    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceInfo))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_INFO },
-  /* 222    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceModbusExt))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_MODBUS_EXT },
-  /* 223    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceHardwareConfiguration))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_HARDWARE_CONFIGURATION },
-  /* 224    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceFunctional))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_FUNCTIONAL },
-  /* 225    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceSensorCalibCoef))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_SENSOR_CALIB_COEF },
-  /* 226    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceOutputCalibCoef))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_OUTPUT_CALIB_COEF },
-  /* 227    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceOutputRotation))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_OUTPUT_ROTATION },
-  /* 228    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveAll))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_ALL },
-  /* 229    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.SaveAllMemoryResult))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SAVE_ALL_MEMORY_RESULT },
-  /* 230    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.SaveAllMemoryResult))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SAVE_ALL_MEMORY_RESULT },
-  /* 231    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveInfo))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_INFO },
-  /* 232    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveModbusExt))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_MODBUS_EXT },
-  /* 233    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveHardwareConfiguration))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_HARDWARE_CONFIGURATION },
-  /* 234    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveFunctional))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_FUNCTIONAL },
-  /* 235    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveSensorCalibCoef))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_SENSOR_CALIB_COEF },
-  /* 236    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveOutputCalibCoef))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_OUTPUT_CALIB_COEF },
-  /* 237    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveOutputRotation))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_OUTPUT_ROTATION },
+  /* 206    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadInfoSettingsStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_INFO_SETTINGS_STATUS },
+  /* 207    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadCalibrationSettingsStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_CALIBRATION_SETTINGS_STATUS },
+  /* 208    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadFactorySettingsStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_FACTORY_SETTINGS_STATUS },
+  /* 209    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.LoadUserSettingsStatus))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_LOAD_USER_SETTINGS_STATUS },
+  /* 210    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadInfoSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_INFO_SETTINGS },
+  /* 211    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadCalibrationSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_CALIBRATION_SETTINGS },
+  /* 212    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadFactorySettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_FACTORY_SETTINGS },
+  /* 213    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadUserSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_USER_SETTINGS },
+  /* 214    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceAll))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_ALL },
+  /* 215    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceInfoSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_INFO_SETTINGS },
+  /* 216    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceCalibrationSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_CALIBRATION_SETTINGS },
+  /* 217    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceFactorySettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_FACTORY_SETTINGS },
+  /* 218    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.LoadWithForceUserSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_LOAD_WITH_FORCE_USER_SETTINGS },
+  /* 219    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveAll))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_ALL },
+  /* 220    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.SaveAllMemoryResult))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SAVE_ALL_MEMORY_RESULT },
+  /* 221    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Monitoring.SaveAllMemoryResult))[1]), .AccessType = eMBSEX_MM_ACCESS_TYPE_R, .ParameterId = PARAMETER_ID_SAVE_ALL_MEMORY_RESULT },
+  /* 222    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveInfoSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_INFO_SETTINGS },
+  /* 223    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveCalibrationSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_CALIBRATION_SETTINGS },
+  /* 224    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveFactorySettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_FACTORY_SETTINGS },
+  /* 225    */ { .pValue = &(((uint16_t*)&(ParametersValue.RappBaseParameterList.Command.SaveUserSettings))[0]), .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = PARAMETER_ID_SAVE_USER_SETTINGS },
+  /* 226    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 227    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 228    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 229    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 230    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 231    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 232    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 233    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 234    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 235    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 236    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
+  /* 237    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
   /* 238    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
   /* 239    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
   /* 240    */ { .pValue = NULL, .AccessType = eMBSEX_MM_ACCESS_TYPE_RW, .ParameterId = 65535 /* Reserve1 */ },
@@ -76014,41 +75942,29 @@ uint8_t fCgParameterList_RestoreDefaultValue(void) {
   ParametersValue.Info.Setting.ProductionMonth = 0;
   ParametersValue.Info.Setting.ProductionDay = 0;
   ParametersValue.RappBaseParameterList.Monitoring.LoadAllMemoryResult = 0;
-  ParametersValue.RappBaseParameterList.Monitoring.LoadInfoStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
-  ParametersValue.RappBaseParameterList.Monitoring.LoadModbusExtStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
-  ParametersValue.RappBaseParameterList.Monitoring.LoadHardwareConfigurationStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
-  ParametersValue.RappBaseParameterList.Monitoring.LoadFunctionalStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
-  ParametersValue.RappBaseParameterList.Monitoring.LoadSensorCalibCoefStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
-  ParametersValue.RappBaseParameterList.Monitoring.LoadOutputCalibCoefStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
-  ParametersValue.RappBaseParameterList.Monitoring.LoadOutputRotationStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
+  ParametersValue.RappBaseParameterList.Monitoring.LoadInfoSettingsStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
+  ParametersValue.RappBaseParameterList.Monitoring.LoadCalibrationSettingsStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
+  ParametersValue.RappBaseParameterList.Monitoring.LoadFactorySettingsStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
+  ParametersValue.RappBaseParameterList.Monitoring.LoadUserSettingsStatus = (eLoadMemoryResult_t)0; // TEST: This is an enum
   ParametersValue.RappBaseParameterList.Monitoring.SaveAllMemoryResult = 0;
   ParametersValue.RappBaseParameterList.Setting.MemoryRetryQty = 3;
   ParametersValue.RappBaseParameterList.Setting.MemoryRetryDelayMs = 50;
   ParametersValue.RappBaseParameterList.Command.RestoreDefaultValue = 0;
   ParametersValue.RappBaseParameterList.Command.LoadAll = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadInfo = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadModbusExt = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadHardwareConfiguration = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadFunctional = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadSensorCalibCoef = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadOutputCalibCoef = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadOutputRotation = 0;
+  ParametersValue.RappBaseParameterList.Command.LoadInfoSettings = 0;
+  ParametersValue.RappBaseParameterList.Command.LoadCalibrationSettings = 0;
+  ParametersValue.RappBaseParameterList.Command.LoadFactorySettings = 0;
+  ParametersValue.RappBaseParameterList.Command.LoadUserSettings = 0;
   ParametersValue.RappBaseParameterList.Command.LoadWithForceAll = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadWithForceInfo = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadWithForceModbusExt = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadWithForceHardwareConfiguration = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadWithForceFunctional = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadWithForceSensorCalibCoef = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadWithForceOutputCalibCoef = 0;
-  ParametersValue.RappBaseParameterList.Command.LoadWithForceOutputRotation = 0;
+  ParametersValue.RappBaseParameterList.Command.LoadWithForceInfoSettings = 0;
+  ParametersValue.RappBaseParameterList.Command.LoadWithForceCalibrationSettings = 0;
+  ParametersValue.RappBaseParameterList.Command.LoadWithForceFactorySettings = 0;
+  ParametersValue.RappBaseParameterList.Command.LoadWithForceUserSettings = 0;
   ParametersValue.RappBaseParameterList.Command.SaveAll = 0;
-  ParametersValue.RappBaseParameterList.Command.SaveInfo = 0;
-  ParametersValue.RappBaseParameterList.Command.SaveModbusExt = 0;
-  ParametersValue.RappBaseParameterList.Command.SaveHardwareConfiguration = 0;
-  ParametersValue.RappBaseParameterList.Command.SaveFunctional = 0;
-  ParametersValue.RappBaseParameterList.Command.SaveSensorCalibCoef = 0;
-  ParametersValue.RappBaseParameterList.Command.SaveOutputCalibCoef = 0;
-  ParametersValue.RappBaseParameterList.Command.SaveOutputRotation = 0;
+  ParametersValue.RappBaseParameterList.Command.SaveInfoSettings = 0;
+  ParametersValue.RappBaseParameterList.Command.SaveCalibrationSettings = 0;
+  ParametersValue.RappBaseParameterList.Command.SaveFactorySettings = 0;
+  ParametersValue.RappBaseParameterList.Command.SaveUserSettings = 0;
   ParametersValue.RappBaseSystem.Monitoring.ResetSource = 0;
   ParametersValue.RappBaseSystem.Monitoring.DateYear = 0;
   ParametersValue.RappBaseSystem.Monitoring.DateMonth = 0;

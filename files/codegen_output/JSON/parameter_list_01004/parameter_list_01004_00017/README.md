@@ -9,10 +9,11 @@
 
 The application generates the following files:
 
-### TXT Files
+### JSON Files
 | File Name | Description |
 |-----------|-------------|
-| cg_parameter_list_01004_human_readable.txt | - |
+| cg_parameter_list_01004_00017_info.json | - |
+| cg_parameter_list_01004_00017_parameter_list.json | - |
 ## Notes
 
 - The outputs are generated based on the version **3.0.11** of this software.  

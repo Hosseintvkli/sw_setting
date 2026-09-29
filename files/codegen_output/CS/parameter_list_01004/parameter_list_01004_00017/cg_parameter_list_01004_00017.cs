@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 namespace ACCUNAV_IMU_Setting
 {
     [DefaultProperty("SerialNo")]
-    public class Parameters_DeviceID_01004 : IParameterListDevice
+    public class Parameters_DeviceID_01004_00017 : IParameterListDevice
     {
         private bool readedOnce;
 
@@ -97,7 +97,7 @@ namespace ACCUNAV_IMU_Setting
         public UInt16 outputStabilizationCycleQty;
         public sPrtlFrame1 prtlFrame1Setting;
 
-        public Parameters_DeviceID_01004()
+        public Parameters_DeviceID_01004_00017()
         {
             readedOnce = false;
         

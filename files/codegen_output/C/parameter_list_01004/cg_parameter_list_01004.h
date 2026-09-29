@@ -20,8 +20,8 @@ extern "C" {
 * @brief 
 * 
 */
-#define PARAMETER_LIST_VERSION      16
-#define PARAMETER_LIST_VERSION_STR  "00016"
+#define PARAMETER_LIST_VERSION      17
+#define PARAMETER_LIST_VERSION_STR  "00017"
 
 /**
 * @brief 
@@ -33,7 +33,7 @@ extern "C" {
 * @brief 
 * 
 */
-#define PARAMETERS_QTY  7747
+#define PARAMETERS_QTY  7735
 
 /**
 * @brief 
@@ -74,38 +74,26 @@ typedef uint16_t parameter_mb_addr_t;
 #define PARAMETER_MB_ADDR_LOAD_ALL                                                               ((parameter_mb_addr_t)203)
 #define PARAMETER_MB_ADDR_LOAD_ALL_MEMORY_RESULT_0                                               ((parameter_mb_addr_t)204)
 #define PARAMETER_MB_ADDR_LOAD_ALL_MEMORY_RESULT_1                                               ((parameter_mb_addr_t)205)
-#define PARAMETER_MB_ADDR_LOAD_INFO_STATUS                                                       ((parameter_mb_addr_t)206)
-#define PARAMETER_MB_ADDR_LOAD_MODBUS_EXT_STATUS                                                 ((parameter_mb_addr_t)207)
-#define PARAMETER_MB_ADDR_LOAD_HARDWARE_CONFIGURATION_STATUS                                     ((parameter_mb_addr_t)208)
-#define PARAMETER_MB_ADDR_LOAD_FUNCTIONAL_STATUS                                                 ((parameter_mb_addr_t)209)
-#define PARAMETER_MB_ADDR_LOAD_SENSOR_CALIB_COEF_STATUS                                          ((parameter_mb_addr_t)210)
-#define PARAMETER_MB_ADDR_LOAD_OUTPUT_CALIB_COEF_STATUS                                          ((parameter_mb_addr_t)211)
-#define PARAMETER_MB_ADDR_LOAD_OUTPUT_ROTATION_STATUS                                            ((parameter_mb_addr_t)212)
-#define PARAMETER_MB_ADDR_LOAD_INFO                                                              ((parameter_mb_addr_t)213)
-#define PARAMETER_MB_ADDR_LOAD_MODBUS_EXT                                                        ((parameter_mb_addr_t)214)
-#define PARAMETER_MB_ADDR_LOAD_HARDWARE_CONFIGURATION                                            ((parameter_mb_addr_t)215)
-#define PARAMETER_MB_ADDR_LOAD_FUNCTIONAL                                                        ((parameter_mb_addr_t)216)
-#define PARAMETER_MB_ADDR_LOAD_SENSOR_CALIB_COEF                                                 ((parameter_mb_addr_t)217)
-#define PARAMETER_MB_ADDR_LOAD_OUTPUT_CALIB_COEF                                                 ((parameter_mb_addr_t)218)
-#define PARAMETER_MB_ADDR_LOAD_OUTPUT_ROTATION                                                   ((parameter_mb_addr_t)219)
-#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_ALL                                                    ((parameter_mb_addr_t)220)
-#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_INFO                                                   ((parameter_mb_addr_t)221)
-#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_MODBUS_EXT                                             ((parameter_mb_addr_t)222)
-#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_HARDWARE_CONFIGURATION                                 ((parameter_mb_addr_t)223)
-#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_FUNCTIONAL                                             ((parameter_mb_addr_t)224)
-#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_SENSOR_CALIB_COEF                                      ((parameter_mb_addr_t)225)
-#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_OUTPUT_CALIB_COEF                                      ((parameter_mb_addr_t)226)
-#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_OUTPUT_ROTATION                                        ((parameter_mb_addr_t)227)
-#define PARAMETER_MB_ADDR_SAVE_ALL                                                               ((parameter_mb_addr_t)228)
-#define PARAMETER_MB_ADDR_SAVE_ALL_MEMORY_RESULT_0                                               ((parameter_mb_addr_t)229)
-#define PARAMETER_MB_ADDR_SAVE_ALL_MEMORY_RESULT_1                                               ((parameter_mb_addr_t)230)
-#define PARAMETER_MB_ADDR_SAVE_INFO                                                              ((parameter_mb_addr_t)231)
-#define PARAMETER_MB_ADDR_SAVE_MODBUS_EXT                                                        ((parameter_mb_addr_t)232)
-#define PARAMETER_MB_ADDR_SAVE_HARDWARE_CONFIGURATION                                            ((parameter_mb_addr_t)233)
-#define PARAMETER_MB_ADDR_SAVE_FUNCTIONAL                                                        ((parameter_mb_addr_t)234)
-#define PARAMETER_MB_ADDR_SAVE_SENSOR_CALIB_COEF                                                 ((parameter_mb_addr_t)235)
-#define PARAMETER_MB_ADDR_SAVE_OUTPUT_CALIB_COEF                                                 ((parameter_mb_addr_t)236)
-#define PARAMETER_MB_ADDR_SAVE_OUTPUT_ROTATION                                                   ((parameter_mb_addr_t)237)
+#define PARAMETER_MB_ADDR_LOAD_INFO_SETTINGS_STATUS                                              ((parameter_mb_addr_t)206)
+#define PARAMETER_MB_ADDR_LOAD_CALIBRATION_SETTINGS_STATUS                                       ((parameter_mb_addr_t)207)
+#define PARAMETER_MB_ADDR_LOAD_FACTORY_SETTINGS_STATUS                                           ((parameter_mb_addr_t)208)
+#define PARAMETER_MB_ADDR_LOAD_USER_SETTINGS_STATUS                                              ((parameter_mb_addr_t)209)
+#define PARAMETER_MB_ADDR_LOAD_INFO_SETTINGS                                                     ((parameter_mb_addr_t)210)
+#define PARAMETER_MB_ADDR_LOAD_CALIBRATION_SETTINGS                                              ((parameter_mb_addr_t)211)
+#define PARAMETER_MB_ADDR_LOAD_FACTORY_SETTINGS                                                  ((parameter_mb_addr_t)212)
+#define PARAMETER_MB_ADDR_LOAD_USER_SETTINGS                                                     ((parameter_mb_addr_t)213)
+#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_ALL                                                    ((parameter_mb_addr_t)214)
+#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_INFO_SETTINGS                                          ((parameter_mb_addr_t)215)
+#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_CALIBRATION_SETTINGS                                   ((parameter_mb_addr_t)216)
+#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_FACTORY_SETTINGS                                       ((parameter_mb_addr_t)217)
+#define PARAMETER_MB_ADDR_LOAD_WITH_FORCE_USER_SETTINGS                                          ((parameter_mb_addr_t)218)
+#define PARAMETER_MB_ADDR_SAVE_ALL                                                               ((parameter_mb_addr_t)219)
+#define PARAMETER_MB_ADDR_SAVE_ALL_MEMORY_RESULT_0                                               ((parameter_mb_addr_t)220)
+#define PARAMETER_MB_ADDR_SAVE_ALL_MEMORY_RESULT_1                                               ((parameter_mb_addr_t)221)
+#define PARAMETER_MB_ADDR_SAVE_INFO_SETTINGS                                                     ((parameter_mb_addr_t)222)
+#define PARAMETER_MB_ADDR_SAVE_CALIBRATION_SETTINGS                                              ((parameter_mb_addr_t)223)
+#define PARAMETER_MB_ADDR_SAVE_FACTORY_SETTINGS                                                  ((parameter_mb_addr_t)224)
+#define PARAMETER_MB_ADDR_SAVE_USER_SETTINGS                                                     ((parameter_mb_addr_t)225)
 #define PARAMETER_MB_ADDR_WATCHDOG_TIME_MS                                                       ((parameter_mb_addr_t)400)
 #define PARAMETER_MB_ADDR_RESET_SOURCE                                                           ((parameter_mb_addr_t)401)
 #define PARAMETER_MB_ADDR_RESET_CMD                                                              ((parameter_mb_addr_t)402)
