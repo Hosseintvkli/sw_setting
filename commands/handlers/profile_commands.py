@@ -264,11 +264,27 @@ def _run_profile(
                         registers = encode_parameter_value_to_holding_registers(
                             definition.data_type_name, assignment.parsed_value
                         )
-                        context.device_modbus_link.write_holding_registers_u16(
-                            definition.modbus_address,
-                            registers,
-                            modbus_unit_identifier=slave_id,
-                        )
+                        if (
+                            definition.parameter_access_kind
+                            == ParameterAccessKind.COMMAND_WRITE
+                            and len(registers) == 1
+                        ):
+                            context.device_modbus_link.write_holding_register_u16(
+                                definition.modbus_address,
+                                registers[0],
+                                modbus_unit_identifier=slave_id,
+                                timeout_seconds_override=(
+                                    context.device_modbus_link
+                                    .get_active_command_execution_timeout_seconds()
+                                ),
+                                total_attempt_count_override=1,
+                            )
+                        else:
+                            context.device_modbus_link.write_holding_registers_u16(
+                                definition.modbus_address,
+                                registers,
+                                modbus_unit_identifier=slave_id,
+                            )
                     ok_count += 1
                     if args.verbose:
                         details.append(

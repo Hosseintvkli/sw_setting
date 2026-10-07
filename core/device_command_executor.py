@@ -63,6 +63,10 @@ class DeviceCommandExecutor:
                 modbus_address,
                 COMMAND_TRIGGER_VALUE_U16,
                 modbus_unit_identifier=modbus_unit_identifier,
+                timeout_seconds_override=(
+                    self._device_modbus_link.get_active_command_execution_timeout_seconds()
+                ),
+                total_attempt_count_override=1,
             )
         except DeviceModbusLinkError as exc:
             return DeviceCommandExecutionResult(

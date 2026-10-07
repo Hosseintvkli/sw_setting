@@ -222,6 +222,9 @@ class DeviceModbusLink:
         modbus_register_address: int,
         value_u16: int,
         modbus_unit_identifier: int | None = None,
+        *,
+        timeout_seconds_override: float | None = None,
+        total_attempt_count_override: int | None = None,
     ) -> None:
         """
         Write one holding register (value masked to 16-bit).
@@ -233,9 +236,35 @@ class DeviceModbusLink:
         client, unit_id = self._require_connected_client_and_unit_id(
             modbus_unit_identifier_override=modbus_unit_identifier
         )
+        if total_attempt_count_override is not None:
+            if total_attempt_count_override < 1:
+                raise ValueError("total_attempt_count_override must be positive")
+            self._set_client_retry_count(client, total_attempt_count_override)
         self._set_client_timeout_seconds(
-            client, self.get_active_write_timeout_seconds()
+            client,
+            self.get_active_write_timeout_seconds()
+            if timeout_seconds_override is None
+            else timeout_seconds_override,
         )
+        try:
+            self._write_holding_register_u16_with_active_timeout(
+                client, unit_id, modbus_register_address, value_u16
+            )
+        finally:
+            if total_attempt_count_override is not None:
+                settings = self._active_communication_settings
+                if settings is not None:
+                    self._set_client_retry_count(
+                        client, settings.modbus_transaction_retry_count
+                    )
+
+    def _write_holding_register_u16_with_active_timeout(
+        self,
+        client: ModbusSerialClient | ModbusTcpClient,
+        unit_id: int,
+        modbus_register_address: int,
+        value_u16: int,
+    ) -> None:
         value_u16 = int(value_u16) & 0xFFFF
         is_broadcast = int(unit_id) == 0
         try:

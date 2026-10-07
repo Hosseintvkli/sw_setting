@@ -16,7 +16,12 @@ class FakeLink:
         self.read_values = dict(read_values)
         self.failed_writes = set(failed_writes)
 
-    def write_holding_register_u16(self, address, value, modbus_unit_identifier=None):
+    def write_holding_register_u16(
+        self, address, value, modbus_unit_identifier=None,
+        *, timeout_seconds_override=None, total_attempt_count_override=None,
+    ):
+        assert timeout_seconds_override == 1
+        assert total_attempt_count_override == 1
         self.operations.append(("write", modbus_unit_identifier, address, value))
         if modbus_unit_identifier in self.failed_writes:
             raise DeviceModbusLinkError("write rejected")
