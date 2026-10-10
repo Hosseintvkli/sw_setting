@@ -9,7 +9,7 @@ __pycache__/
 
 # PyInstaller and packaged application output
 /build/
-/dist/
+/dist/*
+!/dist/sw_setting/
 /*.spec
-*.exe
 *.msi
