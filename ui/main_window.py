@@ -962,7 +962,8 @@ class DeviceSettingMainWindow(QMainWindow):
             self.label_selected_device.setText(
                 "Selected device: "
                 f"{data.get('device_name') or '(unknown)'}  "
-                f"SlaveId={data.get('slave_id')}  DeviceId={data.get('device_id', '—')}"
+                f"SlaveId={data.get('slave_id')}  "
+                f"DeviceId={_format_device_id(data.get('device_id'))}"
             )
         elif command in ("load-settings", "reload-settings") and ok:
             self._settings_loaded = True
@@ -978,13 +979,14 @@ class DeviceSettingMainWindow(QMainWindow):
                 )
             self.label_selected_device.setText(
                 f"Selected device: {data.get('device_name', '(unknown)')}  "
-                f"SlaveId={data.get('slave_id')}  DeviceId={data.get('device_id')}"
+                f"SlaveId={data.get('slave_id')}  "
+                f"DeviceId={_format_device_id(data.get('device_id'))}"
             )
             self.label_monitoring_device_name.setText(
                 str(data.get("device_name") or "—")
             )
             self.label_status_device_id.setText(
-                f"File DeviceID: {data.get('device_id', 'None')}"
+                f"File DeviceID: {_format_device_id(data.get('device_id'), missing='None')}"
             )
             self._set_status_segment(self.label_status_device_id, _STATUS_OK_COLOR)
         elif command == "get-monitoring-header" and ok:
@@ -1643,7 +1645,10 @@ class DeviceSettingMainWindow(QMainWindow):
         )
 
         def make_device_item(node: dict[str, Any], label: str | None = None):
-            name = str(node.get("device_name") or f"DeviceId={node.get('device_id')}")
+            name = str(
+                node.get("device_name")
+                or f"DeviceId={_format_device_id(node.get('device_id'))}"
+            )
             parameter_list_available = node.get("parameter_list_available") is not False
             display_label = label or name
             if not parameter_list_available:
@@ -1663,7 +1668,8 @@ class DeviceSettingMainWindow(QMainWindow):
                 child = port.get("device")
                 if port.get("connected") and isinstance(child, dict):
                     child_name = str(
-                        child.get("device_name") or f"DeviceId={child.get('device_id')}"
+                        child.get("device_name")
+                        or f"DeviceId={_format_device_id(child.get('device_id'))}"
                     )
                     item.addChild(
                         make_device_item(child, f"port[{port_index}]: {child_name}")
@@ -1811,7 +1817,10 @@ class DeviceSettingMainWindow(QMainWindow):
         self._clear_loaded_device_state()
         self._loaded_topology_slave_id = slave_id
         self._refresh_loaded_topology_marker()
-        name = str(node.get("device_name") or f"DeviceId={node.get('device_id')}")
+        name = str(
+            node.get("device_name")
+            or f"DeviceId={_format_device_id(node.get('device_id'))}"
+        )
         message = (
             f"Parameter-list version {node.get('parameter_list_version')} for "
             f"{name} is unavailable. Device information is shown, but "
@@ -2090,7 +2099,9 @@ class DeviceSettingMainWindow(QMainWindow):
 
     def _apply_monitoring_data(self, data: dict[str, Any]) -> None:
         self.label_monitoring_slave_id.setText(str(data.get("slave_id", "—")))
-        self.label_monitoring_device_id.setText(str(data.get("device_id", "—")))
+        self.label_monitoring_device_id.setText(
+            _format_device_id(data.get("device_id"))
+        )
         self.label_monitoring_serial_no.setText(str(data.get("serial_number") or "—"))
         self.label_monitoring_hardware_version.setText(
             str(data.get("hardware_version") or "—")
@@ -2101,7 +2112,7 @@ class DeviceSettingMainWindow(QMainWindow):
         serial_number = data.get("serial_number")
         device_id = data.get("device_id")
         self.label_status_device_id.setText(
-            f"File DeviceID: {device_id if device_id is not None else 'None'}"
+            f"File DeviceID: {_format_device_id(device_id, missing='None')}"
         )
         self._set_status_segment(
             self.label_status_device_id,
@@ -2932,6 +2943,7 @@ class DeviceSettingMainWindow(QMainWindow):
     # ----- log helpers and shutdown -----
 
     def _append_log(self, message: str, *, success: bool | None = None) -> None:
+        message = _format_device_ids_in_text(message)
         color = ""
         if success is True:
             color = "#1b7a1b"
@@ -2943,6 +2955,7 @@ class DeviceSettingMainWindow(QMainWindow):
         )
 
     def _append_profile_log(self, message: str, *, success: bool | None = None) -> None:
+        message = _format_device_ids_in_text(message)
         color = "#1b7a1b" if success is True else "#b00020" if success is False else ""
         text = html.escape(message)
         self.profile_log_text_edit.append(
@@ -2950,6 +2963,7 @@ class DeviceSettingMainWindow(QMainWindow):
         )
 
     def _append_command_log(self, message: str, *, success: bool | None = None) -> None:
+        message = _format_device_ids_in_text(message)
         color = "#1b7a1b" if success is True else "#b00020" if success is False else ""
         text = html.escape(message)
         self.commands_log_text_edit.append(
@@ -2966,6 +2980,23 @@ def _optional_int(value: object) -> int | None:
         return int(value) if value is not None else None
     except (TypeError, ValueError):
         return None
+
+
+def _format_device_id(value: object, *, missing: str = "—") -> str:
+    """Format a DeviceId for display while keeping the stored value numeric."""
+    device_id = _optional_int(value)
+    return f"{device_id:05d}" if device_id is not None else missing
+
+
+_DEVICE_ID_IN_TEXT_PATTERN = re.compile(r"(DeviceId\s*[=:]\s*)(\d+)", re.IGNORECASE)
+
+
+def _format_device_ids_in_text(message: str) -> str:
+    """Normalize DeviceId occurrences in operator-facing messages."""
+    return _DEVICE_ID_IN_TEXT_PATTERN.sub(
+        lambda match: f"{match.group(1)}{int(match.group(2)):05d}",
+        message,
+    )
 
 
 def _count_identified_hubs_and_devices(root: dict[str, Any]) -> tuple[int, int]:

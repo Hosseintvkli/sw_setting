@@ -31,8 +31,8 @@ from core.modbus_register_value_codec import (
 
 DEVICE_ID_HOLDING_REGISTER_ADDRESS = 0
 PARAMETER_LIST_VERSION_HOLDING_REGISTER_ADDRESS = 1
-FIRMWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS = 2
-FIRMWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS = 3
+FIRMWARE_VERSION_HOLDING_REGISTER_ADDRESS = 2
+FIRMWARE_VERSION_REGISTER_COUNT = 5
 SERIAL_NUMBER_HOLDING_REGISTER_ADDRESS = 7
 SERIAL_NUMBER_REGISTER_COUNT = 2
 HARDWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS = 9
@@ -241,15 +241,16 @@ class DeviceSettingTreeLoader:
         serial_number: int | None = None
 
         try:
-            fw_major = self._device_modbus_link.read_holding_register_u16(
-                FIRMWARE_VERSION_MAJOR_HOLDING_REGISTER_ADDRESS,
+            firmware_registers = self._device_modbus_link.read_holding_registers_u16(
+                FIRMWARE_VERSION_HOLDING_REGISTER_ADDRESS,
+                FIRMWARE_VERSION_REGISTER_COUNT,
                 modbus_unit_identifier=self._modbus_slave_unit_identifier,
             )
-            fw_minor = self._device_modbus_link.read_holding_register_u16(
-                FIRMWARE_VERSION_MINOR_HOLDING_REGISTER_ADDRESS,
-                modbus_unit_identifier=self._modbus_slave_unit_identifier,
+            firmware_version_text = (
+                f"{firmware_registers[0]}.{firmware_registers[1]}."
+                f"{firmware_registers[2]}."
+                f"{firmware_registers[3] | (firmware_registers[4] << 16)}"
             )
-            firmware_version_text = f"{fw_major}.{fw_minor}"
         except DeviceModbusLinkError:
             pass
 
