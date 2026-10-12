@@ -42,7 +42,7 @@ _CONNECT_TIMEOUT_MS = 100
 _READ_TIMEOUT_MS = 200
 _WRITE_TIMEOUT_MS = 100
 _COMMAND_TIMEOUT_MS = 10_000
-_MODBUS_ATTEMPTS = 3
+_DEFAULT_MODBUS_ATTEMPTS = 3
 
 
 class CommunicationSettingsPanel(QWidget):
@@ -165,6 +165,25 @@ class CommunicationSettingsPanel(QWidget):
         ethernet_form.addRow("Device IP:", self.line_edit_device_ip_address)
         ethernet_form.addRow("TCP port:", self.spin_box_modbus_tcp_port_number)
 
+        self.modbus_retry_settings_group_box = QGroupBox("Modbus Retry")
+        self.combo_box_modbus_attempt_count = QComboBox()
+        for attempt_count in range(1, 11):
+            self.combo_box_modbus_attempt_count.addItem(
+                str(attempt_count), attempt_count
+            )
+        self.combo_box_modbus_attempt_count.setCurrentIndex(
+            self.combo_box_modbus_attempt_count.findData(
+                _DEFAULT_MODBUS_ATTEMPTS
+            )
+        )
+        self.combo_box_modbus_attempt_count.setToolTip(
+            "Total attempts for each Modbus operation, including Identify probes."
+        )
+        retry_form = QFormLayout(self.modbus_retry_settings_group_box)
+        retry_form.addRow(
+            "Retry attempts:", self.combo_box_modbus_attempt_count
+        )
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setSpacing(4)
@@ -172,6 +191,7 @@ class CommunicationSettingsPanel(QWidget):
         layout.addWidget(self.serial_settings_group_box)
         layout.addWidget(self.ethernet_settings_group_box)
         layout.addWidget(self.modbus_tcp_settings_group_box)
+        layout.addWidget(self.modbus_retry_settings_group_box)
         layout.addStretch(1)
 
         self.push_button_refresh_serial_port_list.setObjectName(
@@ -183,7 +203,7 @@ class CommunicationSettingsPanel(QWidget):
         self.push_button_open_windows_network_connections.setObjectName(
             "secondaryActionButton"
         )
-        for form in (serial_form, ethernet_local_form, ethernet_form):
+        for form in (serial_form, ethernet_local_form, ethernet_form, retry_form):
             form.setHorizontalSpacing(7)
             form.setVerticalSpacing(4)
 
@@ -373,6 +393,9 @@ class CommunicationSettingsPanel(QWidget):
             )
 
     def connect_cli_arguments(self) -> list[str]:
+        retry_attempts = int(
+            self.combo_box_modbus_attempt_count.currentData()
+        )
         if self.radio_button_serial_rtu.isChecked():
             port = str(self.combo_box_serial_port_name.currentData() or "").strip()
             if not port:
@@ -391,7 +414,7 @@ class CommunicationSettingsPanel(QWidget):
                 "--write-timeout-ms",
                 str(_WRITE_TIMEOUT_MS),
                 "--command-timeout-ms", str(_COMMAND_TIMEOUT_MS),
-                "--retries", str(_MODBUS_ATTEMPTS),
+                "--retries", str(retry_attempts),
             ]
 
         device_ip = self.line_edit_device_ip_address.text().strip()
@@ -412,7 +435,7 @@ class CommunicationSettingsPanel(QWidget):
             "--write-timeout-ms",
             str(_WRITE_TIMEOUT_MS),
             "--command-timeout-ms", str(_COMMAND_TIMEOUT_MS),
-            "--retries", str(_MODBUS_ATTEMPTS),
+            "--retries", str(retry_attempts),
         ]
         if local_name:
             arguments.extend(["--local-interface", local_name])
