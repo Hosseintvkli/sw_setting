@@ -101,6 +101,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._monitoring_read_scheduled = False
         self._monitoring_next_parameter_index = 0
         self._suppress_monitoring_item_change = False
+        self._disconnect_after_monitoring_stops = False
         self._pending_watched_command: tuple[
             str, list[str], object, bool, str, bool
         ] | None = None
@@ -815,6 +816,8 @@ class DeviceSettingMainWindow(QMainWindow):
         self._cli_busy = busy
         self._update_action_states()
         if not busy:
+            if self._try_execute_pending_disconnect():
+                return
             if self._pending_device_slave_id is not None:
                 slave_id = self._pending_device_slave_id
                 self._pending_device_slave_id = None
@@ -892,8 +895,12 @@ class DeviceSettingMainWindow(QMainWindow):
         if command == "connect" and ok:
             self._clear_loaded_device_state()
             self._set_connected_state(True)
-        elif command == "disconnect" and ok:
-            self._set_connected_state(False)
+        elif command == "disconnect":
+            if ok:
+                self._set_connected_state(False)
+            else:
+                self.push_button_connection_toggle.setText("Disconnect")
+                self._update_action_states()
         elif command == "serve-stop" and ok:
             self._session_ready_flag = False
             self._set_connected_state(False)
@@ -1061,7 +1068,34 @@ class DeviceSettingMainWindow(QMainWindow):
         self._execute("connect", arguments)
 
     def _on_disconnect_clicked(self) -> None:
+        monitoring_active = (
+            self.push_button_periodic_monitoring_read.isChecked()
+            or self._monitoring_read_scheduled
+            or self._monitoring_read_in_flight
+        )
+        if monitoring_active:
+            self._stop_periodic_monitoring(
+                "Monitoring stopped before disconnect."
+            )
+            self._disconnect_after_monitoring_stops = True
+            self.push_button_connection_toggle.setText("Disconnecting...")
+            self._update_action_states()
+            self._try_execute_pending_disconnect()
+            return
         self._execute("disconnect")
+
+    def _try_execute_pending_disconnect(self) -> bool:
+        """Disconnect after the current Monitoring read has finished."""
+        if not self._disconnect_after_monitoring_stops:
+            return False
+        if self._cli_busy or self._monitoring_read_in_flight:
+            return False
+        self._disconnect_after_monitoring_stops = False
+        if not self._execute("disconnect"):
+            self.push_button_connection_toggle.setText("Disconnect")
+            self._update_action_states()
+            return False
+        return True
 
     def _on_connection_toggle_clicked(self) -> None:
         if self._connected:
@@ -1071,6 +1105,8 @@ class DeviceSettingMainWindow(QMainWindow):
 
     def _set_connected_state(self, connected: bool) -> None:
         self._connected = connected
+        if not connected:
+            self._disconnect_after_monitoring_stops = False
         self.push_button_connection_toggle.setText(
             "Disconnect" if connected else "Connect"
         )
@@ -1088,19 +1124,26 @@ class DeviceSettingMainWindow(QMainWindow):
             _STATUS_OK_COLOR if connected else _STATUS_ERROR_COLOR,
         )
         if not connected:
-            self._settings_loaded = False
-            self._selected_slave_id = None
-            self._loaded_topology_slave_id = None
-            self.settings_tree_widget.clear()
-            self.commands_tree_widget.clear()
-            self._clear_monitoring_parameter_table()
-            self.label_selected_device.setText("Selected device: (none)")
-            self._clear_monitoring()
+            self._stop_periodic_monitoring(
+                "Monitoring stopped because the device was disconnected."
+            )
         self._update_action_states()
 
     def _update_action_states(self) -> None:
         ready = self._session_ready_flag and not self._cli_busy
-        self.push_button_connection_toggle.setEnabled(ready)
+        monitoring_can_be_stopped_for_disconnect = (
+            self._session_ready_flag
+            and self._connected
+            and not self._disconnect_after_monitoring_stops
+            and (
+                self.push_button_periodic_monitoring_read.isChecked()
+                or self._monitoring_read_scheduled
+                or self._monitoring_read_in_flight
+            )
+        )
+        self.push_button_connection_toggle.setEnabled(
+            ready or monitoring_can_be_stopped_for_disconnect
+        )
         self.push_button_run_identify.setEnabled(
             ready and self._connected and not self._identify_running
         )
@@ -2286,6 +2329,16 @@ class DeviceSettingMainWindow(QMainWindow):
             self._schedule_next_monitoring_read()
         else:
             self.push_button_periodic_monitoring_read.setText("Start Monitoring")
+        self.push_button_periodic_monitoring_read.setObjectName(
+            "dangerActionButton" if enabled else "primaryActionButton"
+        )
+        self.push_button_periodic_monitoring_read.style().unpolish(
+            self.push_button_periodic_monitoring_read
+        )
+        self.push_button_periodic_monitoring_read.style().polish(
+            self.push_button_periodic_monitoring_read
+        )
+        self._update_action_states()
 
     def _stop_periodic_monitoring(self, _status_message: str) -> None:
         if self.push_button_periodic_monitoring_read.isChecked():
@@ -2372,7 +2425,8 @@ class DeviceSettingMainWindow(QMainWindow):
                     else "No response from read-monitoring."
                 )
                 self._append_log(f"Monitoring read failed: {error}", success=False)
-            self._schedule_next_monitoring_read()
+            if not self._try_execute_pending_disconnect():
+                self._schedule_next_monitoring_read()
 
         if not self._execute(
             "read-monitoring",
