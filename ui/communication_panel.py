@@ -9,6 +9,7 @@ from __future__ import annotations
 import sys
 
 from PyQt6.QtCore import QProcess, Qt, pyqtSignal
+from PyQt6.QtGui import QIntValidator
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
     QButtonGroup,
@@ -27,6 +28,9 @@ from PyQt6.QtWidgets import (
 )
 
 _STANDARD_BAUD_RATES = (
+    1200,
+    2400,
+    4800,
     9600,
     19200,
     38400,
@@ -35,8 +39,11 @@ _STANDARD_BAUD_RATES = (
     230400,
     460800,
     921600,
+    1000000,
+    1500000,
+    2000000,
+    3000000,
 )
-_CUSTOM_BAUD_LABEL = "Custom..."
 _REQUIRED_LOCAL_IPV4_ADDRESS = "192.168.1.120"
 _CONNECT_TIMEOUT_MS = 100
 _READ_TIMEOUT_MS = 200
@@ -87,25 +94,23 @@ class CommunicationSettingsPanel(QWidget):
         serial_port_controls.addLayout(serial_refresh_row)
 
         self.combo_box_baud_rate_bits_per_second = QComboBox()
+        self.combo_box_baud_rate_bits_per_second.setEditable(True)
+        self.combo_box_baud_rate_bits_per_second.setInsertPolicy(
+            QComboBox.InsertPolicy.NoInsert
+        )
         for baud_rate in _STANDARD_BAUD_RATES:
             self.combo_box_baud_rate_bits_per_second.addItem(str(baud_rate), baud_rate)
-        self.combo_box_baud_rate_bits_per_second.addItem(_CUSTOM_BAUD_LABEL, None)
         self.combo_box_baud_rate_bits_per_second.setCurrentText("115200")
-        self.spin_box_custom_baud_rate_bits_per_second = QSpinBox()
-        self.spin_box_custom_baud_rate_bits_per_second.setRange(50, 12_000_000)
-        self.spin_box_custom_baud_rate_bits_per_second.setValue(115200)
-        self.spin_box_custom_baud_rate_bits_per_second.setEnabled(False)
-        self._remove_spin_buttons(
-            self.spin_box_custom_baud_rate_bits_per_second
+        baud_line_edit = self.combo_box_baud_rate_bits_per_second.lineEdit()
+        if baud_line_edit is not None:
+            baud_line_edit.setValidator(QIntValidator(50, 12_000_000, self))
+        self.combo_box_baud_rate_bits_per_second.setToolTip(
+            "Choose a common baud rate or type any value from 50 to 12000000."
         )
-        baud_row = QHBoxLayout()
-        baud_row.addWidget(self.combo_box_baud_rate_bits_per_second, stretch=1)
-        baud_row.addWidget(QLabel("Custom:"))
-        baud_row.addWidget(self.spin_box_custom_baud_rate_bits_per_second)
 
         serial_form = QFormLayout(self.serial_settings_group_box)
         serial_form.addRow("COM port:", serial_port_controls)
-        serial_form.addRow("Baud rate:", baud_row)
+        serial_form.addRow("Baud rate:", self.combo_box_baud_rate_bits_per_second)
 
         self.ethernet_settings_group_box = QGroupBox(
             "PC Ethernet Connection Details"
@@ -161,11 +166,26 @@ class CommunicationSettingsPanel(QWidget):
         self.spin_box_modbus_tcp_port_number.setRange(1, 65535)
         self.spin_box_modbus_tcp_port_number.setValue(502)
         self._remove_spin_buttons(self.spin_box_modbus_tcp_port_number)
+        self.spin_box_connect_timeout_milliseconds = self._timeout_spin_box(
+            _CONNECT_TIMEOUT_MS
+        )
         ethernet_form = QFormLayout(self.modbus_tcp_settings_group_box)
         ethernet_form.addRow("Device IP:", self.line_edit_device_ip_address)
         ethernet_form.addRow("TCP port:", self.spin_box_modbus_tcp_port_number)
+        ethernet_form.addRow(
+            "Connect timeout:", self.spin_box_connect_timeout_milliseconds
+        )
 
-        self.modbus_retry_settings_group_box = QGroupBox("Modbus Retry")
+        self.modbus_retry_settings_group_box = QGroupBox("Modbus Timing and Retry")
+        self.spin_box_read_timeout_milliseconds = self._timeout_spin_box(
+            _READ_TIMEOUT_MS
+        )
+        self.spin_box_write_timeout_milliseconds = self._timeout_spin_box(
+            _WRITE_TIMEOUT_MS
+        )
+        self.spin_box_command_timeout_milliseconds = self._timeout_spin_box(
+            _COMMAND_TIMEOUT_MS, maximum=3_600_000
+        )
         self.spin_box_modbus_attempt_count = QSpinBox()
         self.spin_box_modbus_attempt_count.setRange(1, 100)
         self.spin_box_modbus_attempt_count.setValue(_DEFAULT_MODBUS_ATTEMPTS)
@@ -174,6 +194,15 @@ class CommunicationSettingsPanel(QWidget):
             "Total attempts for each Modbus operation, including Identify probes."
         )
         retry_form = QFormLayout(self.modbus_retry_settings_group_box)
+        retry_form.addRow(
+            "Read timeout:", self.spin_box_read_timeout_milliseconds
+        )
+        retry_form.addRow(
+            "Write timeout:", self.spin_box_write_timeout_milliseconds
+        )
+        retry_form.addRow(
+            "Command timeout:", self.spin_box_command_timeout_milliseconds
+        )
         retry_form.addRow(
             "Retry attempts:", self.spin_box_modbus_attempt_count
         )
@@ -204,9 +233,6 @@ class CommunicationSettingsPanel(QWidget):
         self.radio_button_serial_rtu.toggled.connect(
             self._update_link_kind_visibility
         )
-        self.combo_box_baud_rate_bits_per_second.currentIndexChanged.connect(
-            self._update_custom_baud_enabled
-        )
         self.combo_box_local_network_interface.currentIndexChanged.connect(
             self._update_local_network_validation
         )
@@ -214,7 +240,6 @@ class CommunicationSettingsPanel(QWidget):
             self._update_network_combo_tooltip
         )
         self._update_link_kind_visibility()
-        self._update_custom_baud_enabled()
         self._update_local_network_validation()
         self._update_network_combo_tooltip()
 
@@ -224,16 +249,24 @@ class CommunicationSettingsPanel(QWidget):
         spin.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         spin.setKeyboardTracking(False)
 
+    def _timeout_spin_box(
+        self, value: int, *, maximum: int = 600_000
+    ) -> QSpinBox:
+        spin = QSpinBox()
+        spin.setRange(1, maximum)
+        spin.setValue(value)
+        spin.setSuffix(" ms")
+        self._remove_spin_buttons(spin)
+        return spin
+
     def _update_link_kind_visibility(self, *_args) -> None:
         serial = self.radio_button_serial_rtu.isChecked()
         self.serial_settings_group_box.setVisible(serial)
         self.ethernet_settings_group_box.setVisible(not serial)
         self.modbus_tcp_settings_group_box.setVisible(not serial)
 
-    def _update_custom_baud_enabled(self, *_args) -> None:
-        self.spin_box_custom_baud_rate_bits_per_second.setEnabled(
-            self.combo_box_baud_rate_bits_per_second.currentData() is None
-        )
+    def is_ethernet_tcp_selected(self) -> bool:
+        return self.radio_button_ethernet_tcp.isChecked()
 
     def set_available_serial_ports(self, ports: list[dict[str, object]]) -> None:
         previous = self.combo_box_serial_port_name.currentData()
@@ -392,20 +425,22 @@ class CommunicationSettingsPanel(QWidget):
             port = str(self.combo_box_serial_port_name.currentData() or "").strip()
             if not port:
                 raise ValueError("Select a serial port first.")
-            baud_data = self.combo_box_baud_rate_bits_per_second.currentData()
-            baud = (
-                int(baud_data)
-                if baud_data is not None
-                else self.spin_box_custom_baud_rate_bits_per_second.value()
-            )
+            baud_text = self.combo_box_baud_rate_bits_per_second.currentText().strip()
+            try:
+                baud = int(baud_text)
+            except ValueError as exc:
+                raise ValueError("Enter a numeric baud rate.") from exc
+            if not 50 <= baud <= 12_000_000:
+                raise ValueError("Baud rate must be between 50 and 12000000.")
             return [
                 "--port", port,
                 "--baud", str(baud),
                 "--read-timeout-ms",
-                str(_READ_TIMEOUT_MS),
+                str(self.spin_box_read_timeout_milliseconds.value()),
                 "--write-timeout-ms",
-                str(_WRITE_TIMEOUT_MS),
-                "--command-timeout-ms", str(_COMMAND_TIMEOUT_MS),
+                str(self.spin_box_write_timeout_milliseconds.value()),
+                "--command-timeout-ms",
+                str(self.spin_box_command_timeout_milliseconds.value()),
                 "--retries", str(retry_attempts),
             ]
 
@@ -421,12 +456,13 @@ class CommunicationSettingsPanel(QWidget):
             "--device-ip", device_ip,
             "--tcp-port", str(self.spin_box_modbus_tcp_port_number.value()),
             "--connect-timeout-ms",
-            str(_CONNECT_TIMEOUT_MS),
+            str(self.spin_box_connect_timeout_milliseconds.value()),
             "--read-timeout-ms",
-            str(_READ_TIMEOUT_MS),
+            str(self.spin_box_read_timeout_milliseconds.value()),
             "--write-timeout-ms",
-            str(_WRITE_TIMEOUT_MS),
-            "--command-timeout-ms", str(_COMMAND_TIMEOUT_MS),
+            str(self.spin_box_write_timeout_milliseconds.value()),
+            "--command-timeout-ms",
+            str(self.spin_box_command_timeout_milliseconds.value()),
             "--retries", str(retry_attempts),
         ]
         if local_name:

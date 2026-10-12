@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import QEasingCurve, QTimer, Qt, QVariantAnimation
+from PyQt6.QtCore import QEasingCurve, QSize, QTimer, Qt, QVariantAnimation
 from PyQt6.QtGui import QBrush, QColor, QGuiApplication
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QSplitter,
     QScrollArea,
+    QStyle,
     QTabWidget,
     QTextEdit,
     QTreeWidget,
@@ -102,6 +103,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._monitoring_next_parameter_index = 0
         self._suppress_monitoring_item_change = False
         self._disconnect_after_monitoring_stops = False
+        self._reconnect_requested = False
         self._pending_watched_command: tuple[
             str, list[str], object, bool, str, bool
         ] | None = None
@@ -126,9 +128,21 @@ class DeviceSettingMainWindow(QMainWindow):
         self.communication_settings_panel = CommunicationSettingsPanel()
         self.push_button_connection_toggle = QPushButton("Connect")
         self.push_button_connection_toggle.setObjectName("primaryActionButton")
+        self.push_button_reconnect = QPushButton()
+        self.push_button_reconnect.setObjectName("secondaryActionButton")
+        self.push_button_reconnect.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload)
+        )
+        self.push_button_reconnect.setIconSize(QSize(18, 18))
+        self.push_button_reconnect.setFixedWidth(32)
+        self.push_button_reconnect.setAccessibleName("Reconnect")
+        self.push_button_reconnect.setToolTip(
+            "Disconnect and reconnect using the current Ethernet settings."
+        )
         connection_buttons = QHBoxLayout()
         connection_buttons.setContentsMargins(12, 0, 0, 0)
         connection_buttons.addWidget(self.push_button_connection_toggle)
+        connection_buttons.addWidget(self.push_button_reconnect)
         connection_buttons.addStretch(1)
 
         communicate_tab = QWidget()
@@ -606,6 +620,10 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_connection_toggle.clicked.connect(
             self._on_connection_toggle_clicked
         )
+        self.push_button_reconnect.clicked.connect(self._on_reconnect_clicked)
+        self.communication_settings_panel.radio_button_serial_rtu.toggled.connect(
+            lambda _checked: self._update_action_states()
+        )
         self.push_button_run_identify.clicked.connect(self._on_identify_clicked)
         self.push_button_enable_all_streaming.clicked.connect(
             lambda: self._broadcast_streaming_command(4002, "Enable")
@@ -898,7 +916,17 @@ class DeviceSettingMainWindow(QMainWindow):
         elif command == "disconnect":
             if ok:
                 self._set_connected_state(False)
+                if self._reconnect_requested:
+                    self._reconnect_requested = False
+                    self.push_button_reconnect.setToolTip(
+                        "Disconnect and reconnect using the current Ethernet settings."
+                    )
+                    QTimer.singleShot(0, self._on_connect_clicked)
             else:
+                self._reconnect_requested = False
+                self.push_button_reconnect.setToolTip(
+                    "Disconnect and reconnect using the current Ethernet settings."
+                )
                 self.push_button_connection_toggle.setText("Disconnect")
                 self._update_action_states()
         elif command == "serve-stop" and ok:
@@ -1082,7 +1110,26 @@ class DeviceSettingMainWindow(QMainWindow):
             self._update_action_states()
             self._try_execute_pending_disconnect()
             return
-        self._execute("disconnect")
+        if not self._execute("disconnect"):
+            self._cancel_reconnect_request()
+
+    def _on_reconnect_clicked(self) -> None:
+        if (
+            not self._connected
+            or not self.communication_settings_panel.is_ethernet_tcp_selected()
+        ):
+            return
+        self._reconnect_requested = True
+        self.push_button_reconnect.setToolTip("Reconnecting...")
+        self._update_action_states()
+        self._on_disconnect_clicked()
+
+    def _cancel_reconnect_request(self) -> None:
+        self._reconnect_requested = False
+        self.push_button_reconnect.setToolTip(
+            "Disconnect and reconnect using the current Ethernet settings."
+        )
+        self._update_action_states()
 
     def _try_execute_pending_disconnect(self) -> bool:
         """Disconnect after the current Monitoring read has finished."""
@@ -1093,7 +1140,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self._disconnect_after_monitoring_stops = False
         if not self._execute("disconnect"):
             self.push_button_connection_toggle.setText("Disconnect")
-            self._update_action_states()
+            self._cancel_reconnect_request()
             return False
         return True
 
@@ -1143,6 +1190,12 @@ class DeviceSettingMainWindow(QMainWindow):
         )
         self.push_button_connection_toggle.setEnabled(
             ready or monitoring_can_be_stopped_for_disconnect
+        )
+        self.push_button_reconnect.setEnabled(
+            self._connected
+            and self.communication_settings_panel.is_ethernet_tcp_selected()
+            and not self._reconnect_requested
+            and (ready or monitoring_can_be_stopped_for_disconnect)
         )
         self.push_button_run_identify.setEnabled(
             ready and self._connected and not self._identify_running
