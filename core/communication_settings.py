@@ -66,4 +66,4 @@ class DeviceCommunicationSettings:
     # Maximum time to wait for a COMMAND register to leave its pending state.
     command_execution_timeout_milliseconds: int = 10_000
     # Total attempts per Modbus transaction (try immediately, then wait timeout & retry)
-    modbus_transaction_retry_count: int = 3
+    modbus_transaction_retry_count: int = 1

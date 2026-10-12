@@ -75,7 +75,10 @@ def handle_connect(context: CommandSessionContext, args) -> CommandResult:
     except DeviceModbusLinkError as exc:
         return failure("connect", str(exc))
 
-    context.selected_slave_id = None
+    if context.selected_slave_id is not None:
+        context.device_modbus_link.set_modbus_unit_identifier_override(
+            context.selected_slave_id
+        )
     context.log(f"Connected: {link_info}")
     return success(
         "connect",
@@ -85,16 +88,23 @@ def handle_connect(context: CommandSessionContext, args) -> CommandResult:
             "write_timeout_ms": int(args.write_timeout_ms),
             "command_timeout_ms": int(args.command_timeout_ms),
             "retries": retries,
+            "restored_selected_slave_id": context.selected_slave_id,
+            "settings_state_preserved": context.last_settings_load_result is not None,
         },
     )
 
 
 def handle_disconnect(context: CommandSessionContext, args) -> CommandResult:
     context.device_modbus_link.disconnect()
-    context.selected_slave_id = None
-    context.last_settings_load_result = None
     context.log("Disconnected.")
-    return success("disconnect", {"connected": False})
+    return success(
+        "disconnect",
+        {
+            "connected": False,
+            "preserved_selected_slave_id": context.selected_slave_id,
+            "settings_state_preserved": context.last_settings_load_result is not None,
+        },
+    )
 
 
 def handle_status(context: CommandSessionContext, args) -> CommandResult:

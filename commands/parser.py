@@ -46,7 +46,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     p.add_argument("--write-timeout-ms", type=int, default=100)
     p.add_argument("--connect-timeout-ms", type=int, default=100)
     p.add_argument("--command-timeout-ms", type=int, default=10_000)
-    p.add_argument("--retries", type=int, default=3)
+    p.add_argument("--retries", type=int, default=1)
 
     sub.add_parser("disconnect", help="Close Modbus link")
     sub.add_parser("status", help="Show session status")

@@ -911,7 +911,6 @@ class DeviceSettingMainWindow(QMainWindow):
             self._append_log(str(error), success=False)
 
         if command == "connect" and ok:
-            self._clear_loaded_device_state()
             self._set_connected_state(True)
         elif command == "disconnect":
             if ok:
