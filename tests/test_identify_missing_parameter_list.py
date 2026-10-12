@@ -12,8 +12,9 @@ from core.device_topology_models import IdentifiedDeviceNode
 
 
 class _FakeModbusLink:
-    def __init__(self) -> None:
+    def __init__(self, retry_count: int = 3) -> None:
         self.writes: list[tuple[int, int, int | None]] = []
+        self.retry_count = retry_count
 
     def read_holding_register_u16(
         self, address: int, modbus_unit_identifier: int | None = None,
@@ -42,6 +43,9 @@ class _FakeModbusLink:
 
     def get_active_read_timeout_seconds(self) -> float:
         return 0.2
+
+    def get_active_transaction_retry_count(self) -> int:
+        return self.retry_count
 
 
 class MissingParameterListIdentifyTests(unittest.TestCase):
@@ -102,8 +106,8 @@ class MissingParameterListIdentifyTests(unittest.TestCase):
 
         self.assertNotIn(0, hub.downstream_port_slave_id_min)
 
-    def test_empty_downstream_port_is_probed_three_times(self):
-        session = DeviceIdentifySession(_FakeModbusLink())
+    def test_empty_downstream_port_uses_configured_probe_count(self):
+        session = DeviceIdentifySession(_FakeModbusLink(retry_count=3))
         hub = IdentifiedDeviceNode(
             device_id=3,
             parameter_list_version=15,
@@ -127,6 +131,29 @@ class MissingParameterListIdentifyTests(unittest.TestCase):
         self.assertEqual([call.args[0] for call in wait.call_args_list], [0.2] * 3)
         self.assertEqual(hub.downstream_port_slave_id_min[0], 0)
         self.assertEqual(hub.downstream_port_slave_id_max[0], 0)
+
+    def test_retry_one_probes_empty_downstream_port_once(self):
+        session = DeviceIdentifySession(_FakeModbusLink(retry_count=1))
+        hub = IdentifiedDeviceNode(
+            device_id=3,
+            parameter_list_version=15,
+            device_name="datalogger_v3_Salve",
+            permanent_modbus_slave_id=246,
+            downstream_port_quantity=1,
+            parameter_list_package=object(),
+        )
+        with (
+            patch.object(session, "_configure_hub_ports_for_discovery_scan"),
+            patch.object(session, "_wait_for_device_state_to_settle") as wait,
+            patch.object(session, "_write_port_min_max"),
+            patch.object(
+                session, "_discover_node_on_temporary_slave_one", return_value=None
+            ) as probe,
+        ):
+            session._scan_downstream_ports_recursively(hub)
+
+        probe.assert_called_once_with(parent_node=hub, port_index_on_parent=0)
+        wait.assert_called_once_with(0.2, "discovery probe 1/1")
 
     def test_device_is_kept_when_exact_parameter_list_version_is_missing(self):
         events: list[tuple[str, str, dict]] = []

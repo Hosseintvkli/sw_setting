@@ -121,7 +121,7 @@ class DeviceIdentifySession:
                 f"STEP probe root: READ unit={TEMPORARY_DISCOVERY_MODBUS_UNIT_IDENTIFIER} "
                 f"addr {HOLDING_ADDRESS_DEVICE_ID} and {HOLDING_ADDRESS_PARAMETER_LIST_VERSION}"
             )
-            root = self._probe_node_with_three_attempts(
+            root = self._probe_node_with_configured_attempts(
                 parent_node=None, port_index_on_parent=None
             )
             if root is None:
@@ -357,16 +357,17 @@ class DeviceIdentifySession:
         )
         return node
 
-    def _probe_node_with_three_attempts(
+    def _probe_node_with_configured_attempts(
         self,
         parent_node: IdentifiedDeviceNode | None,
         port_index_on_parent: int | None,
     ) -> IdentifiedDeviceNode | None:
-        """Three explicit one-shot probes, each preceded by one read timeout."""
-        for attempt in range(1, 4):
+        """Run the configured number of one-shot discovery probes."""
+        attempt_count = self._device_modbus_link.get_active_transaction_retry_count()
+        for attempt in range(1, attempt_count + 1):
             self._wait_for_device_state_to_settle(
                 self._device_modbus_link.get_active_read_timeout_seconds(),
-                f"discovery probe {attempt}/3",
+                f"discovery probe {attempt}/{attempt_count}",
             )
             node = self._discover_node_on_temporary_slave_one(
                 parent_node=parent_node,
@@ -437,7 +438,7 @@ class DeviceIdentifySession:
                 self._configure_hub_ports_for_discovery_scan(
                     hub_node, package, port_index
                 )
-                child = self._probe_node_with_three_attempts(
+                child = self._probe_node_with_configured_attempts(
                     parent_node=hub_node, port_index_on_parent=port_index
                 )
                 if child is None:
