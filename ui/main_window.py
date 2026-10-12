@@ -2091,25 +2091,68 @@ class DeviceSettingMainWindow(QMainWindow):
                 else new_value
             )
             restore(display)
+            if isinstance(data, dict) and data.get("serial_number") is not None:
+                self._apply_serial_number_update(
+                    _optional_int(data.get("slave_id")),
+                    _optional_int(data.get("serial_number")),
+                )
 
         if not self._execute(
             "set-parameter", ["--name", name, "--value", new_value], after_set
         ):
             restore(previous)
 
+    def _apply_serial_number_update(
+        self,
+        slave_id: int | None,
+        serial_number: int | None,
+    ) -> None:
+        """Refresh every visible copy of SerialNo after a successful write."""
+        if slave_id is None or serial_number is None:
+            return
+
+        if self._loaded_topology_slave_id == slave_id:
+            serial_text = str(serial_number)
+            self.label_monitoring_serial_no.setText(serial_text)
+            self.label_status_serial_no.setText(f"File SerialNo: {serial_text}")
+            self._set_status_segment(self.label_status_serial_no, _STATUS_OK_COLOR)
+
+        root = self.devices_topology_tree_widget.invisibleRootItem()
+
+        def update_children(parent: QTreeWidgetItem) -> bool:
+            for index in range(parent.childCount()):
+                item = parent.child(index)
+                node = item.data(0, _ROLE_NODE)
+                if (
+                    isinstance(node, dict)
+                    and _optional_int(node.get("slave_id")) == slave_id
+                ):
+                    node["serial_number"] = serial_number
+                    item.setData(0, _ROLE_NODE, node)
+                    item.setText(1, str(serial_number))
+                    return True
+                if update_children(item):
+                    return True
+            return False
+
+        if update_children(root):
+            self.devices_topology_tree_widget.resizeColumnToContents(1)
+
     def _apply_monitoring_data(self, data: dict[str, Any]) -> None:
+        serial_number = data.get("serial_number")
         self.label_monitoring_slave_id.setText(str(data.get("slave_id", "—")))
         self.label_monitoring_device_id.setText(
             _format_device_id(data.get("device_id"))
         )
-        self.label_monitoring_serial_no.setText(str(data.get("serial_number") or "—"))
+        self.label_monitoring_serial_no.setText(
+            str(serial_number) if serial_number is not None else "—"
+        )
         self.label_monitoring_hardware_version.setText(
             str(data.get("hardware_version") or "—")
         )
         self.label_monitoring_firmware_version.setText(
             str(data.get("firmware_version") or "—")
         )
-        serial_number = data.get("serial_number")
         device_id = data.get("device_id")
         self.label_status_device_id.setText(
             f"File DeviceID: {_format_device_id(device_id, missing='None')}"

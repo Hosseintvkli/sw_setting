@@ -14,6 +14,7 @@ from core.device_setting_tree_loader import (
     DeviceSettingTreeLoader,
     DeviceSettingTreeLoadCancelled,
     DeviceSettingTreeLoaderError,
+    SERIAL_NUMBER_HOLDING_REGISTER_ADDRESS,
 )
 from core.modbus_register_value_codec import (
     ModbusRegisterValueCodecError,
@@ -223,18 +224,47 @@ def handle_set_parameter(context: CommandSessionContext, args) -> CommandResult:
     ) as exc:
         return failure("set-parameter", str(exc))
 
+    response_data = {
+        "name": name,
+        "value": parsed_value,
+        "display": format_decoded_parameter_value_for_display(
+            parameter.data_type_name, parsed_value
+        ),
+        "modbus_addr": parameter.modbus_address,
+        "slave_id": slave_id,
+    }
+    if parameter.modbus_address == SERIAL_NUMBER_HOLDING_REGISTER_ADDRESS:
+        serial_number = int(parsed_value)
+        _update_cached_serial_number(context, slave_id, serial_number)
+        response_data["serial_number"] = serial_number
+
     return success(
         "set-parameter",
-        {
-            "name": name,
-            "value": parsed_value,
-            "display": format_decoded_parameter_value_for_display(
-                parameter.data_type_name, parsed_value
-            ),
-            "modbus_addr": parameter.modbus_address,
-            "slave_id": slave_id,
-        },
+        response_data,
     )
+
+
+def _update_cached_serial_number(
+    context: CommandSessionContext,
+    slave_id: int,
+    serial_number: int,
+) -> None:
+    """Keep loaded header/settings and Identify topology consistent after a write."""
+    load = context.last_settings_load_result
+    if (
+        load is not None
+        and load.monitoring_header_values.modbus_slave_unit_identifier == slave_id
+    ):
+        load.monitoring_header_values.serial_number = serial_number
+        for leaf in load.setting_leaf_values:
+            if leaf.parameter.modbus_address == SERIAL_NUMBER_HOLDING_REGISTER_ADDRESS:
+                leaf.decoded_value = serial_number
+                leaf.display_value_text = str(serial_number)
+                leaf.read_error_message = None
+
+    node = context.find_node_by_slave_id(slave_id)
+    if node is not None:
+        node.serial_number = serial_number
 
 
 def handle_list_parameters(context: CommandSessionContext, args) -> CommandResult:
