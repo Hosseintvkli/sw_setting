@@ -166,22 +166,16 @@ class CommunicationSettingsPanel(QWidget):
         ethernet_form.addRow("TCP port:", self.spin_box_modbus_tcp_port_number)
 
         self.modbus_retry_settings_group_box = QGroupBox("Modbus Retry")
-        self.combo_box_modbus_attempt_count = QComboBox()
-        for attempt_count in range(1, 11):
-            self.combo_box_modbus_attempt_count.addItem(
-                str(attempt_count), attempt_count
-            )
-        self.combo_box_modbus_attempt_count.setCurrentIndex(
-            self.combo_box_modbus_attempt_count.findData(
-                _DEFAULT_MODBUS_ATTEMPTS
-            )
-        )
-        self.combo_box_modbus_attempt_count.setToolTip(
+        self.spin_box_modbus_attempt_count = QSpinBox()
+        self.spin_box_modbus_attempt_count.setRange(1, 100)
+        self.spin_box_modbus_attempt_count.setValue(_DEFAULT_MODBUS_ATTEMPTS)
+        self._remove_spin_buttons(self.spin_box_modbus_attempt_count)
+        self.spin_box_modbus_attempt_count.setToolTip(
             "Total attempts for each Modbus operation, including Identify probes."
         )
         retry_form = QFormLayout(self.modbus_retry_settings_group_box)
         retry_form.addRow(
-            "Retry attempts:", self.combo_box_modbus_attempt_count
+            "Retry attempts:", self.spin_box_modbus_attempt_count
         )
 
         layout = QVBoxLayout(self)
@@ -393,9 +387,7 @@ class CommunicationSettingsPanel(QWidget):
             )
 
     def connect_cli_arguments(self) -> list[str]:
-        retry_attempts = int(
-            self.combo_box_modbus_attempt_count.currentData()
-        )
+        retry_attempts = self.spin_box_modbus_attempt_count.value()
         if self.radio_button_serial_rtu.isChecked():
             port = str(self.combo_box_serial_port_name.currentData() or "").strip()
             if not port:
