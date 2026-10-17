@@ -82,9 +82,14 @@ class MissingParameterListIdentifyTests(unittest.TestCase):
             ],
         )
         probe.assert_called_once_with(parent_node=None, port_index_on_parent=None)
-        wait.assert_called_once_with(
-            0.0,
-            "streamer shutdown and broadcast Identify setup",
+        self.assertEqual(
+            [call.args for call in wait.call_args_list],
+            [
+                (0.0, "broadcast SlaveId=1"),
+                (0.0, "broadcast IdentifyStatus=1"),
+                (0.0, "broadcast StreamerEnableCmd=0"),
+                (0.0, "streamer shutdown and broadcast Identify setup"),
+            ],
         )
 
     def test_routing_write_timeout_is_accepted_when_readback_matches(self):

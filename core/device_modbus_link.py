@@ -273,13 +273,24 @@ class DeviceModbusLink:
                     address=modbus_register_address,
                     value=value_u16,
                     device_id=unit_id,
+                    no_response_expected=is_broadcast,
                 )
             except TypeError:
-                response = client.write_register(
-                    address=modbus_register_address,
-                    value=value_u16,
-                    slave=unit_id,
-                )
+                try:
+                    response = client.write_register(
+                        address=modbus_register_address,
+                        value=value_u16,
+                        slave=unit_id,
+                        no_response_expected=is_broadcast,
+                    )
+                except TypeError:
+                    # Compatibility with older pymodbus releases that expose
+                    # neither device_id nor no_response_expected.
+                    response = client.write_register(
+                        address=modbus_register_address,
+                        value=value_u16,
+                        slave=unit_id,
+                    )
         except ModbusException as exc:
             # A Modbus broadcast must not receive a response. If another
             # protocol (for example the device streamer) is already sending

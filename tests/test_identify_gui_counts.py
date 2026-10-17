@@ -63,6 +63,31 @@ class IdentifyGuiCountTests(unittest.TestCase):
         finally:
             window.close()
 
+    def test_late_live_event_does_not_duplicate_final_topology_device(self):
+        app = QApplication.instance() or QApplication([])
+        window = DeviceSettingMainWindow()
+        device = {
+            "device_name": "rasta",
+            "device_id": 1000,
+            "parameter_list_version": 31,
+            "slave_id": 247,
+            "serial_number": 25,
+            "downstream_qty": 0,
+            "parameter_list_available": True,
+            "ports": [],
+        }
+        try:
+            window._populate_topology(device)
+            window._add_live_identified_device(dict(device))
+
+            self.assertEqual(
+                window.devices_topology_tree_widget.topLevelItemCount(),
+                1,
+            )
+            self.assertIsNotNone(window._live_identify_items.get(247))
+        finally:
+            window.close()
+
 
 if __name__ == "__main__":
     unittest.main()

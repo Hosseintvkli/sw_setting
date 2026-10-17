@@ -54,7 +54,10 @@ class CommandWriteTimeoutTests(unittest.TestCase):
         self.assertEqual(client.retries, 2)
         self.assertEqual(client.transaction.retries, 2)
         client.write_register.assert_called_once_with(
-            address=221, value=0xFFFF, device_id=243
+            address=221,
+            value=0xFFFF,
+            device_id=243,
+            no_response_expected=False,
         )
 
     def test_retries_are_restored_even_if_write_raises(self):
@@ -83,6 +86,19 @@ class CommandWriteTimeoutTests(unittest.TestCase):
             address=4003,
             value=0xFFFF,
             device_id=0,
+            no_response_expected=True,
+        )
+
+    def test_broadcast_explicitly_skips_waiting_for_a_response(self):
+        link, client = self.make_link(response=None)
+
+        link.write_holding_register_u16(4000, 1, modbus_unit_identifier=0)
+
+        client.write_register.assert_called_once_with(
+            address=4000,
+            value=1,
+            device_id=0,
+            no_response_expected=True,
         )
 
     def test_discard_pending_input_resets_serial_buffer(self):

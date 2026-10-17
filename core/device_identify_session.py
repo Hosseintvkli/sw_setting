@@ -109,18 +109,30 @@ class DeviceIdentifySession:
             )
             self._broadcast_write_u16(HOLDING_ADDRESS_SLAVE_ID, 1)
             self._log("Broadcast SlaveId=1 (no reply expected)")
+            self._wait_for_device_state_to_settle(
+                self._settle_seconds_after_broadcast(),
+                "broadcast SlaveId=1",
+            )
             self._log(
                 f"STEP broadcast WRITE unit={BROADCAST_MODBUS_UNIT_IDENTIFIER} "
                 f"addr={HOLDING_ADDRESS_IDENTIFY_STATUS} value=1"
             )
             self._broadcast_write_u16(HOLDING_ADDRESS_IDENTIFY_STATUS, 1)
             self._log("Broadcast IdentifyStatus=1 (no reply expected)")
+            self._wait_for_device_state_to_settle(
+                self._settle_seconds_after_broadcast(),
+                "broadcast IdentifyStatus=1",
+            )
             self._log(
                 f"STEP broadcast WRITE unit={BROADCAST_MODBUS_UNIT_IDENTIFIER} "
                 f"addr={HOLDING_ADDRESS_STREAMER_ENABLE_COMMAND} value=0"
             )
             self._broadcast_write_u16(HOLDING_ADDRESS_STREAMER_ENABLE_COMMAND, 0)
             self._log("Broadcast StreamerEnableCmd=0 (no reply expected)")
+            self._wait_for_device_state_to_settle(
+                self._settle_seconds_after_broadcast(),
+                "broadcast StreamerEnableCmd=0",
+            )
             self._log(
                 f"STEP broadcast WRITE unit={BROADCAST_MODBUS_UNIT_IDENTIFIER} "
                 f"addr={HOLDING_ADDRESS_STREAMER_DISABLE_COMMAND} "

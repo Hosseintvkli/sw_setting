@@ -1657,6 +1657,13 @@ class DeviceSettingMainWindow(QMainWindow):
             )
             item.setData(0, _ROLE_NODE, node)
             item.setData(0, _ROLE_TOPOLOGY_BASE_LABEL, display_label)
+            slave_id = _optional_int(node.get("slave_id"))
+            if slave_id is not None:
+                # The final command response and the last live event can cross
+                # in the Qt event queue. Register final-result rows in the same
+                # map used by live Identify so a late event cannot add the
+                # device a second time.
+                self._live_identify_items[slave_id] = item
             for port in node.get("ports", []):
                 if not isinstance(port, dict):
                     continue
@@ -1667,9 +1674,14 @@ class DeviceSettingMainWindow(QMainWindow):
                         child.get("device_name")
                         or f"DeviceId={_format_device_id(child.get('device_id'))}"
                     )
-                    item.addChild(
-                        make_device_item(child, f"port[{port_index}]: {child_name}")
+                    child_item = make_device_item(
+                        child, f"port[{port_index}]: {child_name}"
                     )
+                    item.addChild(child_item)
+                    if slave_id is not None and port_index is not None:
+                        self._live_identify_port_items[(slave_id, int(port_index))] = (
+                            child_item
+                        )
                 else:
                     empty_port_item = QTreeWidgetItem([f"port[{port_index}]:"])
                     self._style_unconnected_port_item(
@@ -1677,6 +1689,10 @@ class DeviceSettingMainWindow(QMainWindow):
                         self.devices_topology_tree_widget.columnCount(),
                     )
                     item.addChild(empty_port_item)
+                    if slave_id is not None and port_index is not None:
+                        self._live_identify_port_items[(slave_id, int(port_index))] = (
+                            empty_port_item
+                        )
             if not parameter_list_available:
                 self._style_missing_parameter_list_item(
                     item,
