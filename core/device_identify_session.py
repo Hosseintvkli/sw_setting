@@ -27,6 +27,9 @@ HOLDING_ADDRESS_PARAMETER_LIST_VERSION = 1
 HOLDING_ADDRESS_DOWNSTREAM_QUANTITY = 14
 HOLDING_ADDRESS_SLAVE_ID = 4000
 HOLDING_ADDRESS_IDENTIFY_STATUS = 4001
+HOLDING_ADDRESS_STREAMER_ENABLE_COMMAND = 4002
+HOLDING_ADDRESS_STREAMER_DISABLE_COMMAND = 4003
+COMMAND_TRIGGER_VALUE = 0xFFFF
 
 BROADCAST_MODBUS_UNIT_IDENTIFIER = 0
 TEMPORARY_DISCOVERY_MODBUS_UNIT_IDENTIFIER = 1
@@ -112,10 +115,33 @@ class DeviceIdentifySession:
             )
             self._broadcast_write_u16(HOLDING_ADDRESS_IDENTIFY_STATUS, 1)
             self._log("Broadcast IdentifyStatus=1 (no reply expected)")
+            self._log(
+                f"STEP broadcast WRITE unit={BROADCAST_MODBUS_UNIT_IDENTIFIER} "
+                f"addr={HOLDING_ADDRESS_STREAMER_ENABLE_COMMAND} value=0"
+            )
+            self._broadcast_write_u16(HOLDING_ADDRESS_STREAMER_ENABLE_COMMAND, 0)
+            self._log("Broadcast StreamerEnableCmd=0 (no reply expected)")
+            self._log(
+                f"STEP broadcast WRITE unit={BROADCAST_MODBUS_UNIT_IDENTIFIER} "
+                f"addr={HOLDING_ADDRESS_STREAMER_DISABLE_COMMAND} "
+                f"value={COMMAND_TRIGGER_VALUE}"
+            )
+            self._broadcast_write_u16(
+                HOLDING_ADDRESS_STREAMER_DISABLE_COMMAND,
+                COMMAND_TRIGGER_VALUE,
+            )
+            self._log("Broadcast StreamerDisableCmd=65535 (no reply expected)")
             self._wait_for_device_state_to_settle(
                 self._settle_seconds_after_broadcast(),
-                "broadcast Identify setup",
+                "streamer shutdown and broadcast Identify setup",
             )
+            discard_pending_input = getattr(
+                self._device_modbus_link,
+                "discard_pending_input",
+                None,
+            )
+            if callable(discard_pending_input) and discard_pending_input():
+                self._log("Discarded queued serial streamer bytes")
 
             self._log(
                 f"STEP probe root: READ unit={TEMPORARY_DISCOVERY_MODBUS_UNIT_IDENTIFIER} "

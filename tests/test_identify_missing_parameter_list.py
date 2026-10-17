@@ -15,6 +15,7 @@ class _FakeModbusLink:
     def __init__(self, retry_count: int = 3) -> None:
         self.writes: list[tuple[int, int, int | None]] = []
         self.retry_count = retry_count
+        self.is_connected = True
 
     def read_holding_register_u16(
         self, address: int, modbus_unit_identifier: int | None = None,
@@ -49,6 +50,43 @@ class _FakeModbusLink:
 
 
 class MissingParameterListIdentifyTests(unittest.TestCase):
+    def test_identify_broadcast_disables_streamers_before_first_probe(self):
+        link = _FakeModbusLink()
+        session = DeviceIdentifySession(link)
+        root = IdentifiedDeviceNode(
+            device_id=2,
+            parameter_list_version=17,
+            device_name="datalogger_v3_main",
+            permanent_modbus_slave_id=247,
+            downstream_port_quantity=0,
+            parameter_list_package=object(),
+        )
+        with (
+            patch.object(session._catalog, "scan_catalog_from_disk"),
+            patch.object(
+                session,
+                "_probe_node_with_configured_attempts",
+                return_value=root,
+            ) as probe,
+            patch.object(session, "_wait_for_device_state_to_settle") as wait,
+        ):
+            session.run_identify()
+
+        self.assertEqual(
+            link.writes[:4],
+            [
+                (4000, 1, 0),
+                (4001, 1, 0),
+                (4002, 0, 0),
+                (4003, 65535, 0),
+            ],
+        )
+        probe.assert_called_once_with(parent_node=None, port_index_on_parent=None)
+        wait.assert_called_once_with(
+            0.0,
+            "streamer shutdown and broadcast Identify setup",
+        )
+
     def test_routing_write_timeout_is_accepted_when_readback_matches(self):
         session = DeviceIdentifySession(_FakeModbusLink())
         package = SimpleNamespace(

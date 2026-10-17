@@ -71,6 +71,28 @@ class CommandWriteTimeoutTests(unittest.TestCase):
         self.assertEqual(client.comm_params.timeout_connect, 0.1)
         self.assertEqual(client.retries, 2)
 
+    def test_broadcast_ignores_unsolicited_streamer_frame(self):
+        link, client = self.make_link()
+        client.write_register.side_effect = ModbusException(
+            "request uses device id=0 but received 232"
+        )
+
+        link.write_holding_register_u16(4003, 0xFFFF, modbus_unit_identifier=0)
+
+        client.write_register.assert_called_once_with(
+            address=4003,
+            value=0xFFFF,
+            device_id=0,
+        )
+
+    def test_discard_pending_input_resets_serial_buffer(self):
+        link, client = self.make_link()
+        serial_socket = SimpleNamespace(reset_input_buffer=Mock())
+        client.socket = serial_socket
+
+        self.assertTrue(link.discard_pending_input())
+        serial_socket.reset_input_buffer.assert_called_once_with()
+
 
 if __name__ == "__main__":
     unittest.main()

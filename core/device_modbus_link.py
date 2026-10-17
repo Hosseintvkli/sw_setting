@@ -281,7 +281,12 @@ class DeviceModbusLink:
                     slave=unit_id,
                 )
         except ModbusException as exc:
-            if is_broadcast and _is_modbus_no_response_error(exc):
+            # A Modbus broadcast must not receive a response. If another
+            # protocol (for example the device streamer) is already sending
+            # on the serial line, pymodbus may parse that unsolicited frame
+            # as a mismatched broadcast response. The write has already been
+            # transmitted, so any Modbus-layer response error is irrelevant.
+            if is_broadcast:
                 return
             raise DeviceModbusLinkError(f"Modbus write exception: {exc}") from exc
         except OSError as exc:
@@ -305,6 +310,17 @@ class DeviceModbusLink:
             raise DeviceModbusLinkError("Modbus write returned no response.")
         if hasattr(response, "isError") and response.isError():
             raise DeviceModbusLinkError(f"Modbus write error response: {response}")
+
+    def discard_pending_input(self) -> bool:
+        """Discard queued serial bytes; return whether a serial buffer was reset."""
+        client, _ = self._require_connected_client_and_unit_id()
+        candidates = (getattr(client, "socket", None), client)
+        for candidate in candidates:
+            reset_input_buffer = getattr(candidate, "reset_input_buffer", None)
+            if callable(reset_input_buffer):
+                reset_input_buffer()
+                return True
+        return False
 
     def write_holding_registers_u16(
         self,
