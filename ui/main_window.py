@@ -137,7 +137,7 @@ class DeviceSettingMainWindow(QMainWindow):
         self.push_button_reconnect.setFixedWidth(32)
         self.push_button_reconnect.setAccessibleName("Reconnect")
         self.push_button_reconnect.setToolTip(
-            "Disconnect and reconnect using the current Ethernet settings."
+            "Disconnect and reconnect using the current communication settings."
         )
         connection_buttons = QHBoxLayout()
         connection_buttons.setContentsMargins(12, 0, 0, 0)
@@ -918,13 +918,13 @@ class DeviceSettingMainWindow(QMainWindow):
                 if self._reconnect_requested:
                     self._reconnect_requested = False
                     self.push_button_reconnect.setToolTip(
-                        "Disconnect and reconnect using the current Ethernet settings."
+                        "Disconnect and reconnect using the current communication settings."
                     )
                     QTimer.singleShot(0, self._on_connect_clicked)
             else:
                 self._reconnect_requested = False
                 self.push_button_reconnect.setToolTip(
-                    "Disconnect and reconnect using the current Ethernet settings."
+                    "Disconnect and reconnect using the current communication settings."
                 )
                 self.push_button_connection_toggle.setText("Disconnect")
                 self._update_action_states()
@@ -1115,10 +1115,7 @@ class DeviceSettingMainWindow(QMainWindow):
             self._cancel_reconnect_request()
 
     def _on_reconnect_clicked(self) -> None:
-        if (
-            not self._connected
-            or not self.communication_settings_panel.is_ethernet_tcp_selected()
-        ):
+        if not self._connected:
             return
         self._reconnect_requested = True
         self.push_button_reconnect.setToolTip("Reconnecting...")
@@ -1128,7 +1125,7 @@ class DeviceSettingMainWindow(QMainWindow):
     def _cancel_reconnect_request(self) -> None:
         self._reconnect_requested = False
         self.push_button_reconnect.setToolTip(
-            "Disconnect and reconnect using the current Ethernet settings."
+            "Disconnect and reconnect using the current communication settings."
         )
         self._update_action_states()
 
@@ -1194,7 +1191,6 @@ class DeviceSettingMainWindow(QMainWindow):
         )
         self.push_button_reconnect.setEnabled(
             self._connected
-            and self.communication_settings_panel.is_ethernet_tcp_selected()
             and not self._reconnect_requested
             and (ready or monitoring_can_be_stopped_for_disconnect)
         )

@@ -43,6 +43,26 @@ class IdentifyGuiCountTests(unittest.TestCase):
         finally:
             window.close()
 
+    def test_reconnect_is_available_for_serial_and_starts_disconnect(self):
+        app = QApplication.instance() or QApplication([])
+        window = DeviceSettingMainWindow()
+        try:
+            window.communication_settings_panel.radio_button_serial_rtu.setChecked(True)
+            window._session_ready_flag = True
+            window._cli_busy = False
+            window._connected = True
+            window._update_action_states()
+
+            self.assertTrue(window.push_button_reconnect.isEnabled())
+            with patch.object(window, "_on_disconnect_clicked") as disconnect:
+                window._on_reconnect_clicked()
+
+            self.assertTrue(window._reconnect_requested)
+            self.assertEqual(window.push_button_reconnect.toolTip(), "Reconnecting...")
+            disconnect.assert_called_once_with()
+        finally:
+            window.close()
+
 
 if __name__ == "__main__":
     unittest.main()
